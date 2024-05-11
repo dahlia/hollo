@@ -9,7 +9,11 @@ import { credentials } from "./schema";
 
 const app = new Hono();
 
-app.get("/", (c) => {
+app.get("/", async (c) => {
+  const [{ value: exist }] = await db
+    .select({ value: count() })
+    .from(credentials);
+  if (exist > 0) return c.redirect("/accounts");
   return c.html(<SetupPage />);
 });
 
@@ -17,7 +21,7 @@ app.post("/", async (c) => {
   const [{ value: exist }] = await db
     .select({ value: count() })
     .from(credentials);
-  if (exist) return c.redirect("/");
+  if (exist > 0) return c.redirect("/accounts");
   const form = await c.req.formData();
   const email = form.get("email")?.toString();
   const password = form.get("password")?.toString();
