@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import accounts from "./accounts";
 import fedi from "./federation";
 import setup from "./setup";
+import "./logging";
 
 const app = new Hono();
 

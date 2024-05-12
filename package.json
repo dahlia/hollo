@@ -9,6 +9,7 @@
     "@fedify/fedify": "0.9.0-dev.173",
     "@fedify/markdown-it-mention": "^0.1.1",
     "@js-temporal/polyfill": "^0.4.4",
+    "@logtape/logtape": "^0.4.0",
     "@stdext/crypto": "npm:@jsr/stdext__crypto",
     "drizzle-orm": "^0.30.10",
     "hono": "^4.3.4",
