@@ -1,16 +1,17 @@
 import { exportJwk, generateCryptoKeyPair } from "@fedify/fedify";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { FC } from "hono/jsx";
+import { AccountForm } from "./components/AccountForm";
 import { AccountList } from "./components/AccountList";
 import Layout from "./components/Layout";
-import { NewAccountForm } from "./components/NewAccountForm";
 import db from "./db";
 import federation from "./federation";
 import {
-  accountOwners,
-  accounts,
   type Account,
   type AccountOwner,
+  accountOwners,
+  accounts,
 } from "./schema";
 import { formatText } from "./text";
 
@@ -108,16 +109,122 @@ app.get("/new", (c) => {
   return c.html(<NewAccountPage />);
 });
 
-export const NewAccountPage: FC = () => {
+export interface NewAccountPageProps {
+  values?: {
+    username?: string;
+    name?: string;
+    bio?: string;
+    protected?: boolean;
+  };
+  errors?: {
+    username?: string;
+    name?: string;
+    bio?: string;
+  };
+}
+
+export const NewAccountPage: FC<NewAccountPageProps> = (props) => {
   return (
     <Layout title="Hollo: New account">
       <hgroup>
         <h1>Create a new account</h1>
         <p>You can create a new account by filling out the form below.</p>
       </hgroup>
-      <NewAccountForm action="/accounts" />
+      <AccountForm
+        action="/accounts"
+        values={props.values}
+        errors={props.errors}
+        submitLabel="Create a new account"
+      />
     </Layout>
   );
 };
+
+app.get("/:id", async (c) => {
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, c.req.param("id")),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+  return c.html(<AccountPage accountOwner={accountOwner} />);
+});
+
+export interface AccountPageProps extends NewAccountPageProps {
+  accountOwner: AccountOwner & { account: Account };
+}
+
+export const AccountPage: FC<AccountPageProps> = (props) => {
+  const username = props.accountOwner.account.handle.replace(/@[^@]+$/, "");
+  return (
+    <Layout title="Hollo: New account">
+      <hgroup>
+        <h1>Edit {username}</h1>
+        <p>You can edit your account by filling out the form below.</p>
+      </hgroup>
+      <AccountForm
+        action={`/accounts/${props.accountOwner.account.id}`}
+        readOnly={{ username: true }}
+        values={{
+          username: username.replace(/^@/, ""),
+          name: props.values?.name ?? props.accountOwner.account.name,
+          bio: props.values?.bio ?? props.accountOwner.bio ?? undefined,
+          protected:
+            props.values?.protected ?? props.accountOwner.account.protected,
+        }}
+        errors={props.errors}
+        submitLabel="Save changes"
+      />
+    </Layout>
+  );
+};
+
+app.post("/:id", async (c) => {
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, c.req.param("id")),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+  const form = await c.req.formData();
+  const name = form.get("name")?.toString()?.trim();
+  const bio = form.get("bio")?.toString()?.trim();
+  const protected_ = form.get("protected") != null;
+  if (name == null || name === "") {
+    return c.html(
+      <AccountPage
+        accountOwner={accountOwner}
+        values={{ name, bio, protected: protected_ }}
+        errors={{
+          name: name == null || name === "" ? "Display name is required." : "",
+        }}
+      />,
+      400,
+    );
+  }
+  await db.transaction(async (tx) => {
+    await tx
+      .update(accounts)
+      .set({
+        name,
+        bioHtml: formatText(tx, bio ?? "").html,
+        protected: protected_,
+      })
+      .where(eq(accounts.id, c.req.param("id")));
+    await tx
+      .update(accountOwners)
+      .set({ bio })
+      .where(eq(accountOwners.id, c.req.param("id")));
+  });
+  return c.redirect("/accounts");
+});
+
+app.post("/:id/delete", async (c) => {
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(accountOwners)
+      .where(eq(accountOwners.id, c.req.param("id")));
+    await tx.delete(accounts).where(eq(accounts.id, c.req.param("id")));
+  });
+  return c.redirect("/accounts");
+});
 
 export default app;

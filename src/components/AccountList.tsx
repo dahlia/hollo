@@ -45,15 +45,30 @@ export const AccountItem: FC<AccountItemProps> = ({
         ) : (
           <small>
             Fetched at{" "}
-            <time dateTime={account.fetched.toISOString()}>
-              {account.fetched.toLocaleDateString()}
+            <time dateTime={account.updated.toISOString()}>
+              {account.updated.toLocaleDateString()}
             </time>
             .
           </small>
         )}
       </p>
       <footer>
-        <form>
+        <form
+          className="grid"
+          action={`/accounts/${account.id}/delete`}
+          method="post"
+          onsubmit="return confirm('Are you sure you want to delete this account?')"
+        >
+          <div>
+            <a
+              href={`/accounts/${account.id}`}
+              role="button"
+              className="contrast"
+              style="display: block;"
+            >
+              Edit
+            </a>
+          </div>
           <button type="submit" className="contrast">
             Delete
           </button>

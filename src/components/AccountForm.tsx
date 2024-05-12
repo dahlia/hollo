@@ -1,8 +1,11 @@
 import type { FC } from "hono/jsx";
 
-export interface NewAccountForm {
+export interface AccountFormProps {
   method?: string;
   action: string;
+  readOnly?: {
+    username?: boolean;
+  };
   values?: {
     username?: string;
     name?: string;
@@ -14,19 +17,21 @@ export interface NewAccountForm {
     name?: string;
     bio?: string;
   };
+  submitLabel: string;
 }
 
-export const NewAccountForm: FC<NewAccountForm> = (props) => {
+export const AccountForm: FC<AccountFormProps> = (props) => {
   return (
     <form method={props.method ?? "post"} action={props.action}>
       <fieldset>
         <label>
-          Username{" "}
+          Username {props.readOnly?.username ? "(cannot change) " : ""}
           <input
             type="text"
             name="username"
             required={true}
             placeholder="john"
+            readOnly={props.readOnly?.username}
             value={props.values?.username}
             aria-invalid={props.errors?.username != null ? true : undefined}
             pattern="^[\\p{L}\\p{N}._\\-]+$"
@@ -79,7 +84,7 @@ export const NewAccountForm: FC<NewAccountForm> = (props) => {
           posts
         </label>
       </fieldset>
-      <button type="submit">Create a new account</button>
+      <button type="submit">{props.submitLabel}</button>
     </form>
   );
 };
