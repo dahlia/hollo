@@ -44,6 +44,7 @@ app.post("/", async (c) => {
               : undefined,
         }}
       />,
+      400,
     );
   }
   await db.insert(credentials).values({

@@ -6,15 +6,20 @@
     "migrate:generate": "bunx drizzle-kit generate"
   },
   "dependencies": {
+    "@fedify/fedify": "0.9.0-dev.173",
+    "@fedify/markdown-it-mention": "^0.1.1",
+    "@js-temporal/polyfill": "^0.4.4",
     "@stdext/crypto": "npm:@jsr/stdext__crypto",
     "drizzle-orm": "^0.30.10",
     "hono": "^4.3.4",
+    "markdown-it": "^14.1.0",
     "postgres": "^3.4.4",
     "xss": "^1.0.15"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.7.3",
     "@types/bun": "latest",
+    "@types/markdown-it": "^14.1.1",
     "drizzle-kit": "^0.21.0"
   }
 }

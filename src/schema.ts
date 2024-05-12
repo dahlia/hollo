@@ -10,7 +10,6 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import type { JsonWebKey } from "node:crypto";
 
 export const credentials = pgTable("credentials", {
   email: varchar("email", { length: 254 }).primaryKey(),
@@ -49,7 +48,7 @@ export const accounts = pgTable("accounts", {
   followers: bigint("followers", { mode: "number" }).default(0),
   posts: bigint("posts", { mode: "number" }).default(0),
   published: timestamp("published", { withTimezone: true }),
-  fetched: timestamp("fetched", { withTimezone: true }).notNull().defaultNow(),
+  updated: timestamp("updated", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const accountRelations = relations(accounts, ({ one }) => ({
