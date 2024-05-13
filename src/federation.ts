@@ -12,7 +12,6 @@ import { accounts } from "./schema";
 
 export const federation = new Federation({
   kv: new MemoryKvStore(),
-  treatHttps: true,
 });
 
 federation

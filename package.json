@@ -15,6 +15,7 @@
     "hono": "^4.3.4",
     "markdown-it": "^14.1.0",
     "postgres": "^3.4.4",
+    "x-forwarded-fetch": "^0.1.0",
     "xss": "^1.0.15"
   },
   "devDependencies": {

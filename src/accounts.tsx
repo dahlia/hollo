@@ -7,6 +7,7 @@ import { AccountList } from "./components/AccountList";
 import Layout from "./components/Layout";
 import db from "./db";
 import federation from "./federation";
+import { loginRequired } from "./login";
 import {
   type Account,
   type AccountOwner,
@@ -16,6 +17,8 @@ import {
 import { formatText } from "./text";
 
 const app = new Hono();
+
+app.use(loginRequired);
 
 app.get("/", async (c) => {
   const owners = await db.query.accountOwners.findMany({
