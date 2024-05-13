@@ -1,5 +1,6 @@
 {
   "scripts": {
+    "prod": "bun run src/index.ts",
     "dev": "bun run --hot src/index.ts",
     "check": "bunx tsc && bunx biome check .",
     "migrate": "bunx drizzle-kit migrate",
