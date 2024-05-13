@@ -76,3 +76,49 @@ export const accountOwnerRelations = relations(accountOwners, ({ one }) => ({
     references: [accounts.id],
   }),
 }));
+
+export const scopeEnum = pgEnum("scope", [
+  "read",
+  "read:accounts",
+  "read:blocks",
+  "read:bookmarks",
+  "read:favourites",
+  "read:filters",
+  "read:follows",
+  "read:lists",
+  "read:mutes",
+  "read:notifications",
+  "read:search",
+  "read:statuses",
+  "write",
+  "write:accounts",
+  "write:blocks",
+  "write:bookmarks",
+  "write:conversations",
+  "write:favourites",
+  "write:filters",
+  "write:follows",
+  "write:lists",
+  "write:media",
+  "write:mutes",
+  "write:notifications",
+  "write:reports",
+  "write:statuses",
+  "follow",
+  "push",
+]);
+
+export type Scope = (typeof scopeEnum.enumValues)[number];
+
+export const applications = pgTable("applications", {
+  id: uuid("id").primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  redirectUri: text("redirect_uri").notNull(),
+  scopes: scopeEnum("scopes").array().notNull(),
+  website: text("website"),
+  clientId: text("client_id").notNull().unique(),
+  clientSecret: text("client_secret").notNull(),
+});
+
+export type Application = typeof applications.$inferSelect;
+export type NewApplication = typeof applications.$inferInsert;

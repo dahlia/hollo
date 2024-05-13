@@ -22,6 +22,13 @@
       "when": 1715495872126,
       "tag": "0002_Rename",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1715580546562,
+      "tag": "0003_applications",
+      "breakpoints": true
     }
   ]
 }

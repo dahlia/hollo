@@ -1,6 +1,7 @@
 import { federation } from "@fedify/fedify/x/hono";
 import { Hono } from "hono";
 import accounts from "./accounts";
+import api from "./api";
 import fedi from "./federation";
 import login from "./login";
 import setup from "./setup";
@@ -11,13 +12,10 @@ const app = new Hono();
 
 app.use(federation(fedi, (_) => undefined));
 
-app.get("/", (c) => {
-  return c.text("Welcome to Hollo!");
-});
-
 app.route("/setup", setup);
 app.route("/login", login);
 app.route("/accounts", accounts);
+app.route("/api", api);
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const BEHIND_PROXY = process.env["BEHIND_PROXY"] === "true";
