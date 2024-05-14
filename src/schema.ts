@@ -70,12 +70,16 @@ export const accountOwners = pgTable("account_owners", {
 export type AccountOwner = typeof accountOwners.$inferSelect;
 export type NewAccountOwner = typeof accountOwners.$inferInsert;
 
-export const accountOwnerRelations = relations(accountOwners, ({ one }) => ({
-  account: one(accounts, {
-    fields: [accountOwners.id],
-    references: [accounts.id],
+export const accountOwnerRelations = relations(
+  accountOwners,
+  ({ one, many }) => ({
+    account: one(accounts, {
+      fields: [accountOwners.id],
+      references: [accounts.id],
+    }),
+    accessTokens: many(accessTokens),
   }),
-}));
+);
 
 export const scopeEnum = pgEnum("scope", [
   "read",
@@ -113,12 +117,51 @@ export type Scope = (typeof scopeEnum.enumValues)[number];
 export const applications = pgTable("applications", {
   id: uuid("id").primaryKey(),
   name: varchar("name", { length: 256 }).notNull(),
-  redirectUri: text("redirect_uri").notNull(),
+  redirectUris: text("redirect_uris").array().notNull(),
   scopes: scopeEnum("scopes").array().notNull(),
   website: text("website"),
   clientId: text("client_id").notNull().unique(),
   clientSecret: text("client_secret").notNull(),
+  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export type Application = typeof applications.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;
+
+export const applicationRelations = relations(applications, ({ many }) => ({
+  accessTokens: many(accessTokens),
+}));
+
+export const grantTypeEnum = pgEnum("grant_type", [
+  "authorization_code",
+  "client_credentials",
+]);
+
+export type GrantType = (typeof grantTypeEnum.enumValues)[number];
+
+export const accessTokens = pgTable("access_tokens", {
+  code: text("code").primaryKey(),
+  applicationId: uuid("application_id")
+    .notNull()
+    .references(() => applications.id),
+  accountOwnerId: uuid("account_owner_id").references(() => accountOwners.id),
+  grant_type: grantTypeEnum("grant_type")
+    .notNull()
+    .default("authorization_code"),
+  scopes: scopeEnum("scopes").array().notNull(),
+  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type AccessToken = typeof accessTokens.$inferSelect;
+export type NewAccessToken = typeof accessTokens.$inferInsert;
+
+export const accessTokenRelations = relations(accessTokens, ({ one }) => ({
+  application: one(applications, {
+    fields: [accessTokens.applicationId],
+    references: [applications.id],
+  }),
+  accountOwner: one(accountOwners, {
+    fields: [accessTokens.accountOwnerId],
+    references: [accountOwners.id],
+  }),
+}));

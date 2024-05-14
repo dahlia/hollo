@@ -4,6 +4,7 @@ import accounts from "./accounts";
 import api from "./api";
 import fedi from "./federation";
 import login from "./login";
+import oauth from "./oauth";
 import setup from "./setup";
 import "./logging";
 import { behindProxy } from "x-forwarded-fetch";
@@ -15,6 +16,7 @@ app.use(federation(fedi, (_) => undefined));
 app.route("/setup", setup);
 app.route("/login", login);
 app.route("/accounts", accounts);
+app.route("/oauth", oauth);
 app.route("/api", api);
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)

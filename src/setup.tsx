@@ -51,7 +51,7 @@ app.post("/", async (c) => {
     email,
     passwordHash: hash("argon2", password),
   });
-  return c.redirect("/");
+  return c.redirect("/accounts");
 });
 
 export interface SetupPageProps {
