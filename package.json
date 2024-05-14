@@ -1,4 +1,7 @@
 {
+  "name": "@fedify/hollo",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
     "prod": "bun run src/index.ts",
     "dev": "bun run --hot src/index.ts",
