@@ -73,6 +73,31 @@ export const tokenRequired = createMiddleware(async (c, next) => {
   await next();
 });
 
+export function scopeRequired(scopes: Scope[]) {
+  return createMiddleware(async (c, next) => {
+    const token = c.get("token");
+    if (
+      !scopes.every(
+        (s) =>
+          token.scopes.includes(s) ||
+          token.scopes.includes(s.replace(/:[^:]+$/, "")) ||
+          ([
+            "read:blocks",
+            "write:blocks",
+            "read:follows",
+            "write:follows",
+            "read:mutes",
+            "write:mutes",
+          ].includes(s) &&
+            token.scopes.includes("follow")),
+      )
+    ) {
+      return c.json({ error: "insufficient_scope" }, 403);
+    }
+    await next();
+  });
+}
+
 const app = new Hono<{ Variables: Variables }>();
 
 const scopesSchema = z

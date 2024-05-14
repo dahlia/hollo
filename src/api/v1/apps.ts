@@ -3,7 +3,7 @@ import { encodeBase64Url } from "@std/encoding/base64url";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
-import { type Variables, tokenRequired } from "../../oauth";
+import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type Scope, applications, scopeEnum } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -84,14 +84,19 @@ app.post(
   },
 );
 
-app.get("/verify_credentials", tokenRequired, async (c) => {
-  const token = c.get("token");
-  const app = token.application;
-  return c.json({
-    id: app.id,
-    name: app.name,
-    website: app.website,
-  });
-});
+app.get(
+  "/verify_credentials",
+  tokenRequired,
+  scopeRequired(["read"]),
+  async (c) => {
+    const token = c.get("token");
+    const app = token.application;
+    return c.json({
+      id: app.id,
+      name: app.name,
+      website: app.website,
+    });
+  },
+);
 
 export default app;
