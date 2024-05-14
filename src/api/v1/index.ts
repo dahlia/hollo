@@ -26,4 +26,8 @@ app.get(
   },
 );
 
+app.get("/custom_emojis", (c) => {
+  return c.json([]);
+});
+
 export default app;
