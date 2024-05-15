@@ -85,7 +85,7 @@ app.post("/", async (c) => {
         type: "Person",
         name,
         handle: `@${username}@${fedCtx.url.host}`,
-        bioHtml: formatText(tx, bio ?? "").html,
+        bioHtml: (await formatText(tx, bio ?? "")).html,
         url: fedCtx.getActorUri(username).href,
         protected: protected_,
         inboxUrl: fedCtx.getInboxUri(username).href,
@@ -208,7 +208,7 @@ app.post("/:id", async (c) => {
       .update(accounts)
       .set({
         name,
-        bioHtml: formatText(tx, bio ?? "").html,
+        bioHtml: (await formatText(tx, bio ?? "")).html,
         protected: protected_,
       })
       .where(eq(accounts.id, c.req.param("id")));

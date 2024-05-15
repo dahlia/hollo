@@ -27,6 +27,9 @@
   "cSpell.words": [
     "biomejs",
     "bunx",
+    "datetime",
+    "favourite",
+    "favourited",
     "favourites",
     "fedi",
     "fedify",
@@ -34,6 +37,10 @@
     "hono",
     "logtape",
     "microblog",
-    "microblogging"
+    "microblogging",
+    "reblog",
+    "reblogged",
+    "reblogs",
+    "uuidv7"
   ]
 }

@@ -9,14 +9,14 @@ export interface FormatResult {
   html: string;
 }
 
-export function formatText(
+export async function formatText(
   _db: PgDatabase<
     PostgresJsQueryResultHKT,
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
   text: string,
-): FormatResult {
+): Promise<FormatResult> {
   // TODO: deal with mentions
   const md = new MarkdownIt();
   return {

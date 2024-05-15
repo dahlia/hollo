@@ -21,6 +21,7 @@
     "hono": "^4.3.4",
     "markdown-it": "^14.1.0",
     "postgres": "^3.4.4",
+    "uuidv7-js": "^1.0.12",
     "x-forwarded-fetch": "^0.1.0",
     "xss": "^1.0.15",
     "zod": "^3.23.8"

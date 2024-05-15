@@ -1,7 +1,11 @@
 import { zValidator } from "@hono/zod-validator";
+import { and, desc, eq, gte, lte, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
+import { db } from "../../db";
+import { serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
+import { posts } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -10,22 +14,53 @@ app.get(
   tokenRequired,
   scopeRequired(["read:statuses"]),
   zValidator(
-    "form",
+    "query",
     z.object({
       max_id: z.string().uuid().optional(),
       since_id: z.string().uuid().optional(),
       min_id: z.string().uuid().optional(),
-      limit: z.number().int().min(1).max(100).default(20),
+      limit: z
+        .string()
+        .transform((v) => Number.parseInt(v))
+        .optional(),
     }),
   ),
-  (c) => {
-    if (c.get("token").accountOwner == null) {
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
         422,
       );
     }
-    return c.json([]);
+    const query = c.req.valid("query");
+    const timeline = await db.query.posts.findMany({
+      where: and(
+        or(
+          eq(posts.accountId, owner.id),
+          eq(posts.visibility, "public"), // FIXME
+        ),
+        query.max_id == null ? undefined : lte(posts.id, query.max_id),
+        query.min_id == null ? undefined : gte(posts.id, query.min_id),
+      ),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+      },
+      orderBy: [desc(posts.id)],
+      limit: query.limit ?? 20,
+    });
+    return c.json(timeline.map(serializePost));
   },
 );
 

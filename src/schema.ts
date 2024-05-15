@@ -1,10 +1,13 @@
-import { relations } from "drizzle-orm";
+import { like, relations } from "drizzle-orm";
 import {
+  type AnyPgColumn,
   bigint,
   boolean,
+  foreignKey,
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
@@ -51,8 +54,13 @@ export const accounts = pgTable("accounts", {
   updated: timestamp("updated", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const accountRelations = relations(accounts, ({ one }) => ({
-  owner: one(accountOwners),
+export const accountRelations = relations(accounts, ({ one, many }) => ({
+  owner: one(accountOwners, {
+    fields: [accounts.id],
+    references: [accountOwners.id],
+  }),
+  posts: many(posts),
+  mentions: many(mentions),
 }));
 
 export type Account = typeof accounts.$inferSelect;
@@ -163,5 +171,109 @@ export const accessTokenRelations = relations(accessTokens, ({ one }) => ({
   accountOwner: one(accountOwners, {
     fields: [accessTokens.accountOwnerId],
     references: [accountOwners.id],
+  }),
+}));
+
+export const postTypeEnum = pgEnum("post_type", ["Article", "Note"]);
+
+export type PostType = (typeof postTypeEnum.enumValues)[number];
+
+export const postVisibilityEnum = pgEnum("post_visibility", [
+  "public",
+  "unlisted",
+  "private",
+  "direct",
+]);
+
+export type PostVisibility = (typeof postVisibilityEnum.enumValues)[number];
+
+export const posts = pgTable("posts", {
+  id: uuid("id").primaryKey(),
+  iri: text("iri").notNull().unique(),
+  type: postTypeEnum("type").notNull(),
+  accountId: uuid("actor_id")
+    .notNull()
+    .references(() => accounts.id),
+  applicationId: uuid("application_id").references(() => applications.id, {
+    onDelete: "set null",
+  }),
+  replyTargetId: uuid("reply_target_id").references(
+    (): AnyPgColumn => posts.id,
+    { onDelete: "set null" },
+  ),
+  sharingId: uuid("sharing_id").references((): AnyPgColumn => posts.id, {
+    onDelete: "cascade",
+  }),
+  visibility: postVisibilityEnum("visibility").notNull(),
+  summaryHtml: text("summary_html"),
+  contentHtml: text("content_html"),
+  language: text("language"),
+  tags: jsonb("tags").notNull().default({}).$type<Record<string, string>>(),
+  sensitive: boolean("sensitive").notNull().default(false),
+  url: text("url"),
+  repliesCount: bigint("replies_count", { mode: "number" }).default(0),
+  sharesCount: bigint("shares_count", { mode: "number" }).default(0),
+  likesCount: bigint("likes_count", { mode: "number" }).default(0),
+  published: timestamp("published", { withTimezone: true }),
+  updated: timestamp("updated", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Post = typeof posts.$inferSelect;
+export type NewPost = typeof posts.$inferInsert;
+
+export const postRelations = relations(posts, ({ one, many }) => ({
+  account: one(accounts, {
+    fields: [posts.accountId],
+    references: [accounts.id],
+  }),
+  application: one(applications, {
+    fields: [posts.applicationId],
+    references: [applications.id],
+  }),
+  replyTarget: one(posts, {
+    fields: [posts.replyTargetId],
+    references: [posts.id],
+    relationName: "replies",
+  }),
+  replies: many(posts, {
+    relationName: "replyTarget",
+  }),
+  sharing: one(posts, {
+    fields: [posts.sharingId],
+    references: [posts.id],
+    relationName: "shares",
+  }),
+  shares: many(posts, {
+    relationName: "sharing",
+  }),
+  mentions: many(mentions),
+}));
+
+export const mentions = pgTable(
+  "mentions",
+  {
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.postId, table.accountId] }),
+  }),
+);
+
+export type Mention = typeof mentions.$inferSelect;
+export type NewMention = typeof mentions.$inferInsert;
+
+export const mentionRelations = relations(mentions, ({ one }) => ({
+  post: one(posts, {
+    fields: [mentions.postId],
+    references: [posts.id],
+  }),
+  account: one(accounts, {
+    fields: [mentions.accountId],
+    references: [accounts.id],
   }),
 }));
