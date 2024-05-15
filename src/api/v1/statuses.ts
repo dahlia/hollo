@@ -122,4 +122,59 @@ app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
   return c.json(serializePost(post));
 });
 
+app.get(
+  "/:id/context",
+  tokenRequired,
+  scopeRequired(["read:statuses"]),
+  async (c) => {
+    const id = c.req.param("id");
+    const with_ = {
+      account: true,
+      application: true,
+      replyTarget: true,
+      sharing: {
+        with: {
+          account: true,
+          application: true,
+          replyTarget: true,
+          mentions: { with: { account: { with: { owner: true } } } },
+        },
+      },
+      mentions: { with: { account: { with: { owner: true } } } },
+      replies: true,
+    } as const;
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, id),
+      with: with_,
+    });
+    if (post == null) return c.json({ error: "Record not found" }, 404);
+    const ancestors: (typeof post)[] = [];
+    let p: typeof post | undefined = post;
+    while (p.replyTargetId != null) {
+      p = await db.query.posts.findFirst({
+        where: eq(posts.id, p.replyTargetId),
+        with: with_,
+      });
+      if (p == null) break;
+      ancestors.unshift(p);
+    }
+    const descendants: (typeof post)[] = [];
+    const ps: (typeof post)[] = [post];
+    while (true) {
+      const p = ps.shift();
+      if (p == null) break;
+      const replies = await db.query.posts.findMany({
+        where: eq(posts.replyTargetId, p.id),
+        with: with_,
+      });
+      descendants.push(...replies);
+      ps.push(...replies);
+    }
+    return c.json({
+      ancestors: ancestors.map(serializePost),
+      descendants: descendants.map(serializePost),
+    });
+  },
+);
+
 export default app;

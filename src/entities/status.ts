@@ -34,7 +34,7 @@ export function serializePost(
     in_reply_to_id: post.replyTargetId,
     in_reply_to_account_id: post.replyTarget?.accountId,
     sensitive: post.sensitive,
-    spoiler_text: post.summaryHtml,
+    spoiler_text: post.summaryHtml ?? "",
     visibility: post.visibility,
     language: post.language,
     uri: post.iri,
@@ -46,7 +46,7 @@ export function serializePost(
     reblogged: false, // TODO
     muted: false, // TODO
     bookmarked: false, // TODO
-    content: post.contentHtml,
+    content: post.contentHtml ?? "",
     reblog:
       post.sharing == null
         ? null

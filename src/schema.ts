@@ -233,18 +233,18 @@ export const postRelations = relations(posts, ({ one, many }) => ({
   replyTarget: one(posts, {
     fields: [posts.replyTargetId],
     references: [posts.id],
-    relationName: "replies",
+    relationName: "reply",
   }),
   replies: many(posts, {
-    relationName: "replyTarget",
+    relationName: "reply",
   }),
   sharing: one(posts, {
     fields: [posts.sharingId],
     references: [posts.id],
-    relationName: "shares",
+    relationName: "share",
   }),
   shares: many(posts, {
-    relationName: "sharing",
+    relationName: "share",
   }),
   mentions: many(mentions),
 }));
