@@ -99,4 +99,27 @@ app.post(
   },
 );
 
+app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
+  const id = c.req.param("id");
+  const post = await db.query.posts.findFirst({
+    where: eq(posts.id, id),
+    with: {
+      account: true,
+      application: true,
+      replyTarget: true,
+      sharing: {
+        with: {
+          account: true,
+          application: true,
+          replyTarget: true,
+          mentions: { with: { account: { with: { owner: true } } } },
+        },
+      },
+      mentions: { with: { account: { with: { owner: true } } } },
+    },
+  });
+  if (post == null) return c.json({ error: "Record not found" }, 404);
+  return c.json(serializePost(post));
+});
+
 export default app;
