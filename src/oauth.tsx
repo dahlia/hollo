@@ -294,118 +294,124 @@ const AuthorizationCodePage: FC<AuthorizationCodePageProps> = (props) => {
   );
 };
 
-app.post(
-  "/token",
-  cors(),
-  zValidator(
-    "form",
-    z.object({
-      grant_type: z.enum(["authorization_code", "client_credentials"]),
-      code: z.string().optional(),
-      client_id: z.string(),
-      client_secret: z.string(),
-      redirect_uri: z.string().url(),
-      scope: scopesSchema.optional(),
-    }),
-  ),
-  async (c) => {
-    const form = c.req.valid("form");
-    const application = await db.query.applications.findFirst({
-      where: eq(applications.clientId, form.client_id),
-    });
-    if (
-      application == null ||
-      application.clientSecret !== form.client_secret
-    ) {
-      return c.json(
-        {
-          error: "invalid_client",
-          error_description:
-            "Client authentication failed due to unknown client, " +
-            "no client authentication included, or unsupported authentication " +
-            "method.",
-        },
-        401,
-      );
+const tokenRequestSchema = z.object({
+  grant_type: z.enum(["authorization_code", "client_credentials"]),
+  code: z.string().optional(),
+  client_id: z.string(),
+  client_secret: z.string(),
+  redirect_uri: z.string().url(),
+  scope: scopesSchema.optional(),
+});
+
+app.post("/token", cors(), async (c) => {
+  let form: z.infer<typeof tokenRequestSchema>;
+  if (c.req.header("Content-Type") === "application/json") {
+    const json = await c.req.json();
+    const result = await tokenRequestSchema.safeParseAsync(json);
+    if (!result.success) {
+      return c.json({ error: "Invalid request", zod_error: result.error }, 400);
     }
-    const scopes = form.scope ?? ["read"];
-    if (scopes.some((s) => !application.scopes.includes(s))) {
+    form = result.data;
+  } else {
+    const formData = await c.req.parseBody();
+    const result = await tokenRequestSchema.safeParseAsync(formData);
+    if (!result.success) {
+      return c.json({ error: "Invalid request", zod_error: result.error }, 400);
+    }
+    form = result.data;
+  }
+  const application = await db.query.applications.findFirst({
+    where: eq(applications.clientId, form.client_id),
+  });
+  if (application == null || application.clientSecret !== form.client_secret) {
+    return c.json(
+      {
+        error: "invalid_client",
+        error_description:
+          "Client authentication failed due to unknown client, " +
+          "no client authentication included, or unsupported authentication " +
+          "method.",
+      },
+      401,
+    );
+  }
+  const scopes = form.scope ?? ["read"];
+  if (scopes.some((s) => !application.scopes.includes(s))) {
+    return c.json(
+      {
+        error: "invalid_scope",
+        error_description:
+          "The requested scope is invalid, unknown, or malformed.",
+      },
+      400,
+    );
+  }
+  if (form.grant_type === "authorization_code") {
+    if (form.code == null) {
       return c.json(
         {
-          error: "invalid_scope",
-          error_description:
-            "The requested scope is invalid, unknown, or malformed.",
+          error: "invalid_request",
+          error_description: "The authorization code is required.",
         },
         400,
       );
     }
-    if (form.grant_type === "authorization_code") {
-      if (form.code == null) {
-        return c.json(
-          {
-            error: "invalid_request",
-            error_description: "The authorization code is required.",
-          },
-          400,
-        );
-      }
-      const token = await db.query.accessTokens.findFirst({
-        where: eq(accessTokens.code, form.code),
-        with: { application: true },
-      });
-      if (token == null || token.grant_type !== "authorization_code") {
-        return c.json(
-          {
-            error: "invalid_grant",
-            error_description:
-              "The provided authorization code is invalid, expired, revoked, " +
-              "does not match the redirection URI used in the authorization " +
-              "request, or was issued to another client.",
-          },
-          400,
-        );
-      }
-      const now = (Date.now() / 1000) | 0;
-      const message = `${now}^${token.code}`;
-      const textEncoder = new TextEncoder();
-      const secretKey = await crypto.subtle.importKey(
-        "raw",
-        textEncoder.encode(SECRET_KEY),
-        { name: "HMAC", hash: "SHA-256" },
-        false,
-        ["sign"],
-      );
-      const signature = await crypto.subtle.sign(
-        "HMAC",
-        secretKey,
-        textEncoder.encode(message),
-      );
-      const accessToken = `${encodeBase64Url(signature)}^${message}`;
-      return c.json({
-        access_token: accessToken,
-        token_type: "Bearer",
-        scope: token.scopes.join(" "),
-        created_at: now,
-      });
-    }
-
-    const code = encodeBase64Url(crypto.getRandomValues(new Uint8Array(16)));
-    const tokens = await db
-      .insert(accessTokens)
-      .values({
-        code,
-        applicationId: application.id,
-        scopes,
-        grant_type: "client_credentials",
-      })
-      .returning();
-    return c.json({
-      access_token: tokens[0].code,
-      token_type: "Bearer",
-      scope: tokens[0].scopes.join(" "),
-      created_at: (+tokens[0].created / 1000) | 0,
+    const token = await db.query.accessTokens.findFirst({
+      where: eq(accessTokens.code, form.code),
+      with: { application: true },
     });
-  },
-);
+    if (token == null || token.grant_type !== "authorization_code") {
+      return c.json(
+        {
+          error: "invalid_grant",
+          error_description:
+            "The provided authorization code is invalid, expired, revoked, " +
+            "does not match the redirection URI used in the authorization " +
+            "request, or was issued to another client.",
+        },
+        400,
+      );
+    }
+    const now = (Date.now() / 1000) | 0;
+    const message = `${now}^${token.code}`;
+    const textEncoder = new TextEncoder();
+    const secretKey = await crypto.subtle.importKey(
+      "raw",
+      textEncoder.encode(SECRET_KEY),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    const signature = await crypto.subtle.sign(
+      "HMAC",
+      secretKey,
+      textEncoder.encode(message),
+    );
+    const accessToken = `${encodeBase64Url(signature)}^${message}`;
+    return c.json({
+      access_token: accessToken,
+      token_type: "Bearer",
+      scope: token.scopes.join(" "),
+      created_at: now,
+    });
+  }
+
+  const code = encodeBase64Url(crypto.getRandomValues(new Uint8Array(16)));
+  const tokens = await db
+    .insert(accessTokens)
+    .values({
+      code,
+      applicationId: application.id,
+      scopes,
+      grant_type: "client_credentials",
+    })
+    .returning();
+  return c.json({
+    access_token: tokens[0].code,
+    token_type: "Bearer",
+    scope: tokens[0].scopes.join(" "),
+    created_at: (+tokens[0].created / 1000) | 0,
+  });
+});
 
 export default app;
