@@ -1,6 +1,12 @@
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import { serializeAccountOwner } from "../../entities/account";
+import { db } from "../../db";
+import {
+  serializeAccount,
+  serializeAccountOwner,
+} from "../../entities/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
+import { accounts } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -19,5 +25,18 @@ app.get(
     return c.json(serializeAccountOwner(accountOwner));
   },
 );
+
+app.get("/:id", async (c) => {
+  const id = c.req.param("id");
+  const account = await db.query.accounts.findFirst({
+    where: eq(accounts.id, id),
+    with: { owner: true },
+  });
+  if (account == null) return c.json({ error: "Record not found" }, 404);
+  if (account.owner != null) {
+    return c.json(serializeAccountOwner({ ...account.owner, account }));
+  }
+  return c.json(serializeAccount(account));
+});
 
 export default app;
