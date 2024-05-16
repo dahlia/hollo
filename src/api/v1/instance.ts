@@ -14,25 +14,24 @@ app.get("/", async (c) => {
   });
   if (accountOwner == null) return c.notFound();
   return c.json({
-    domain: url.host,
+    uri: url.host,
     title: url.host,
-    version: metadata.version,
-    source_url: "https://github.com/dahlia/hollo",
+    short_description: `A Hollo instance at ${url.host}`,
     description: `A Hollo instance at ${url.host}`,
-    usage: {
-      users: {
-        active_month: 0, // TODO
-      },
+    email: credential.email,
+    version: metadata.version,
+    urls: {}, // TODO
+    stats: {
+      user_count: 0, // TODO
+      status_count: 0, // TODO
+      domain_count: 0, // TODO
     },
-    // TODO: thumbnail
+    thumbnail: null, // TODO
     languages: ["en"], // TODO
+    registrations: false,
+    approval_required: true,
+    invites_enabled: false,
     configuration: {
-      // TODO: urls
-      accounts: {
-        // TODO
-        max_featured_tags: 0,
-        max_pinned_statuses: 0,
-      },
       statuses: {
         // TODO
         max_characters: 4096,
@@ -55,20 +54,9 @@ app.get("/", async (c) => {
         min_expiration: 0,
         max_expiration: 0,
       },
-      translation: {
-        enabled: false,
-      },
-      registrations: {
-        enabled: false,
-        approval_required: true,
-        message: null,
-      },
-      contact: {
-        email: credential.email,
-        account: serializeAccountOwner(accountOwner),
-      },
-      rules: [],
     },
+    contact_account: serializeAccountOwner(accountOwner),
+    rules: [],
   });
 });
 
