@@ -142,6 +142,40 @@ app.patch(
   },
 );
 
+app.get(
+  "/relationships",
+  tokenRequired,
+  scopeRequired(["read:follows"]),
+  (c) => {
+    if (c.get("token").accountOwner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const ids = c.req.queries("id[]") ?? [];
+    return c.json(
+      ids.map((id) => ({
+        id,
+        following: false,
+        showing_reblogs: false,
+        notifying: false,
+        languages: null,
+        followed_by: false,
+        blocking: false,
+        blocked_by: false,
+        muting: false,
+        muting_notifications: false,
+        requested: false,
+        requested_by: false,
+        domain_blocking: false,
+        endorsed: false,
+        note: "",
+      })),
+    );
+  },
+);
+
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const account = await db.query.accounts.findFirst({
