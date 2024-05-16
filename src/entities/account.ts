@@ -22,7 +22,11 @@ export function serializeAccount(account: Account) {
     statuses_count: account.posts,
     last_status_at: null,
     emojis: [],
-    fields: [],
+    fields: Object.entries(account.fieldHtmls).map(([name, value]) => ({
+      name,
+      value,
+      verified_at: null,
+    })),
   };
 }
 
@@ -37,7 +41,11 @@ export function serializeAccountOwner(
       sensitive: false,
       language: "en",
       follow_requests_count: 0,
-      fields: [],
+      fields: Object.entries(accountOwner.fields).map(([name, value]) => ({
+        name,
+        value,
+        verified_at: null,
+      })),
     },
   };
 }

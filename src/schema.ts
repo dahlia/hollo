@@ -4,6 +4,7 @@ import {
   bigint,
   boolean,
   foreignKey,
+  json,
   jsonb,
   pgEnum,
   pgTable,
@@ -50,6 +51,10 @@ export const accounts = pgTable("accounts", {
   following: bigint("following", { mode: "number" }).default(0),
   followers: bigint("followers", { mode: "number" }).default(0),
   posts: bigint("posts", { mode: "number" }).default(0),
+  fieldHtmls: json("field_htmls")
+    .notNull()
+    .default({})
+    .$type<Record<string, string>>(),
   published: timestamp("published", { withTimezone: true }),
   updated: timestamp("updated", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -72,6 +77,7 @@ export const accountOwners = pgTable("account_owners", {
     .references(() => accounts.id),
   privateKeyJwk: jsonb("private_key_jwk").$type<JsonWebKey>().notNull(),
   publicKeyJwk: jsonb("public_key_jwk").$type<JsonWebKey>().notNull(),
+  fields: json("fields").notNull().default({}).$type<Record<string, string>>(),
   bio: text("bio"),
 });
 

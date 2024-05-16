@@ -57,6 +57,13 @@
       "when": 1715770920174,
       "tag": "0007_posts",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1715869311534,
+      "tag": "0008_fields",
+      "breakpoints": true
     }
   ]
 }

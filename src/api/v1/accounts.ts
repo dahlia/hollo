@@ -92,6 +92,17 @@ app.patch(
       );
       coverUrl = new URL(`covers/${account.id}`, S3_URL_BASE).href;
     }
+    const fields = Object.entries(owner.fields);
+    const fieldHtmls: [string, string][] = [];
+    for (const i of [0, 1, 2, 3] as const) {
+      const name = form[`fields_attributes[${i}][name]`];
+      const value = form[`fields_attributes[${i}][value]`];
+      if (name != null && value != null) {
+        fields[i] = [name, value];
+      }
+      const contentHtml = (await formatText(db, fields[i][1])).html;
+      fieldHtmls.push([fields[i][0], contentHtml]);
+    }
     const updatedAccounts = await db
       .update(accounts)
       .set({
@@ -102,6 +113,7 @@ app.patch(
             : (await formatText(db, form.note)).html,
         avatarUrl,
         coverUrl,
+        fieldHtmls: Object.fromEntries(fieldHtmls),
         protected:
           form.locked == null ? account.protected : form.locked === "true",
         type:
@@ -117,6 +129,7 @@ app.patch(
       .update(accountOwners)
       .set({
         bio: form.note ?? owner.bio,
+        fields: Object.fromEntries(fields),
       })
       .where(eq(accountOwners.id, owner.id))
       .returning();

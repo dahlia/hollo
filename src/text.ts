@@ -18,8 +18,10 @@ export async function formatText(
   text: string,
 ): Promise<FormatResult> {
   // TODO: deal with mentions
-  const md = new MarkdownIt();
+  const md = new MarkdownIt({ linkify: true });
   return {
     html: xss(md.render(text)),
   };
 }
+
+// cSpell: ignore linkify
