@@ -10,6 +10,8 @@
     "migrate:generate": "bunx drizzle-kit generate"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.577.0",
+    "@aws-sdk/credential-providers": "^3.577.0",
     "@fedify/fedify": "0.9.0-dev.173",
     "@fedify/markdown-it-mention": "^0.1.1",
     "@hono/zod-validator": "^0.2.1",
