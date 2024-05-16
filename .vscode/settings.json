@@ -25,6 +25,7 @@
     }
   },
   "cSpell.words": [
+    "activitypub",
     "biomejs",
     "bunx",
     "datetime",
@@ -38,6 +39,7 @@
     "logtape",
     "microblog",
     "microblogging",
+    "nodeinfo",
     "reblog",
     "reblogged",
     "reblogs",

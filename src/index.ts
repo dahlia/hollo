@@ -18,6 +18,7 @@ app.route("/login", login);
 app.route("/accounts", accounts);
 app.route("/oauth", oauth);
 app.route("/api", api);
+app.get("/nodeinfo/2.0", (c) => c.redirect("/nodeinfo/2.1"));
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const BEHIND_PROXY = process.env["BEHIND_PROXY"] === "true";

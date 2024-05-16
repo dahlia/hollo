@@ -11,7 +11,9 @@ import {
   importJwk,
 } from "@fedify/fedify";
 import { Temporal } from "@js-temporal/polyfill";
+import { parse } from "@std/semver";
 import { and, eq, like } from "drizzle-orm";
+import metadata from "../package.json" with { type: "json" };
 import db from "./db";
 import { accounts, posts } from "./schema";
 
@@ -134,8 +136,31 @@ federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
   });
 });
 
+federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
+  return {
+    software: {
+      name: "hollo",
+      version: parse(metadata.version),
+      repository: new URL("https://github.com/dahlia/hollo"),
+    },
+    protocols: ["activitypub"],
+    usage: {
+      users: {
+        //TODO
+        total: 1,
+        activeMonth: 1,
+        activeHalfyear: 1,
+      },
+      localComments: 0,
+      localPosts: 0,
+    },
+  };
+});
+
 function toTemporalInstant(value: Date): Temporal.Instant {
   return Temporal.Instant.from(value.toISOString());
 }
 
 export default federation;
+
+// cSpell: ignore halfyear
