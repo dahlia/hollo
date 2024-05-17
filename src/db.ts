@@ -6,7 +6,7 @@ import * as schema from "./schema";
 const databaseUrl = process.env["DATABASE_URL"];
 if (databaseUrl == null) throw new Error("DATABASE_URL must be defined");
 
-const client = postgres(databaseUrl);
+const client = postgres(databaseUrl, { connect_timeout: 5 });
 export const db = drizzle(client, { schema });
 
 export default db;

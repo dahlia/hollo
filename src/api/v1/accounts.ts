@@ -178,6 +178,23 @@ app.get(
   },
 );
 
+app.get(
+  "/lookup",
+  zValidator("query", z.object({ acct: z.string() })),
+  async (c) => {
+    const acct = c.req.valid("query").acct;
+    const account = await db.query.accounts.findFirst({
+      where: eq(
+        accounts.handle,
+        acct.includes("@") ? `@${acct}` : `@${acct}@${new URL(c.req.url).host}`,
+      ),
+      with: { owner: true },
+    });
+    if (account == null) return c.json({ error: "Record not found" }, 404);
+    return c.json(serializeAccountOwner({ ...account.owner, account }));
+  },
+);
+
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const account = await db.query.accounts.findFirst({
