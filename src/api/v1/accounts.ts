@@ -1,6 +1,6 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { zValidator } from "@hono/zod-validator";
-import { eq } from "drizzle-orm";
+import { and, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
@@ -8,10 +8,12 @@ import {
   serializeAccount,
   serializeAccountOwner,
 } from "../../entities/account";
+import { serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { S3_BUCKET, S3_URL_BASE, s3, urlBase } from "../../s3";
-import { accountOwners, accounts } from "../../schema";
+import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
+import { accountOwners, accounts, posts } from "../../schema";
 import { formatText } from "../../text";
+import { timelineQuerySchema } from "./timelines";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -188,5 +190,75 @@ app.get("/:id", async (c) => {
   }
   return c.json(serializeAccount(account));
 });
+
+app.get(
+  "/:id/statuses",
+  tokenRequired,
+  scopeRequired(["read:statuses"]),
+  zValidator(
+    "query",
+    timelineQuerySchema.merge(
+      z.object({
+        only_media: z.enum(["true", "false"]).optional(),
+        exclude_replies: z.enum(["true", "false"]).optional(),
+        exclude_reblogs: z.enum(["true", "false"]).optional(),
+        pinned: z.enum(["true", "false"]).optional(),
+        tagged: z.string().optional(),
+      }),
+    ),
+  ),
+  async (c) => {
+    const id = c.req.param("id");
+    const account = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: { owner: true },
+    });
+    if (account == null) return c.json({ error: "Record not found" }, 404);
+    const tokenOwner = c.get("token").accountOwner;
+    if (tokenOwner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const query = c.req.valid("query");
+    if (query.pinned || query.only_media) {
+      return c.json([]); // FIXME
+    }
+    const postList = await db.query.posts.findMany({
+      where: and(
+        eq(posts.accountId, id),
+        or(
+          eq(posts.accountId, tokenOwner.id),
+          eq(posts.visibility, "public"),
+          eq(posts.visibility, "unlisted"),
+          // TODO: private, direct
+        ),
+        query.exclude_replies === "true"
+          ? isNull(posts.replyTargetId)
+          : undefined,
+        query.max_id == null ? undefined : lte(posts.id, query.max_id),
+        query.min_id == null ? undefined : gte(posts.id, query.min_id),
+      ),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+      },
+      orderBy: [desc(posts.id)],
+      limit: query.limit ?? 20,
+    });
+    return c.json(postList.map(serializePost));
+  },
+);
 
 export default app;

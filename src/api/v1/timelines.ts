@@ -9,7 +9,7 @@ import { posts } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
-const timelineQuerySchema = z.object({
+export const timelineQuerySchema = z.object({
   max_id: z.string().uuid().optional(),
   since_id: z.string().uuid().optional(),
   min_id: z.string().uuid().optional(),

@@ -3,7 +3,6 @@ import {
   type AnyPgColumn,
   bigint,
   boolean,
-  foreignKey,
   json,
   jsonb,
   pgEnum,
