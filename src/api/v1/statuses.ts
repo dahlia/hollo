@@ -13,32 +13,37 @@ import { formatText } from "../../text";
 
 const app = new Hono<{ Variables: Variables }>();
 
+const statusSchema = z.object({
+  status: z.string().min(1).optional(),
+  media_ids: z.array(z.string().uuid()).optional(),
+  poll: z
+    .object({
+      options: z.array(z.string()).optional(),
+      expires_in: z.number().int().optional(),
+      multiple: z.boolean().default(false),
+      hide_totals: z.boolean().default(false),
+    })
+    .optional(),
+  sensitive: z.boolean().default(false),
+  spoiler_text: z.string().optional(),
+  language: z.string().min(2).optional(),
+});
+
 app.post(
   "/",
   tokenRequired,
   scopeRequired(["write:statuses"]),
   zValidator(
     "json",
-    z.object({
-      status: z.string().min(1).optional(),
-      media_ids: z.array(z.string().uuid()).optional(),
-      poll: z
-        .object({
-          options: z.array(z.string()).optional(),
-          expires_in: z.number().int().optional(),
-          multiple: z.boolean().default(false),
-          hide_totals: z.boolean().default(false),
-        })
-        .optional(),
-      in_reply_to_id: z.string().uuid().optional(),
-      sensitive: z.boolean().default(false),
-      spoiler_text: z.string().optional(),
-      visibility: z
-        .enum(["public", "unlisted", "private", "direct"])
-        .optional(),
-      language: z.string().min(2).optional(),
-      scheduled_at: z.string().datetime().optional(),
-    }),
+    statusSchema.merge(
+      z.object({
+        in_reply_to_id: z.string().uuid().optional(),
+        visibility: z
+          .enum(["public", "unlisted", "private", "direct"])
+          .optional(),
+        scheduled_at: z.string().datetime().optional(),
+      }),
+    ),
   ),
   async (c) => {
     // TODO idempotency-key
@@ -76,6 +81,60 @@ app.post(
       url: url.href,
       published: new Date(),
     });
+    // TODO: mentions
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, id),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+      },
+    });
+    // biome-ignore lint/style/noNonNullAssertion: never null
+    return c.json(serializePost(post!));
+  },
+);
+
+app.put(
+  "/:id",
+  tokenRequired,
+  scopeRequired(["write:statuses"]),
+  zValidator("json", statusSchema),
+  async (c) => {
+    const token = c.get("token");
+    const owner = token.accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const id = c.req.param("id");
+    const data = c.req.valid("json");
+    const result = await db
+      .update(posts)
+      .set({
+        contentHtml:
+          data.status == null ? null : (await formatText(db, data.status)).html,
+        sensitive: data.sensitive,
+        summaryHtml:
+          data.spoiler_text == null
+            ? null
+            : (await formatText(db, data.spoiler_text)).html,
+        language: data.language ?? "en", // TODO
+      })
+      .where(eq(posts.id, id))
+      .returning();
+    if (result.length < 1) return c.json({ error: "Record not found" }, 404);
     // TODO: mentions
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, id),
