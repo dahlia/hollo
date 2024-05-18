@@ -10,12 +10,12 @@ import {
   getActorClassByTypeName,
   importJwk,
 } from "@fedify/fedify";
-import { Temporal } from "@js-temporal/polyfill";
 import { parse } from "@std/semver";
 import { and, eq, like } from "drizzle-orm";
-import metadata from "../package.json" with { type: "json" };
-import db from "./db";
-import { accounts, posts } from "./schema";
+import metadata from "../../package.json" with { type: "json" };
+import db from "../db";
+import { accounts, posts } from "../schema";
+import { toTemporalInstant } from "./date";
 
 export const federation = new Federation({
   kv: new MemoryKvStore(),
@@ -156,10 +156,6 @@ federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
     },
   };
 });
-
-function toTemporalInstant(value: Date): Temporal.Instant {
-  return Temporal.Instant.from(value.toISOString());
-}
 
 export default federation;
 

@@ -44,6 +44,7 @@
     "reblog",
     "reblogged",
     "reblogs",
-    "uuidv7"
+    "uuidv7",
+    "webfinger"
   ]
 }

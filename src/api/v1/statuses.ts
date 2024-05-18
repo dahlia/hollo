@@ -8,7 +8,7 @@ import { db } from "../../db";
 import { serializePost } from "../../entities/status";
 import federation from "../../federation";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { posts } from "../../schema";
+import { mentions, posts } from "../../schema";
 import { formatText } from "../../text";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -60,28 +60,43 @@ app.post(
     const handle = owner.account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
     const id = uuidv7();
     const url = fedCtx.getObjectUri(Note, { handle, id });
-    await db.insert(posts).values({
-      id,
-      iri: url.href,
-      type: "Note",
-      accountId: owner.id,
-      applicationId: token.applicationId,
-      replyTargetId: data.in_reply_to_id,
-      sharingId: null,
-      visibility: data.visibility ?? "public", // TODO
-      summaryHtml:
+    await db.transaction(async (tx) => {
+      const content =
+        data.status == null ? null : await formatText(tx, data.status, fedCtx);
+      const summary =
         data.spoiler_text == null
           ? null
-          : (await formatText(db, data.spoiler_text)).html,
-      contentHtml:
-        data.status == null ? null : (await formatText(db, data.status)).html,
-      language: data.language ?? "en", // TODO
-      tags: {}, // TODO
-      sensitive: data.sensitive,
-      url: url.href,
-      published: new Date(),
+          : await formatText(tx, data.spoiler_text, fedCtx);
+      await tx.insert(posts).values({
+        id,
+        iri: url.href,
+        type: "Note",
+        accountId: owner.id,
+        applicationId: token.applicationId,
+        replyTargetId: data.in_reply_to_id,
+        sharingId: null,
+        visibility: data.visibility ?? "public", // TODO
+        summaryHtml: summary?.html,
+        contentHtml: content?.html,
+        language: data.language ?? "en", // TODO
+        tags: {}, // TODO
+        sensitive: data.sensitive,
+        url: url.href,
+        published: new Date(),
+      });
+      const mentionedIds = [
+        ...(content?.mentions ?? []),
+        ...(summary?.mentions ?? []),
+      ];
+      if (mentionedIds.length > 0) {
+        await tx.insert(mentions).values(
+          mentionedIds.map((accountId) => ({
+            postId: id,
+            accountId,
+          })),
+        );
+      }
     });
-    // TODO: mentions
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, id),
       with: {
@@ -120,22 +135,39 @@ app.put(
     }
     const id = c.req.param("id");
     const data = c.req.valid("json");
-    const result = await db
-      .update(posts)
-      .set({
-        contentHtml:
-          data.status == null ? null : (await formatText(db, data.status)).html,
-        sensitive: data.sensitive,
-        summaryHtml:
-          data.spoiler_text == null
-            ? null
-            : (await formatText(db, data.spoiler_text)).html,
-        language: data.language ?? "en", // TODO
-      })
-      .where(eq(posts.id, id))
-      .returning();
-    if (result.length < 1) return c.json({ error: "Record not found" }, 404);
-    // TODO: mentions
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    await db.transaction(async (tx) => {
+      const content =
+        data.status == null ? null : await formatText(tx, data.status, fedCtx);
+      const summary =
+        data.spoiler_text == null
+          ? null
+          : await formatText(tx, data.spoiler_text, fedCtx);
+      const result = await tx
+        .update(posts)
+        .set({
+          contentHtml: content?.html,
+          sensitive: data.sensitive,
+          summaryHtml: summary?.html,
+          language: data.language ?? "en", // TODO
+        })
+        .where(eq(posts.id, id))
+        .returning();
+      if (result.length < 1) return c.json({ error: "Record not found" }, 404);
+      await tx.delete(mentions).where(eq(mentions.postId, id));
+      const mentionedIds = [
+        ...(content?.mentions ?? []),
+        ...(summary?.mentions ?? []),
+      ];
+      if (mentionedIds.length > 0) {
+        await tx.insert(mentions).values(
+          mentionedIds.map((accountId) => ({
+            postId: id,
+            accountId,
+          })),
+        );
+      }
+    });
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, id),
       with: {

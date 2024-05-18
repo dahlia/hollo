@@ -1,4 +1,5 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { isActor, lookupObject } from "@fedify/fedify";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
 import { Hono } from "hono";
@@ -9,6 +10,8 @@ import {
   serializeAccountOwner,
 } from "../../entities/account";
 import { serializePost } from "../../entities/status";
+import { federation } from "../../federation";
+import { persistAccount } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
 import { accountOwners, accounts, posts } from "../../schema";
@@ -180,9 +183,16 @@ app.get(
 
 app.get(
   "/lookup",
-  zValidator("query", z.object({ acct: z.string() })),
+  zValidator(
+    "query",
+    z.object({
+      acct: z.string(),
+      skip_webfinger: z.enum(["true", "false"]).default("true"),
+    }),
+  ),
   async (c) => {
-    const acct = c.req.valid("query").acct;
+    const query = c.req.valid("query");
+    const acct = query.acct;
     const account = await db.query.accounts.findFirst({
       where: eq(
         accounts.handle,
@@ -190,7 +200,20 @@ app.get(
       ),
       with: { owner: true },
     });
-    if (account == null) return c.json({ error: "Record not found" }, 404);
+    if (account == null) {
+      if (query.skip_webfinger !== "false") {
+        return c.json({ error: "Record not found" }, 404);
+      }
+      const fedCtx = federation.createContext(c.req.raw, undefined);
+      const actor = await lookupObject(acct, fedCtx);
+      if (!isActor(actor)) return c.json({ error: "Record not found" }, 404);
+      const loadedAccount = await persistAccount(db, actor, fedCtx);
+      if (loadedAccount == null) {
+        return c.json({ error: "Record not found" }, 404);
+      }
+      return c.json(serializeAccount(loadedAccount));
+    }
+    if (account.owner == null) return c.json(serializeAccount(account));
     return c.json(serializeAccountOwner({ ...account.owner, account }));
   },
 );
