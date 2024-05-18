@@ -1,7 +1,6 @@
-import { zValidator } from "@hono/zod-validator";
 import { encodeBase64Url } from "@std/encoding/base64url";
 import { Hono } from "hono";
-import { type SafeParseReturnType, z } from "zod";
+import { z } from "zod";
 import { db } from "../../db";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type Scope, applications, scopeEnum } from "../../schema";

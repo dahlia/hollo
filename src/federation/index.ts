@@ -1,20 +1,26 @@
 import {
+  Accept,
   Endpoints,
   Federation,
+  Follow,
   Hashtag,
   LanguageString,
   MemoryKvStore,
   Mention,
   Note,
   PUBLIC_COLLECTION,
+  Reject,
   getActorClassByTypeName,
   importJwk,
+  isActor,
 } from "@fedify/fedify";
+import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
 import { and, eq, like } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
-import { accounts, posts } from "../schema";
+import { accountOwners, accounts, follows, posts } from "../schema";
+import { persistAccount } from "./account";
 import { toTemporalInstant } from "./date";
 
 export const federation = new Federation({
@@ -24,22 +30,23 @@ export const federation = new Federation({
 federation
   .setActorDispatcher("/@{handle}", async (ctx, handle, key) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: like(accounts.handle, `@${handle}@%`),
+      where: eq(accountOwners.handle, handle),
       with: { account: true },
     });
     if (owner == null) return null;
-    const cls = getActorClassByTypeName(owner.account.type);
+    const account = owner.account;
+    const cls = getActorClassByTypeName(account.type);
     return new cls({
-      id: new URL(owner.account.iri),
-      name: owner.account.name,
+      id: new URL(account.iri),
+      name: account.name,
       preferredUsername: handle,
-      summary: owner.account.bioHtml,
-      url: owner.account.url ? new URL(owner.account.url) : null,
-      manuallyApprovesFollowers: owner.account.protected,
-      icon: owner.account.avatarUrl ? new URL(owner.account.avatarUrl) : null,
-      image: owner.account.coverUrl ? new URL(owner.account.coverUrl) : null,
-      published: owner.account.published
-        ? toTemporalInstant(owner.account.published)
+      summary: account.bioHtml,
+      url: account.url ? new URL(account.url) : null,
+      manuallyApprovesFollowers: account.protected,
+      icon: account.avatarUrl ? new URL(account.avatarUrl) : null,
+      image: account.coverUrl ? new URL(account.coverUrl) : null,
+      published: account.published
+        ? toTemporalInstant(account.published)
         : null,
       publicKey: key,
       followers: ctx.getFollowersUri(handle),
@@ -51,10 +58,9 @@ federation
       }),
     });
   })
-  .setKeyPairDispatcher(async (_, handle) => {
+  .setKeyPairDispatcher(async (_ctx, handle) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: like(accounts.handle, `@${handle}@%`),
-      with: { account: true },
+      where: eq(accountOwners.handle, handle),
     });
     if (owner == null) return null;
     return {
@@ -81,7 +87,95 @@ federation.setOutboxDispatcher("/@{handle}/outbox", async (_ctx, _) => {
   };
 });
 
-federation.setInboxListeners("/@{handle}/inbox", "/inbox");
+const inboxLogger = getLogger(["hollo", "inbox"]);
+
+federation
+  .setInboxListeners("/@{handle}/inbox", "/inbox")
+  .on(Follow, async (ctx, follow) => {
+    if (follow.id == null) return;
+    const actor = await follow.getActor();
+    if (!isActor(actor) || actor.id == null) {
+      inboxLogger.debug("Invalid actor: {actor}", { actor });
+      return;
+    }
+    const object = await follow.getObject();
+    if (!isActor(object) || object.id == null) {
+      inboxLogger.debug("Invalid object: {object}", { object });
+      return;
+    }
+    const following = await db.query.accounts.findFirst({
+      where: eq(accounts.iri, object.id.href),
+      with: { owner: true },
+    });
+    if (following?.owner == null) {
+      inboxLogger.debug("Invalid following: {following}", { following });
+      return;
+    }
+    const follower = await persistAccount(db, actor, ctx);
+    if (follower == null) return;
+    await db
+      .insert(follows)
+      .values({
+        iri: follow.id.href,
+        followingId: following.id,
+        followerId: follower.id,
+        approved: following.protected ? null : new Date(),
+      })
+      .onConflictDoNothing();
+    if (!following.protected) {
+      await ctx.sendActivity(
+        following.owner,
+        actor,
+        new Accept({
+          actor: object.id,
+          object: follow,
+        }),
+      );
+    }
+  })
+  .on(Accept, async (ctx, accept) => {
+    const object = await accept.getObject();
+    if (object instanceof Follow) {
+      if (object.id == null) return;
+      const actor = await accept.getActor();
+      if (!isActor(actor) || actor.id == null) {
+        inboxLogger.debug("Invalid actor: {actor}", { actor });
+        return;
+      }
+      const account = await persistAccount(db, actor, ctx);
+      if (account == null) return;
+      await db
+        .update(follows)
+        .set({ approved: new Date() })
+        .where(
+          and(
+            eq(follows.iri, object.id.href),
+            eq(follows.followingId, account.id),
+          ),
+        );
+    }
+  })
+  .on(Reject, async (ctx, reject) => {
+    const object = await reject.getObject();
+    if (object instanceof Follow) {
+      if (object.id == null) return;
+      const actor = await reject.getActor();
+      if (!isActor(actor) || actor.id == null) {
+        inboxLogger.debug("Invalid actor: {actor}", { actor });
+        return;
+      }
+      const account = await persistAccount(db, actor, ctx);
+      if (account == null) return;
+      await db
+        .delete(follows)
+        .where(
+          and(
+            eq(follows.iri, object.id.href),
+            eq(follows.followingId, account.id),
+          ),
+        );
+    }
+  });
 
 federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
   const owner = await db.query.accountOwners.findFirst({

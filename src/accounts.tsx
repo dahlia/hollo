@@ -97,6 +97,7 @@ app.post("/", async (c) => {
     const keyPair = await generateCryptoKeyPair();
     await tx.insert(accountOwners).values({
       id: account[0].id,
+      handle: username,
       privateKeyJwk: await exportJwk(keyPair.privateKey),
       publicKeyJwk: await exportJwk(keyPair.publicKey),
       bio: bio ?? "",

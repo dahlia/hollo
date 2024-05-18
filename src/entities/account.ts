@@ -17,9 +17,9 @@ export function serializeAccount(account: Account) {
     avatar_static: account.avatarUrl,
     header: account.coverUrl,
     header_static: account.coverUrl,
-    followers_count: account.followers,
-    following_count: account.following,
-    statuses_count: account.posts,
+    followers_count: account.followersCount,
+    following_count: account.followingCount,
+    statuses_count: account.postsCount,
     last_status_at: null,
     emojis: [],
     fields: Object.entries(account.fieldHtmls).map(([name, value]) => ({

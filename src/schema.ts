@@ -1,4 +1,4 @@
-import { like, relations } from "drizzle-orm";
+import { relations } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
@@ -47,9 +47,9 @@ export const accounts = pgTable("accounts", {
   inboxUrl: text("inbox_url").notNull(),
   followersUrl: text("followers_url"),
   sharedInboxUrl: text("shared_inbox_url"),
-  following: bigint("following", { mode: "number" }).default(0),
-  followers: bigint("followers", { mode: "number" }).default(0),
-  posts: bigint("posts", { mode: "number" }).default(0),
+  followingCount: bigint("following_count", { mode: "number" }).default(0),
+  followersCount: bigint("followers_count", { mode: "number" }).default(0),
+  postsCount: bigint("posts_count", { mode: "number" }).default(0),
   fieldHtmls: json("field_htmls")
     .notNull()
     .default({})
@@ -63,6 +63,8 @@ export const accountRelations = relations(accounts, ({ one, many }) => ({
     fields: [accounts.id],
     references: [accountOwners.id],
   }),
+  following: many(follows, { relationName: "following" }),
+  followers: many(follows, { relationName: "follower" }),
   posts: many(posts),
   mentions: many(mentions),
 }));
@@ -74,6 +76,7 @@ export const accountOwners = pgTable("account_owners", {
   id: uuid("id")
     .primaryKey()
     .references(() => accounts.id),
+  handle: text("handle").notNull().unique(),
   privateKeyJwk: jsonb("private_key_jwk").$type<JsonWebKey>().notNull(),
   publicKeyJwk: jsonb("public_key_jwk").$type<JsonWebKey>().notNull(),
   fields: json("fields").notNull().default({}).$type<Record<string, string>>(),
@@ -93,6 +96,45 @@ export const accountOwnerRelations = relations(
     accessTokens: many(accessTokens),
   }),
 );
+
+export const follows = pgTable(
+  "follows",
+  {
+    iri: text("iri").notNull().unique(),
+    followingId: uuid("following_id")
+      .notNull()
+      .references(() => accounts.id),
+    followerId: uuid("follower_id")
+      .notNull()
+      .references(() => accounts.id),
+    shares: boolean("shares").notNull().default(true),
+    notify: boolean("notify").notNull().default(false),
+    languages: text("languages").array(),
+    created: timestamp("created", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    approved: timestamp("approved", { withTimezone: true }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.followingId, table.followerId] }),
+  }),
+);
+
+export type Follow = typeof follows.$inferSelect;
+export type NewFollow = typeof follows.$inferInsert;
+
+export const followRelations = relations(follows, ({ one }) => ({
+  following: one(accounts, {
+    fields: [follows.followingId],
+    references: [accounts.id],
+    relationName: "follower",
+  }),
+  follower: one(accounts, {
+    fields: [follows.followerId],
+    references: [accounts.id],
+    relationName: "following",
+  }),
+}));
 
 export const scopeEnum = pgEnum("scope", [
   "read",

@@ -64,6 +64,34 @@
       "when": 1715869311534,
       "tag": "0008_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1716027036647,
+      "tag": "0009_follows",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1716027702080,
+      "tag": "0010_follows.approved",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1716038457086,
+      "tag": "0011_follows.iri",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1716039376548,
+      "tag": "0012_account_owners.handle",
+      "breakpoints": true
     }
   ]
 }

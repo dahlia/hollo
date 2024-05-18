@@ -66,9 +66,9 @@ export async function persistAccount(
     inboxUrl: actor.inboxId.href,
     followersUrl: followers?.id?.href,
     sharedInboxUrl: actor.endpoints?.sharedInbox?.href,
-    following: (await actor.getFollowing(options))?.totalItems ?? 0,
-    followers: followers?.totalItems ?? 0,
-    posts: (await actor.getOutbox(options))?.totalItems ?? 0,
+    followingCount: (await actor.getFollowing(options))?.totalItems ?? 0,
+    followersCount: followers?.totalItems ?? 0,
+    postsCount: (await actor.getOutbox(options))?.totalItems ?? 0,
     fieldHtmls,
     published: toDate(actor.published),
   };

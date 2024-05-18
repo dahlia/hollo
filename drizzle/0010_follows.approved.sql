@@ -1,0 +1,1 @@
+ALTER TABLE "follows" ADD COLUMN "approved" timestamp with time zone;

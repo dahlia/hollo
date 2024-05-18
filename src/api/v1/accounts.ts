@@ -1,7 +1,18 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { isActor, lookupObject } from "@fedify/fedify";
+import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
-import { and, desc, eq, gte, ilike, isNull, like, lte, or } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  gte,
+  ilike,
+  inArray,
+  isNull,
+  lte,
+  or,
+} from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
@@ -14,7 +25,13 @@ import { federation } from "../../federation";
 import { persistAccount } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
-import { accountOwners, accounts, posts } from "../../schema";
+import {
+  type NewFollow,
+  accountOwners,
+  accounts,
+  follows,
+  posts,
+} from "../../schema";
 import { formatText } from "../../text";
 import { timelineQuerySchema } from "./timelines";
 
@@ -151,31 +168,51 @@ app.get(
   "/relationships",
   tokenRequired,
   scopeRequired(["read:follows"]),
-  (c) => {
-    if (c.get("token").accountOwner == null) {
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
         422,
       );
     }
     const ids = c.req.queries("id[]") ?? [];
+    const accountList = await db.query.accounts.findMany({
+      where: inArray(accounts.id, ids),
+      with: {
+        owner: true,
+        following: {
+          where: eq(follows.followingId, owner.id),
+        },
+        followers: {
+          where: eq(follows.followerId, owner.id),
+        },
+      },
+    });
+    accountList.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
     return c.json(
-      ids.map((id) => ({
-        id,
-        following: false,
-        showing_reblogs: false,
-        notifying: false,
-        languages: null,
-        followed_by: false,
-        blocking: false,
-        blocked_by: false,
-        muting: false,
-        muting_notifications: false,
-        requested: false,
-        requested_by: false,
-        domain_blocking: false,
-        endorsed: false,
-        note: "",
+      accountList.map((account) => ({
+        id: account.id,
+        following:
+          account.followers.length > 0 && account.followers[0].approved != null,
+        showing_reblogs:
+          account.followers.length > 0 && account.followers[0].shares,
+        notifying: account.followers.length > 0 && account.followers[0].notify,
+        languages:
+          account.followers.length > 0 ? account.followers[0].languages : null,
+        followed_by:
+          account.following.length > 0 && account.following[0].approved != null,
+        blocking: false, // TODO
+        blocked_by: false, // TODO
+        muting: false, // TODO
+        muting_notifications: false, // TODO
+        requested:
+          account.followers.length > 0 && account.followers[0].approved == null,
+        requested_by:
+          account.following.length > 0 && account.following[0].approved == null,
+        domain_blocking: false, // TODO
+        endorsed: false, // TODO
+        note: "", // TODO
       })),
     );
   },
@@ -364,6 +401,152 @@ app.get(
       limit: query.limit ?? 20,
     });
     return c.json(postList.map(serializePost));
+  },
+);
+
+app.post(
+  "/:id/follow",
+  tokenRequired,
+  scopeRequired(["write:follows"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const id = c.req.param("id");
+    const following = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: { owner: true },
+    });
+    if (following == null) return c.json({ error: "Record not found" }, 404);
+    const result = await db
+      .insert(follows)
+      .values({
+        iri: `urn:uuid:${crypto.randomUUID()}`,
+        followingId: following.id,
+        followerId: owner.id,
+        shares: true,
+        notify: false,
+        languages: null,
+        approved:
+          following.owner == null || following.protected ? null : new Date(),
+      } satisfies NewFollow)
+      .onConflictDoNothing()
+      .returning();
+    // TODO: respond with 403 if the following blocks the follower
+    if (result.length < 1) {
+      return c.json({ error: "The action is not allowed" }, 403);
+    }
+    const follow = result[0];
+    if (following.owner == null) {
+      const fedCtx = federation.createContext(c.req.raw, undefined);
+      await fedCtx.sendActivity(
+        owner,
+        [
+          {
+            id: new URL(following.iri),
+            inboxId: new URL(following.inboxUrl),
+          },
+        ],
+        new vocab.Follow({
+          id: new URL(follow.iri),
+          actor: new URL(owner.account.iri),
+          object: new URL(following.iri),
+        }),
+      );
+    }
+    const reverse = await db.query.follows.findFirst({
+      where: and(
+        eq(follows.followingId, owner.id),
+        eq(follows.followerId, following.id),
+      ),
+    });
+    return c.json({
+      id: follow.followingId,
+      following: follow.approved != null,
+      showing_reblogs: follow.shares,
+      notifying: follow.notify,
+      languages: follow.languages,
+      followed_by: reverse?.approved != null,
+      blocking: false, // TODO
+      blocked_by: false, // TODO
+      muting: false, // TODO
+      muting_notifications: false, // TODO
+      requested: follow.approved == null,
+      requested_by: reverse != null && reverse.approved == null,
+      domain_blocking: false, // TODO
+      endorsed: false, // TODO
+      note: "", // TODO
+    });
+  },
+);
+
+app.post(
+  "/:id/unfollow",
+  tokenRequired,
+  scopeRequired(["write:follows"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const id = c.req.param("id");
+    const result = await db
+      .delete(follows)
+      .where(and(eq(follows.followingId, id), eq(follows.followerId, owner.id)))
+      .returning({ iri: follows.iri });
+    if (result.length > 0) {
+      const fedCtx = federation.createContext(c.req.raw, undefined);
+      const following = await db.query.accounts.findFirst({
+        where: eq(accounts.id, id),
+        with: { owner: true },
+      });
+      if (following != null && following.owner == null) {
+        await fedCtx.sendActivity(
+          owner,
+          [
+            {
+              id: new URL(following.iri),
+              inboxId: new URL(following.inboxUrl),
+            },
+          ],
+          new vocab.Undo({
+            actor: new URL(owner.account.iri),
+            object: new vocab.Follow({
+              id: new URL(result[0].iri),
+              actor: new URL(owner.account.iri),
+              object: new URL(following.iri),
+            }),
+          }),
+        );
+      }
+    }
+    const reverse = await db.query.follows.findFirst({
+      where: and(eq(follows.followingId, owner.id), eq(follows.followerId, id)),
+    });
+    return c.json({
+      id,
+      following: false,
+      showing_reblogs: false,
+      notifying: false,
+      languages: null,
+      followed_by: reverse?.approved != null,
+      blocking: false, // TODO
+      blocked_by: false, // TODO
+      muting: false, // TODO
+      muting_notifications: false, // TODO
+      requested: false,
+      requested_by: reverse != null && reverse.approved == null,
+      domain_blocking: false, // TODO
+      endorsed: false, // TODO
+      note: "", // TODO
+    });
   },
 );
 
