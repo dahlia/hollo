@@ -1,7 +1,7 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { isActor, lookupObject } from "@fedify/fedify";
 import { zValidator } from "@hono/zod-validator";
-import { and, desc, eq, gte, isNull, lte, or } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, isNull, like, lte, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
@@ -215,6 +215,72 @@ app.get(
     }
     if (account.owner == null) return c.json(serializeAccount(account));
     return c.json(serializeAccountOwner({ ...account.owner, account }));
+  },
+);
+
+const HANDLE_PATTERN =
+  /^@?[\p{L}\p{N}._-]+@(?:[\p{L}\p{N}][\p{L}\p{N}_-]*\.)+[\p{L}\p{N}]{2,}$/giu;
+
+app.get(
+  "/search",
+  tokenRequired,
+  scopeRequired(["read:accounts"]),
+  zValidator(
+    "query",
+    z.object({
+      q: z.string().min(1),
+      limit: z
+        .string()
+        .default("40")
+        .transform((v) => Number.parseInt(v)),
+      offset: z
+        .string()
+        .default("0")
+        .transform((v) => Number.parseInt(v)),
+      resolve: z
+        .enum(["true", "false"])
+        .default("false")
+        .transform((v) => v === "true"),
+      following: z
+        .enum(["true", "false"])
+        .default("false")
+        .transform((v) => v === "true"),
+    }),
+  ),
+  async (c) => {
+    const query = c.req.valid("query");
+    if (query.resolve && HANDLE_PATTERN.test(query.q) && query.offset < 1) {
+      const exactMatch = await db.query.accounts.findFirst({
+        where: ilike(accounts.handle, `@${query.q.replace(/^@/, "")}`),
+      });
+      if (exactMatch != null) {
+        const fedCtx = federation.createContext(c.req.raw, undefined);
+        const actor = await lookupObject(query.q, fedCtx);
+        if (isActor(actor)) await persistAccount(db, actor, fedCtx);
+      }
+    }
+    const accountList = await db.query.accounts.findMany({
+      where: or(
+        ilike(accounts.handle, `%${query.q}%`),
+        ilike(accounts.name, `%${query.q}%`),
+      ),
+      with: { owner: true },
+      orderBy: [
+        desc(ilike(accounts.handle, `@${query.q.replace(/^@/, "")}`)),
+        desc(ilike(accounts.name, query.q)),
+        desc(ilike(accounts.handle, `@${query.q.replace(/^@/, "")}%`)),
+        desc(ilike(accounts.name, `${query.q}%`)),
+      ],
+      offset: query.offset,
+      limit: query.limit,
+    });
+    return c.json(
+      accountList.map((a) =>
+        a.owner == null
+          ? serializeAccount(a)
+          : serializeAccountOwner({ ...a.owner, account: a }),
+      ),
+    );
   },
 );
 

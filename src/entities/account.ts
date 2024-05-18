@@ -6,7 +6,7 @@ export function serializeAccount(account: Account) {
   return {
     id: account.id,
     username,
-    acct: username,
+    acct: account.handle.replace(/^@/, ""),
     display_name: account.name,
     locked: account.protected,
     bot: account.type === "Application" || account.type === "Service",
