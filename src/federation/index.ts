@@ -10,6 +10,7 @@ import {
   Note,
   PUBLIC_COLLECTION,
   Reject,
+  Undo,
   getActorClassByTypeName,
   importJwk,
   isActor,
@@ -172,6 +173,27 @@ federation
           and(
             eq(follows.iri, object.id.href),
             eq(follows.followingId, account.id),
+          ),
+        );
+    }
+  })
+  .on(Undo, async (ctx, undo) => {
+    const object = await undo.getObject();
+    if (object instanceof Follow) {
+      if (object.id == null) return;
+      const actor = await undo.getActor();
+      if (!isActor(actor) || actor.id == null) {
+        inboxLogger.debug("Invalid actor: {actor}", { actor });
+        return;
+      }
+      const account = await persistAccount(db, actor, ctx);
+      if (account == null) return;
+      await db
+        .delete(follows)
+        .where(
+          and(
+            eq(follows.iri, object.id.href),
+            eq(follows.followerId, account.id),
           ),
         );
     }
