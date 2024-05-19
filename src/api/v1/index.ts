@@ -34,4 +34,8 @@ app.get("/custom_emojis", (c) => {
   return c.json([]);
 });
 
+app.get("/announcements", (c) => {
+  return c.json([]);
+});
+
 export default app;
