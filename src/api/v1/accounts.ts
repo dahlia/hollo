@@ -328,6 +328,56 @@ app.get(
   },
 );
 
+app.get(
+  "/familiar_followers",
+  tokenRequired,
+  scopeRequired(["read:follows"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const ids: string[] = c.req.queries("id[]") ?? [];
+    const result: {
+      id: string;
+      accounts: ReturnType<typeof serializeAccount>[];
+    }[] = [];
+    for (const id of ids) {
+      const accountList = await db.query.accounts.findMany({
+        where: and(
+          inArray(
+            accounts.id,
+            db
+              .select({ id: follows.followerId })
+              .from(follows)
+              .where(eq(follows.followingId, id)),
+          ),
+          inArray(
+            accounts.id,
+            db
+              .select({ id: follows.followingId })
+              .from(follows)
+              .where(eq(follows.followerId, owner.id)),
+          ),
+        ),
+        with: { owner: true },
+      });
+      result.push({
+        id,
+        accounts: accountList.map((a) =>
+          a.owner == null
+            ? serializeAccount(a, c.req.url)
+            : serializeAccountOwner({ ...a.owner, account: a }, c.req.url),
+        ),
+      });
+    }
+    return c.json(result);
+  },
+);
+
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const account = await db.query.accounts.findFirst({
