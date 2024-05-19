@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import accounts from "./accounts";
 import api from "./api";
 import fedi from "./federation";
+import image from "./image";
 import login from "./login";
 import oauth from "./oauth";
 import setup from "./setup";
@@ -18,6 +19,7 @@ app.route("/login", login);
 app.route("/accounts", accounts);
 app.route("/oauth", oauth);
 app.route("/api", api);
+app.route("/image", image);
 app.get("/nodeinfo/2.0", (c) => c.redirect("/nodeinfo/2.1"));
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)

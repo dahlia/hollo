@@ -55,7 +55,7 @@ app.get("/", async (c) => {
         max_expiration: 0,
       },
     },
-    contact_account: serializeAccountOwner(accountOwner),
+    contact_account: serializeAccountOwner(accountOwner, c.req.url),
     rules: [],
   });
 });

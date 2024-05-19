@@ -115,7 +115,7 @@ app.post(
       },
     });
     // biome-ignore lint/style/noNonNullAssertion: never null
-    return c.json(serializePost(post!));
+    return c.json(serializePost(post!, c.req.url));
   },
 );
 
@@ -186,7 +186,7 @@ app.put(
       },
     });
     // biome-ignore lint/style/noNonNullAssertion: never null
-    return c.json(serializePost(post!));
+    return c.json(serializePost(post!, c.req.url));
   },
 );
 
@@ -210,7 +210,7 @@ app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
     },
   });
   if (post == null) return c.json({ error: "Record not found" }, 404);
-  return c.json(serializePost(post));
+  return c.json(serializePost(post, c.req.url));
 });
 
 app.get(
@@ -262,8 +262,8 @@ app.get(
       ps.push(...replies);
     }
     return c.json({
-      ancestors: ancestors.map(serializePost),
-      descendants: descendants.map(serializePost),
+      ancestors: ancestors.map((p) => serializePost(p, c.req.url)),
+      descendants: descendants.map((p) => serializePost(p, c.req.url)),
     });
   },
 );

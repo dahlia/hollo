@@ -83,7 +83,7 @@ app.get(
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,
     });
-    return c.json(timeline.map(serializePost));
+    return c.json(timeline.map((p) => serializePost(p, c.req.url)));
   },
 );
 
@@ -146,7 +146,7 @@ app.get(
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,
     });
-    return c.json(timeline.map(serializePost));
+    return c.json(timeline.map((p) => serializePost(p, c.req.url)));
   },
 );
 

@@ -49,7 +49,7 @@ app.get(
         422,
       );
     }
-    return c.json(serializeAccountOwner(accountOwner));
+    return c.json(serializeAccountOwner(accountOwner, c.req.url));
   },
 );
 
@@ -156,10 +156,13 @@ app.patch(
       .where(eq(accountOwners.id, owner.id))
       .returning();
     return c.json(
-      serializeAccountOwner({
-        ...updatedOwners[0],
-        account: updatedAccounts[0],
-      }),
+      serializeAccountOwner(
+        {
+          ...updatedOwners[0],
+          account: updatedAccounts[0],
+        },
+        c.req.url,
+      ),
     );
   },
 );
@@ -248,10 +251,14 @@ app.get(
       if (loadedAccount == null) {
         return c.json({ error: "Record not found" }, 404);
       }
-      return c.json(serializeAccount(loadedAccount));
+      return c.json(serializeAccount(loadedAccount, c.req.url));
     }
-    if (account.owner == null) return c.json(serializeAccount(account));
-    return c.json(serializeAccountOwner({ ...account.owner, account }));
+    if (account.owner == null) {
+      return c.json(serializeAccount(account, c.req.url));
+    }
+    return c.json(
+      serializeAccountOwner({ ...account.owner, account }, c.req.url),
+    );
   },
 );
 
@@ -314,8 +321,8 @@ app.get(
     return c.json(
       accountList.map((a) =>
         a.owner == null
-          ? serializeAccount(a)
-          : serializeAccountOwner({ ...a.owner, account: a }),
+          ? serializeAccount(a, c.req.url)
+          : serializeAccountOwner({ ...a.owner, account: a }, c.req.url),
       ),
     );
   },
@@ -329,9 +336,11 @@ app.get("/:id", async (c) => {
   });
   if (account == null) return c.json({ error: "Record not found" }, 404);
   if (account.owner != null) {
-    return c.json(serializeAccountOwner({ ...account.owner, account }));
+    return c.json(
+      serializeAccountOwner({ ...account.owner, account }, c.req.url),
+    );
   }
-  return c.json(serializeAccount(account));
+  return c.json(serializeAccount(account, c.req.url));
 });
 
 app.get(
@@ -400,7 +409,7 @@ app.get(
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,
     });
-    return c.json(postList.map(serializePost));
+    return c.json(postList.map((p) => serializePost(p, c.req.url)));
   },
 );
 

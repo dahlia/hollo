@@ -65,7 +65,7 @@ app.get("/", async (c) => {
       },
       contact: {
         email: credential.email,
-        account: serializeAccountOwner(accountOwner),
+        account: serializeAccountOwner(accountOwner, c.req.url),
       },
       rules: [],
     },

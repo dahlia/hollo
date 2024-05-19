@@ -26,6 +26,7 @@ export function serializePost(
       account: Account & { owner: AccountOwner | null };
     })[];
   },
+  baseUrl: URL | string,
   // biome-ignore lint/suspicious/noExplicitAny: JSON
 ): Record<string, any> {
   return {
@@ -50,7 +51,7 @@ export function serializePost(
     reblog:
       post.sharing == null
         ? null
-        : serializePost({ ...post.sharing, sharing: null }),
+        : serializePost({ ...post.sharing, sharing: null }, baseUrl),
     application:
       post.application == null
         ? null
@@ -58,7 +59,7 @@ export function serializePost(
             name: post.application.name,
             website: post.application.website,
           },
-    account: serializeAccount(post.account),
+    account: serializeAccount(post.account, baseUrl),
     media_attachments: [], // TODO
     mentions: post.mentions.map((mention) => ({
       id: mention.accountId,

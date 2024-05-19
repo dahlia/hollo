@@ -1,8 +1,9 @@
 import xss from "xss";
 import type { Account, AccountOwner } from "../schema";
 
-export function serializeAccount(account: Account) {
+export function serializeAccount(account: Account, baseUrl: URL | string) {
   const username = account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
+  const defaultAvatarUrl = new URL("/image/default_avatar", baseUrl).href;
   return {
     id: account.id,
     username,
@@ -13,8 +14,8 @@ export function serializeAccount(account: Account) {
     created_at: account.published ?? account.updated,
     note: xss(account.bioHtml ?? ""),
     url: account.url ?? account.iri,
-    avatar: account.avatarUrl,
-    avatar_static: account.avatarUrl,
+    avatar: account.avatarUrl ?? defaultAvatarUrl,
+    avatar_static: account.avatarUrl ?? defaultAvatarUrl,
     header: account.coverUrl,
     header_static: account.coverUrl,
     followers_count: account.followersCount,
@@ -32,9 +33,10 @@ export function serializeAccount(account: Account) {
 
 export function serializeAccountOwner(
   accountOwner: AccountOwner & { account: Account },
+  baseUrl: URL | string,
 ) {
   return {
-    ...serializeAccount(accountOwner.account),
+    ...serializeAccount(accountOwner.account, baseUrl),
     source: accountOwner && {
       note: accountOwner.bio,
       privacy: "public",
