@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { scopeRequired, tokenRequired } from "../../oauth";
 import accounts from "./accounts";
 import apps from "./apps";
+import follow_requests from "./follow_requests";
 import instance from "./instance";
 import notifications from "./notifications";
 import statuses from "./statuses";
@@ -11,6 +12,7 @@ const app = new Hono();
 
 app.route("/apps", apps);
 app.route("/accounts", accounts);
+app.route("/follow_requests", follow_requests);
 app.route("/instance", instance);
 app.route("/notifications", notifications);
 app.route("/statuses", statuses);
