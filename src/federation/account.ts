@@ -6,7 +6,7 @@ import {
   getActorHandle,
   getActorTypeName,
 } from "@fedify/fedify";
-import type { ExtractTablesWithRelations } from "drizzle-orm";
+import { type ExtractTablesWithRelations, eq } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import { uuidv7 } from "uuidv7-js";
@@ -72,7 +72,7 @@ export async function persistAccount(
     fieldHtmls,
     published: toDate(actor.published),
   };
-  const result = await db
+  await db
     .insert(schema.accounts)
     .values({
       id: uuidv7(),
@@ -82,7 +82,11 @@ export async function persistAccount(
     .onConflictDoUpdate({
       target: schema.accounts.iri,
       set: values,
-    })
-    .returning();
-  return result[0] ?? null;
+      setWhere: eq(schema.accounts.iri, actor.id.href),
+    });
+  return (
+    (await db.query.accounts.findFirst({
+      where: eq(schema.accounts.iri, actor.id.href),
+    })) ?? null
+  );
 }

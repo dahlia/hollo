@@ -1,5 +1,7 @@
 import {
   Accept,
+  Article,
+  Create,
   Endpoints,
   Federation,
   Follow,
@@ -24,6 +26,7 @@ import db from "../db";
 import { accountOwners, accounts, follows, posts } from "../schema";
 import { persistAccount } from "./account";
 import { toTemporalInstant } from "./date";
+import { persistObject } from "./post";
 
 export const federation = new Federation({
   kv: new MemoryKvStore(),
@@ -221,6 +224,12 @@ federation
             eq(follows.followingId, account.id),
           ),
         );
+    }
+  })
+  .on(Create, async (ctx, create) => {
+    const object = await create.getObject();
+    if (object instanceof Article || object instanceof Note) {
+      await persistObject(db, object, ctx);
     }
   })
   .on(Undo, async (ctx, undo) => {
