@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "../../db";
 import { serializePost } from "../../entities/status";
 import federation from "../../federation";
+import { toCreate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { mentions, posts } from "../../schema";
 import { formatText } from "../../text";
@@ -57,16 +58,21 @@ app.post(
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const data = c.req.valid("json");
-    const handle = owner.account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
+    const handle = owner.handle;
     const id = uuidv7();
     const url = fedCtx.getObjectUri(Note, { handle, id });
+    const published = new Date();
+    const content =
+      data.status == null ? null : await formatText(db, data.status, fedCtx);
+    const summary =
+      data.spoiler_text == null
+        ? null
+        : await formatText(db, data.spoiler_text, fedCtx);
+    const mentionedIds = [
+      ...(content?.mentions ?? []),
+      ...(summary?.mentions ?? []),
+    ];
     await db.transaction(async (tx) => {
-      const content =
-        data.status == null ? null : await formatText(tx, data.status, fedCtx);
-      const summary =
-        data.spoiler_text == null
-          ? null
-          : await formatText(tx, data.spoiler_text, fedCtx);
       await tx.insert(posts).values({
         id,
         iri: url.href,
@@ -82,12 +88,8 @@ app.post(
         tags: {}, // TODO
         sensitive: data.sensitive,
         url: url.href,
-        published: new Date(),
+        published,
       });
-      const mentionedIds = [
-        ...(content?.mentions ?? []),
-        ...(summary?.mentions ?? []),
-      ];
       if (mentionedIds.length > 0) {
         await tx.insert(mentions).values(
           mentionedIds.map((accountId) => ({
@@ -97,10 +99,11 @@ app.post(
         );
       }
     });
-    const post = await db.query.posts.findFirst({
+    // biome-ignore lint/style/noNonNullAssertion: post is never null
+    const post = (await db.query.posts.findFirst({
       where: eq(posts.id, id),
       with: {
-        account: true,
+        account: { with: { owner: true } },
         application: true,
         replyTarget: true,
         sharing: {
@@ -113,9 +116,27 @@ app.post(
         },
         mentions: { with: { account: { with: { owner: true } } } },
       },
-    });
-    // biome-ignore lint/style/noNonNullAssertion: never null
-    return c.json(serializePost(post!, c.req.url));
+    }))!;
+    const activity = toCreate(post, fedCtx);
+    if (post.visibility === "direct") {
+      await fedCtx.sendActivity(
+        { handle },
+        post.mentions.map((m) => ({
+          id: new URL(m.account.iri),
+          inboxId: new URL(m.account.inboxUrl),
+          endpoints:
+            m.account.sharedInboxUrl == null
+              ? null
+              : { sharedInbox: new URL(m.account.sharedInboxUrl) },
+        })),
+        activity,
+      );
+    } else {
+      await fedCtx.sendActivity({ handle }, "followers", activity, {
+        preferSharedInbox: true,
+      });
+    }
+    return c.json(serializePost(post, c.req.url));
   },
 );
 

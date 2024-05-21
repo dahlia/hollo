@@ -4,6 +4,7 @@ import {
   Federation,
   Follow,
   Hashtag,
+  InProcessMessageQueue,
   LanguageString,
   MemoryKvStore,
   Mention,
@@ -17,7 +18,7 @@ import {
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
-import { and, eq, like } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, like } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
 import { accountOwners, accounts, follows, posts } from "../schema";
@@ -26,6 +27,7 @@ import { toTemporalInstant } from "./date";
 
 export const federation = new Federation({
   kv: new MemoryKvStore(),
+  queue: new InProcessMessageQueue(),
 });
 
 federation
@@ -70,11 +72,55 @@ federation
     };
   });
 
-federation.setFollowersDispatcher("/@{handle}/followers", async (_ctx, _) => {
-  return {
-    items: [], // TODO: Implement this
-  };
-});
+federation
+  .setFollowersDispatcher(
+    "/@{handle}/followers",
+    async (_ctx, handle, _cursor, filter) => {
+      const owner = await db.query.accountOwners.findFirst({
+        where: eq(accountOwners.handle, handle),
+      });
+      if (owner == null) return null;
+      const followers = await db.query.accounts.findMany({
+        where: and(
+          inArray(
+            accounts.id,
+            db
+              .select({ id: follows.followerId })
+              .from(follows)
+              .where(eq(follows.followingId, owner.id)),
+          ),
+          filter == null
+            ? undefined
+            : ilike(accounts.iri, `${filter.origin}/%`),
+        ),
+      });
+      // TODO: pagination
+      return {
+        items: followers.map((f) => ({
+          id: new URL(f.iri),
+          inboxId: new URL(f.inboxUrl),
+          endpoints: {
+            sharedInbox: f.sharedInboxUrl ? new URL(f.sharedInboxUrl) : null,
+          },
+        })),
+      };
+    },
+  )
+  .setCounter(async (_ctx, handle) => {
+    const result = await db
+      .select({ cnt: count() })
+      .from(follows)
+      .where(
+        eq(
+          follows.followingId,
+          db
+            .select({ id: accountOwners.id })
+            .from(accountOwners)
+            .where(eq(accountOwners.handle, handle)),
+        ),
+      );
+    return result.length > 0 ? result[0].cnt : 0;
+  });
 
 federation.setFollowingDispatcher("/@{handle}/following", async (_ctx, _) => {
   return {
