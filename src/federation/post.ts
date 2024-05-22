@@ -29,7 +29,7 @@ import { toDate, toTemporalInstant } from "./date";
 
 const logger = getLogger(["hollo", "federation", "post"]);
 
-export async function persistObject(
+export async function persistPost(
   db: PgDatabase<
     PostgresJsQueryResultHKT,
     typeof schema,
@@ -64,7 +64,7 @@ export async function persistObject(
       logger.debug("Persisting the reply target...");
       const replyTarget = await object.getReplyTarget();
       if (replyTarget instanceof Note || replyTarget instanceof Article) {
-        const replyTargetObj = await persistObject(db, replyTarget, options);
+        const replyTargetObj = await persistPost(db, replyTarget, options);
         logger.debug("Persisted the reply target: {replyTarget}", {
           replyTarget: replyTargetObj,
         });

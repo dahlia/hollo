@@ -14,6 +14,7 @@ import {
   PUBLIC_COLLECTION,
   Reject,
   Undo,
+  Update,
   getActorClassByTypeName,
   importJwk,
   isActor,
@@ -26,7 +27,7 @@ import db from "../db";
 import { accountOwners, accounts, follows, posts } from "../schema";
 import { persistAccount } from "./account";
 import { toTemporalInstant } from "./date";
-import { persistObject } from "./post";
+import { persistPost } from "./post";
 
 export const federation = new Federation({
   kv: new MemoryKvStore(),
@@ -229,7 +230,19 @@ federation
   .on(Create, async (ctx, create) => {
     const object = await create.getObject();
     if (object instanceof Article || object instanceof Note) {
-      await persistObject(db, object, ctx);
+      await persistPost(db, object, ctx);
+    } else {
+      inboxLogger.debug("Unsupported object on Create: {object}", { object });
+    }
+  })
+  .on(Update, async (ctx, update) => {
+    const object = await update.getObject();
+    if (isActor(object)) {
+      await persistAccount(db, object, ctx);
+    } else if (object instanceof Article || object instanceof Note) {
+      await persistPost(db, object, ctx);
+    } else {
+      inboxLogger.debug("Unsupported object on Update: {object}", { object });
     }
   })
   .on(Undo, async (ctx, undo) => {
