@@ -1,7 +1,7 @@
 import { Note } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
@@ -368,6 +368,70 @@ app.post(
         id: new URL(`#likes/${like.created.toISOString()}`, owner.account.iri),
         actor: new URL(owner.account.iri),
         object: new URL(post.iri),
+      }),
+    );
+    return c.json(serializePost(post, owner, c.req.url));
+  },
+);
+
+app.post(
+  "/:id/unfavourite",
+  tokenRequired,
+  scopeRequired(["write:favourites"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const postId = c.req.param("id");
+    const result = await db
+      .delete(likes)
+      .where(and(eq(likes.postId, postId), eq(likes.accountId, owner.id)))
+      .returning();
+    if (result.length < 1) return c.json({ error: "Record not found" }, 404);
+    const like = result[0];
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: true,
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: true,
+      },
+    });
+    if (post == null) {
+      return c.json({ error: "Record not found" }, 404);
+    }
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    await fedCtx.sendActivity(
+      { handle: owner.handle },
+      {
+        id: new URL(post.account.iri),
+        inboxId: new URL(post.account.inboxUrl),
+      },
+      new vocab.Undo({
+        actor: new URL(owner.account.iri),
+        object: new vocab.Like({
+          id: new URL(
+            `#likes/${like.created.toISOString()}`,
+            owner.account.iri,
+          ),
+          actor: new URL(owner.account.iri),
+          object: new URL(post.iri),
+        }),
       }),
     );
     return c.json(serializePost(post, owner, c.req.url));
