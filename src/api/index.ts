@@ -5,7 +5,13 @@ import v2 from "./v2";
 
 const app = new Hono();
 
-app.use(cors());
+app.use(
+  cors({
+    origin: "*",
+    allowMethods: ["GET", "HEAD", "PUT", "POST", "DELETE", "PATCH"],
+    exposeHeaders: ["Link"],
+  }),
+);
 app.route("/v1", v1);
 app.route("/v2", v2);
 
