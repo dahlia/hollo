@@ -6,6 +6,10 @@ import { Hono } from "hono";
 import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
 import { db } from "../../db";
+import {
+  serializeAccount,
+  serializeAccountOwner,
+} from "../../entities/account";
 import { serializePost } from "../../entities/status";
 import federation from "../../federation";
 import { toCreate } from "../../federation/post";
@@ -435,6 +439,36 @@ app.post(
       }),
     );
     return c.json(serializePost(post, owner, c.req.url));
+  },
+);
+
+app.get(
+  "/:id/favourited_by",
+  tokenRequired,
+  scopeRequired(["read:statuses"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const id = c.req.param("id");
+    const likeList = await db.query.likes.findMany({
+      where: eq(likes.postId, id),
+      with: { account: { with: { owner: true } } },
+    });
+    return c.json(
+      likeList.map((l) =>
+        l.account.owner == null
+          ? serializeAccount(l.account, c.req.url)
+          : serializeAccountOwner(
+              { ...l.account.owner, account: l.account },
+              c.req.url,
+            ),
+      ),
+    );
   },
 );
 
