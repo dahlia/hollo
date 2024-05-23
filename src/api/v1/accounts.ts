@@ -452,14 +452,16 @@ app.get(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
+            likes: true,
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
+        likes: true,
       },
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,
     });
-    return c.json(postList.map((p) => serializePost(p, c.req.url)));
+    return c.json(postList.map((p) => serializePost(p, tokenOwner, c.req.url)));
   },
 );
 

@@ -67,6 +67,7 @@ export const accountRelations = relations(accounts, ({ one, many }) => ({
   followers: many(follows, { relationName: "follower" }),
   posts: many(posts),
   mentions: many(mentions),
+  likes: many(likes),
 }));
 
 export type Account = typeof accounts.$inferSelect;
@@ -285,6 +286,7 @@ export const postRelations = relations(posts, ({ one, many }) => ({
   replies: many(posts, {
     relationName: "reply",
   }),
+  likes: many(likes),
   sharing: one(posts, {
     fields: [posts.sharingId],
     references: [posts.id],
@@ -321,6 +323,38 @@ export const mentionRelations = relations(mentions, ({ one }) => ({
   }),
   account: one(accounts, {
     fields: [mentions.accountId],
+    references: [accounts.id],
+  }),
+}));
+
+export const likes = pgTable(
+  "likes",
+  {
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id),
+    created: timestamp("created", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.postId, table.accountId] }),
+  }),
+);
+
+export type Like = typeof likes.$inferSelect;
+export type NewLike = typeof likes.$inferInsert;
+
+export const likeRelations = relations(likes, ({ one }) => ({
+  post: one(posts, {
+    fields: [likes.postId],
+    references: [posts.id],
+  }),
+  account: one(accounts, {
+    fields: [likes.accountId],
     references: [accounts.id],
   }),
 }));

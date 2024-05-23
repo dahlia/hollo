@@ -8,6 +8,7 @@ import {
   Hashtag,
   InProcessMessageQueue,
   LanguageString,
+  Like,
   MemoryKvStore,
   Mention,
   Note,
@@ -24,7 +25,14 @@ import { parse } from "@std/semver";
 import { and, count, eq, ilike, inArray, like } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
-import { accountOwners, accounts, follows, posts } from "../schema";
+import {
+  type NewLike,
+  accountOwners,
+  accounts,
+  follows,
+  likes,
+  posts,
+} from "../schema";
 import { persistAccount } from "./account";
 import { toTemporalInstant } from "./date";
 import { persistPost } from "./post";
@@ -235,6 +243,30 @@ federation
       inboxLogger.debug("Unsupported object on Create: {object}", { object });
     }
   })
+  .on(Like, async (ctx, like) => {
+    if (like.objectId == null) return;
+    const parsed = ctx.parseUri(like.objectId);
+    if (parsed == null) return;
+    const { type } = parsed;
+    if (
+      type === "object" &&
+      (parsed.class === Note || parsed.class === Article)
+    ) {
+      const actor = await like.getActor();
+      if (actor == null) return;
+      const account = await persistAccount(db, actor, ctx);
+      if (account == null) return;
+      await db.insert(likes).values({
+        // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+        postId: parsed.values["id"],
+        accountId: account.id,
+      } satisfies NewLike);
+    } else {
+      inboxLogger.debug("Unsupported object on Like: {objectId}", {
+        objectId: like.objectId,
+      });
+    }
+  })
   .on(Update, async (ctx, update) => {
     const object = await update.getObject();
     if (isActor(object)) {
@@ -264,6 +296,34 @@ federation
             eq(follows.followerId, account.id),
           ),
         );
+    } else if (object instanceof Like) {
+      const like = object;
+      if (like.objectId == null) return;
+      const parsed = ctx.parseUri(like.objectId);
+      if (parsed == null) return;
+      const { type } = parsed;
+      if (
+        type === "object" &&
+        (parsed.class === Note || parsed.class === Article)
+      ) {
+        const actor = await like.getActor();
+        if (actor == null) return;
+        const account = await persistAccount(db, actor, ctx);
+        if (account == null) return;
+        await db.delete(likes).where(
+          and(
+            // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+            eq(likes.postId, parsed.values["id"]),
+            eq(likes.accountId, account.id),
+          ),
+        );
+      } else {
+        inboxLogger.debug("Unsupported object on Undo<Like>: {objectId}", {
+          objectId: like.objectId,
+        });
+      }
+    } else {
+      inboxLogger.debug("Unsupported object on Undo: {object}", { object });
     }
   });
 

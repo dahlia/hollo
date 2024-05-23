@@ -19,6 +19,8 @@ import { accountOwners, follows, mentions, posts } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
+app.use(tokenRequired);
+
 export const timelineQuerySchema = z.object({
   max_id: z.string().uuid().optional(),
   since_id: z.string().uuid().optional(),
@@ -47,6 +49,13 @@ app.get(
     ),
   ),
   async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
     const query = c.req.valid("query");
     const timeline = await db.query.posts.findMany({
       where: and(
@@ -76,20 +85,21 @@ app.get(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
+            likes: true,
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
+        likes: true,
       },
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,
     });
-    return c.json(timeline.map((p) => serializePost(p, c.req.url)));
+    return c.json(timeline.map((p) => serializePost(p, owner, c.req.url)));
   },
 );
 
 app.get(
   "/home",
-  tokenRequired,
   scopeRequired(["read:statuses"]),
   zValidator("query", timelineQuerySchema),
   async (c) => {
@@ -139,14 +149,16 @@ app.get(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
+            likes: true,
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
+        likes: true,
       },
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,
     });
-    return c.json(timeline.map((p) => serializePost(p, c.req.url)));
+    return c.json(timeline.map((p) => serializePost(p, owner, c.req.url)));
   },
 );
 

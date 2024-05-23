@@ -2,6 +2,7 @@ import type {
   Account,
   AccountOwner,
   Application,
+  Like,
   Mention,
   Post,
 } from "../schema";
@@ -20,12 +21,15 @@ export function serializePost(
           mentions: (Mention & {
             account: Account & { owner: AccountOwner | null };
           })[];
+          likes: Like[];
         })
       | null;
     mentions: (Mention & {
       account: Account & { owner: AccountOwner | null };
     })[];
+    likes: Like[];
   },
+  currentAccountOwner: { id: string },
   baseUrl: URL | string,
   // biome-ignore lint/suspicious/noExplicitAny: JSON
 ): Record<string, any> {
@@ -43,7 +47,9 @@ export function serializePost(
     replies_count: post.repliesCount,
     reblogs_count: post.sharesCount,
     favourites_count: post.likesCount,
-    favourited: false, // TODO
+    favourited: post.likes.some(
+      (like) => like.accountId === currentAccountOwner.id,
+    ),
     reblogged: false, // TODO
     muted: false, // TODO
     bookmarked: false, // TODO
@@ -51,7 +57,11 @@ export function serializePost(
     reblog:
       post.sharing == null
         ? null
-        : serializePost({ ...post.sharing, sharing: null }, baseUrl),
+        : serializePost(
+            { ...post.sharing, sharing: null },
+            currentAccountOwner,
+            baseUrl,
+          ),
     application:
       post.application == null
         ? null

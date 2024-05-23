@@ -1,4 +1,5 @@
 import { Note } from "@fedify/fedify";
+import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
@@ -9,7 +10,7 @@ import { serializePost } from "../../entities/status";
 import federation from "../../federation";
 import { toCreate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { mentions, posts } from "../../schema";
+import { type Like, type NewLike, likes, mentions, posts } from "../../schema";
 import { formatText } from "../../text";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -112,9 +113,11 @@ app.post(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
+            likes: true,
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
+        likes: true,
       },
     }))!;
     const activity = toCreate(post, fedCtx);
@@ -136,7 +139,7 @@ app.post(
         preferSharedInbox: true,
       });
     }
-    return c.json(serializePost(post, c.req.url));
+    return c.json(serializePost(post, owner, c.req.url));
   },
 );
 
@@ -201,17 +204,23 @@ app.put(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
+            likes: true,
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
+        likes: true,
       },
     });
     // biome-ignore lint/style/noNonNullAssertion: never null
-    return c.json(serializePost(post!, c.req.url));
+    return c.json(serializePost(post!, owner, c.req.url));
   },
 );
 
 app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
+  const owner = c.get("token").accountOwner;
+  if (owner == null) {
+    return c.json({ error: "This method requires an authenticated user" }, 422);
+  }
   const id = c.req.param("id");
   const post = await db.query.posts.findFirst({
     where: eq(posts.id, id),
@@ -225,13 +234,15 @@ app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
           application: true,
           replyTarget: true,
           mentions: { with: { account: { with: { owner: true } } } },
+          likes: true,
         },
       },
       mentions: { with: { account: { with: { owner: true } } } },
+      likes: true,
     },
   });
   if (post == null) return c.json({ error: "Record not found" }, 404);
-  return c.json(serializePost(post, c.req.url));
+  return c.json(serializePost(post, owner, c.req.url));
 });
 
 app.get(
@@ -239,6 +250,13 @@ app.get(
   tokenRequired,
   scopeRequired(["read:statuses"]),
   async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
     const id = c.req.param("id");
     const with_ = {
       account: true,
@@ -250,9 +268,11 @@ app.get(
           application: true,
           replyTarget: true,
           mentions: { with: { account: { with: { owner: true } } } },
+          likes: true,
         },
       },
       mentions: { with: { account: { with: { owner: true } } } },
+      likes: true,
       replies: true,
     } as const;
     const post = await db.query.posts.findFirst({
@@ -283,9 +303,74 @@ app.get(
       ps.push(...replies);
     }
     return c.json({
-      ancestors: ancestors.map((p) => serializePost(p, c.req.url)),
-      descendants: descendants.map((p) => serializePost(p, c.req.url)),
+      ancestors: ancestors.map((p) => serializePost(p, owner, c.req.url)),
+      descendants: descendants.map((p) => serializePost(p, owner, c.req.url)),
     });
+  },
+);
+
+app.post(
+  "/:id/favourite",
+  tokenRequired,
+  scopeRequired(["write:favourites"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const postId = c.req.param("id");
+    let like: Like;
+    try {
+      const result = await db
+        .insert(likes)
+        .values({
+          postId,
+          accountId: owner.id,
+        } as NewLike)
+        .returning();
+      like = result[0];
+    } catch (_) {
+      return c.json({ error: "Record not found" }, 404);
+    }
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: true,
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: true,
+      },
+    });
+    if (post == null) {
+      return c.json({ error: "Record not found" }, 404);
+    }
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    await fedCtx.sendActivity(
+      { handle: owner.handle },
+      {
+        id: new URL(post.account.iri),
+        inboxId: new URL(post.account.inboxUrl),
+      },
+      new vocab.Like({
+        id: new URL(`#likes/${like.created.toISOString()}`, owner.account.iri),
+        actor: new URL(owner.account.iri),
+        object: new URL(post.iri),
+      }),
+    );
+    return c.json(serializePost(post, owner, c.req.url));
   },
 );
 
