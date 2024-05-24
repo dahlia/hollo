@@ -1,7 +1,7 @@
 import { Note } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
@@ -85,6 +85,17 @@ app.post(
       ...(content?.mentions ?? []),
       ...(summary?.mentions ?? []),
     ];
+    const hashtags = [
+      ...(content?.hashtags ?? []),
+      ...(summary?.hashtags ?? []),
+    ];
+    const tags = Object.fromEntries(
+      hashtags.map((tag) => [
+        tag,
+        new URL(`/tags/${encodeURIComponent(tag.substring(1))}`, c.req.url)
+          .href,
+      ]),
+    );
     await db.transaction(async (tx) => {
       await tx.insert(posts).values({
         id,
@@ -98,7 +109,8 @@ app.post(
         summaryHtml: summary?.html,
         contentHtml: content?.html,
         language: data.language ?? "en", // TODO
-        tags: {}, // TODO
+        // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
+        tags: sql`${tags}::jsonb`,
         sensitive: data.sensitive,
         url: url.href,
         published,
@@ -189,6 +201,17 @@ app.put(
         data.spoiler_text == null
           ? null
           : await formatText(tx, data.spoiler_text, fedCtx);
+      const hashtags = [
+        ...(content?.hashtags ?? []),
+        ...(summary?.hashtags ?? []),
+      ];
+      const tags = Object.fromEntries(
+        hashtags.map((tag) => [
+          tag,
+          new URL(`/tags/${encodeURIComponent(tag.substring(1))}`, c.req.url)
+            .href,
+        ]),
+      );
       const result = await tx
         .update(posts)
         .set({
@@ -196,6 +219,8 @@ app.put(
           sensitive: data.sensitive,
           summaryHtml: summary?.html,
           language: data.language ?? "en", // TODO
+          // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
+          tags: sql`${tags}::jsonb`,
         })
         .where(eq(posts.id, id))
         .returning();

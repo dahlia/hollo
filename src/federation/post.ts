@@ -3,6 +3,7 @@ import {
   type Context,
   Create,
   type DocumentLoader,
+  Hashtag,
   LanguageString,
   Link,
   Note,
@@ -11,7 +12,7 @@ import {
 } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { getLogger } from "@logtape/logtape";
-import { type ExtractTablesWithRelations, eq } from "drizzle-orm";
+import { type ExtractTablesWithRelations, eq, sql } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import { uuidv7 } from "uuidv7-js";
@@ -19,12 +20,12 @@ import {
   type Account,
   type AccountOwner,
   type Mention,
-  type NewPost,
   type Post,
+  mentions,
   posts,
 } from "../schema";
 import type * as schema from "../schema";
-import { persistAccount } from "./account";
+import { persistAccount, persistAccountByIri } from "./account";
 import { toDate, toTemporalInstant } from "./date";
 
 const logger = getLogger(["hollo", "federation", "post"]);
@@ -74,7 +75,13 @@ export async function persistPost(
   }
   const to = new Set(object.toIds.map((url) => url.href));
   const cc = new Set(object.ccIds.map((url) => url.href));
-  const values: Omit<NewPost, "id" | "iri"> = {
+  const tags: Record<string, string> = {};
+  for await (const tag of object.getTags()) {
+    if (tag instanceof Hashtag && tag.name != null && tag.href != null) {
+      tags[tag.name.toString()] = tag.href.href;
+    }
+  }
+  const values = {
     type: object instanceof Article ? "Article" : "Note",
     accountId: account.id,
     applicationId: null,
@@ -95,7 +102,8 @@ export async function persistPost(
         : object.summary instanceof LanguageString
           ? object.summary.language.compact()
           : null,
-    tags: {}, // TODO
+    // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
+    tags: sql`${tags}::jsonb`,
     sensitive: object.sensitive ?? false,
     url: object.url instanceof Link ? object.url.href?.href : object.url?.href,
     repliesCount: 0, // TODO
@@ -103,24 +111,35 @@ export async function persistPost(
     likesCount: 0, // TODO
     published: toDate(object.published),
     updated: toDate(object.published) ?? new Date(),
-  };
+  } as const;
   await db
     .insert(posts)
     .values({
       ...values,
       id: uuidv7(),
       iri: object.id.href,
-    } satisfies NewPost)
+    })
     .onConflictDoUpdate({
       target: [posts.iri],
       set: values,
       setWhere: eq(posts.iri, object.id.href),
     });
-  return (
-    (await db.query.posts.findFirst({
-      where: eq(posts.iri, object.id.href),
-    })) ?? null
-  );
+  const post = await db.query.posts.findFirst({
+    where: eq(posts.iri, object.id.href),
+  });
+  if (post == null) return null;
+  await db.delete(mentions).where(eq(mentions.postId, post.id));
+  for await (const tag of object.getTags()) {
+    if (tag instanceof vocab.Mention && tag.name != null && tag.href != null) {
+      const account = await persistAccountByIri(db, tag.href.href, options);
+      if (account == null) continue;
+      await db.insert(mentions).values({
+        accountId: account.id,
+        postId: post.id,
+      });
+    }
+  }
+  return post;
 }
 
 export function toObject(
@@ -156,13 +175,22 @@ export function toObject(
           ? post.contentHtml
           : new LanguageString(post.contentHtml, post.language),
     sensitive: post.sensitive,
-    tags: post.mentions.map(
-      (m) =>
-        new vocab.Mention({
-          href: new URL(m.account.iri),
-          name: m.account.handle,
-        }),
-    ),
+    tags: [
+      ...post.mentions.map(
+        (m) =>
+          new vocab.Mention({
+            href: new URL(m.account.iri),
+            name: m.account.handle,
+          }),
+      ),
+      ...Object.entries(post.tags).map(
+        ([name, url]) =>
+          new vocab.Hashtag({
+            name,
+            href: new URL(url),
+          }),
+      ),
+    ],
     replyTarget:
       post.replyTarget == null ? null : new URL(post.replyTarget.iri),
     published: toTemporalInstant(post.published),

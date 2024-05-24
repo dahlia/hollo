@@ -3,12 +3,13 @@ import {
   and,
   desc,
   eq,
-  gte,
+  gt,
   inArray,
-  lte,
+  lt,
   ne,
   notInArray,
   or,
+  sql,
 } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -34,27 +35,26 @@ export const timelineQuerySchema = z.object({
   min_id: z.string().uuid().optional(),
   limit: z
     .string()
-    .transform((v) => Number.parseInt(v))
-    .optional(),
+    .default("20")
+    .transform((v) => Number.parseInt(v)),
 });
+
+export const publicTimelineQuerySchema = timelineQuerySchema.merge(
+  z.object({
+    local: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
+    remote: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((v) => v === "true"),
+  }),
+);
 
 app.get(
   "/public",
-  zValidator(
-    "query",
-    timelineQuerySchema.merge(
-      z.object({
-        local: z
-          .enum(["true", "false"])
-          .default("false")
-          .transform((v) => v === "true"),
-        remote: z
-          .enum(["true", "false"])
-          .default("false")
-          .transform((v) => v === "true"),
-      }),
-    ),
-  ),
+  zValidator("query", publicTimelineQuerySchema),
   async (c) => {
     const owner = c.get("token").accountOwner;
     if (owner == null) {
@@ -79,8 +79,8 @@ app.get(
               db.select({ id: accountOwners.id }).from(accountOwners),
             )
           : undefined,
-        query.max_id == null ? undefined : lte(posts.id, query.max_id),
-        query.min_id == null ? undefined : gte(posts.id, query.min_id),
+        query.max_id == null ? undefined : lt(posts.id, query.max_id),
+        query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
       with: {
         account: true,
@@ -109,7 +109,7 @@ app.get(
         },
       },
       orderBy: [desc(posts.id)],
-      limit: query.limit ?? 20,
+      limit: query.limit,
     });
     return c.json(timeline.map((p) => serializePost(p, owner, c.req.url)));
   },
@@ -153,8 +153,8 @@ app.get(
             ),
           ),
         ),
-        query.max_id == null ? undefined : lte(posts.id, query.max_id),
-        query.min_id == null ? undefined : gte(posts.id, query.min_id),
+        query.max_id == null ? undefined : lt(posts.id, query.max_id),
+        query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
       with: {
         account: true,
@@ -183,7 +183,96 @@ app.get(
         },
       },
       orderBy: [desc(posts.id)],
-      limit: query.limit ?? 20,
+      limit: query.limit,
+    });
+    return c.json(timeline.map((p) => serializePost(p, owner, c.req.url)));
+  },
+);
+
+app.get(
+  "/tag/:hashtag",
+  tokenRequired,
+  scopeRequired(["read:statuses"]),
+  zValidator("query", publicTimelineQuerySchema),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const query = c.req.valid("query");
+    const hashtag = `#${c.req.param("hashtag")}`;
+    const timeline = await db.query.posts.findMany({
+      where: and(
+        or(
+          eq(posts.accountId, owner.id),
+          and(
+            ne(posts.visibility, "direct"),
+            inArray(
+              posts.accountId,
+              db
+                .select({ id: follows.followingId })
+                .from(follows)
+                .where(eq(follows.followerId, owner.id)),
+            ),
+          ),
+          and(
+            ne(posts.visibility, "private"),
+            inArray(
+              posts.id,
+              db
+                .select({ id: mentions.postId })
+                .from(mentions)
+                .where(eq(mentions.accountId, owner.id)),
+            ),
+          ),
+        ),
+        sql`${posts.tags} ? ${hashtag}`,
+        query.local
+          ? inArray(
+              posts.accountId,
+              db.select({ id: accountOwners.id }).from(accountOwners),
+            )
+          : undefined,
+        query.remote
+          ? notInArray(
+              posts.accountId,
+              db.select({ id: accountOwners.id }).from(accountOwners),
+            )
+          : undefined,
+        query.max_id == null ? undefined : lt(posts.id, query.max_id),
+        query.min_id == null ? undefined : gt(posts.id, query.min_id),
+      ),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
+      },
+      orderBy: [desc(posts.id)],
+      limit: query.limit,
     });
     return c.json(timeline.map((p) => serializePost(p, owner, c.req.url)));
   },

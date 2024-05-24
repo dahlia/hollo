@@ -5,6 +5,8 @@ import {
   PropertyValue,
   getActorHandle,
   getActorTypeName,
+  isActor,
+  lookupObject,
 } from "@fedify/fedify";
 import { type ExtractTablesWithRelations, eq } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
@@ -89,4 +91,25 @@ export async function persistAccount(
       where: eq(schema.accounts.iri, actor.id.href),
     })) ?? null
   );
+}
+
+export async function persistAccountByIri(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  iri: string,
+  options: {
+    contextLoader?: DocumentLoader;
+    documentLoader?: DocumentLoader;
+  } = {},
+): Promise<schema.Account | null> {
+  const account = await db.query.accounts.findFirst({
+    where: eq(schema.accounts.iri, iri),
+  });
+  if (account != null) return account;
+  const actor = await lookupObject(iri, options);
+  if (!isActor(actor) || actor.id == null) return null;
+  return await persistAccount(db, actor, options);
 }

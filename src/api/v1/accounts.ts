@@ -124,7 +124,7 @@ app.patch(
       if (name != null && value != null) {
         fields[i] = [name, value];
       }
-      const contentHtml = (await formatText(db, fields[i][1])).html;
+      const contentHtml = (await formatText(db, fields[i][1], c.req)).html;
       fieldHtmls.push([fields[i][0], contentHtml]);
     }
     const updatedAccounts = await db
@@ -134,7 +134,7 @@ app.patch(
         bioHtml:
           form.note == null
             ? account.bioHtml
-            : (await formatText(db, form.note)).html,
+            : (await formatText(db, form.note, c.req)).html,
         avatarUrl,
         coverUrl,
         fieldHtmls: Object.fromEntries(fieldHtmls),

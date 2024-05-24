@@ -1,4 +1,5 @@
 import { type DocumentLoader, isActor, lookupObject } from "@fedify/fedify";
+import { hashtag } from "@fedify/markdown-it-hashtag";
 import { mention } from "@fedify/markdown-it-mention";
 import { type ExtractTablesWithRelations, inArray } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
@@ -10,6 +11,7 @@ import * as schema from "./schema";
 export interface FormatResult {
   html: string;
   mentions: string[];
+  hashtags: string[];
 }
 
 export async function formatText(
@@ -20,12 +22,15 @@ export async function formatText(
   >,
   text: string,
   options: {
+    url: URL | string;
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
-  } = {},
+  },
 ): Promise<FormatResult> {
   // List all mentions:
-  const draft = new MarkdownIt({ linkify: true }).use(mention, {});
+  const draft = new MarkdownIt({ linkify: true })
+    .use(mention, {})
+    .use(hashtag, {});
   const draftEnv: { mentions: string[] } = { mentions: [] };
   draft.render(text, draftEnv);
 
@@ -61,24 +66,49 @@ export async function formatText(
   }
 
   // Render the final HTML:
-  const md = new MarkdownIt({ linkify: true }).use(mention, {
-    link(handle) {
-      if (handle in handles) return handles[handle].href;
-      return null;
-    },
-    linkAttributes(handle: string) {
-      return {
-        "data-account-id": handles[handle].id,
-        "data-account-handle": handle,
-        translate: "no",
-        class: "h-card u-url mention",
-      };
-    },
-  });
-  const html = md.render(text);
+  const md = new MarkdownIt({ linkify: true })
+    .use(mention, {
+      link(handle) {
+        if (handle in handles) return handles[handle].href;
+        return null;
+      },
+      linkAttributes(handle: string) {
+        return {
+          "data-account-id": handles[handle].id,
+          "data-account-handle": handle,
+          translate: "no",
+          class: "h-card u-url mention",
+        };
+      },
+      label(handle: string) {
+        const bareHandle = handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
+        return `@<span>${Bun.escapeHTML(bareHandle)}</span>`;
+      },
+    })
+    .use(hashtag, {
+      link(tag) {
+        return new URL(
+          `/tags/${encodeURIComponent(tag.substring(1))}`,
+          options.url,
+        ).href;
+      },
+      linkAttributes(tag: string) {
+        return {
+          "data-tag": tag.substring(1),
+          class: "mention hashtag",
+          rel: "tag",
+        };
+      },
+      label(tag: string) {
+        return `#<span>${Bun.escapeHTML(tag.substring(1))}</span>`;
+      },
+    });
+  const env: { hashtags: string[] } = { hashtags: [] };
+  const html = md.render(text, env);
   return {
     html: html,
     mentions: Object.values(handles).map((v) => v.id),
+    hashtags: env.hashtags,
   };
 }
 
