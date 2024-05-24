@@ -130,4 +130,86 @@ app.get(
   },
 );
 
+app.get(
+  "/bookmarks",
+  tokenRequired,
+  scopeRequired(["read:bookmarks"]),
+  zValidator(
+    "query",
+    z.object({
+      before: z.string().datetime().optional(),
+      limit: z
+        .string()
+        .default("20")
+        .transform((v) => Number.parseInt(v)),
+    }),
+  ),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const query = c.req.valid("query");
+    const bookmarkList = await db.query.bookmarks.findMany({
+      where: and(
+        eq(bookmarks.accountOwnerId, owner.id),
+        query.before == null
+          ? undefined
+          : lt(bookmarks.created, new Date(query.before)),
+      ),
+      with: {
+        post: {
+          with: {
+            account: { with: { owner: true } },
+            application: true,
+            replyTarget: true,
+            sharing: {
+              with: {
+                account: true,
+                application: true,
+                replyTarget: true,
+                mentions: { with: { account: { with: { owner: true } } } },
+                likes: {
+                  where: eq(likes.accountId, owner.id),
+                },
+                bookmarks: {
+                  where: eq(bookmarks.accountOwnerId, owner.id),
+                },
+              },
+            },
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
+          },
+        },
+      },
+      orderBy: [desc(bookmarks.created)],
+      limit: query.limit,
+    });
+    return c.json(
+      bookmarkList.map((bm) => serializePost(bm.post, owner, c.req.url)),
+      200,
+      bookmarkList.length < query.limit
+        ? {}
+        : {
+            Link: `<${
+              new URL(
+                `?before=${encodeURIComponent(
+                  bookmarkList[bookmarkList.length - 1].created.toISOString(),
+                )}&limit=${query.limit}`,
+                c.req.url,
+              ).href
+            }>; rel="next"`,
+          },
+    );
+  },
+);
+
 export default app;

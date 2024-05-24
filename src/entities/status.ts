@@ -57,7 +57,7 @@ export function serializePost(
     muted: false, // TODO
     bookmarked: post.bookmarks.some(
       (bookmark) => bookmark.accountOwnerId === currentAccountOwner.id,
-    ), // TODO
+    ),
     content: post.contentHtml ?? "",
     reblog:
       post.sharing == null
