@@ -595,4 +595,63 @@ app.post(
   },
 );
 
+app.post(
+  "/:id/unbookmark",
+  tokenRequired,
+  scopeRequired(["write:bookmarks"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const postId = c.req.param("id");
+    const result = await db
+      .delete(bookmarks)
+      .where(
+        and(
+          eq(bookmarks.postId, postId),
+          eq(bookmarks.accountOwnerId, owner.id),
+        ),
+      )
+      .returning();
+    if (result.length < 1) {
+      return c.json({ error: "Record not found" }, 404);
+    }
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
+      },
+    });
+    // biome-ignore lint/style/noNonNullAssertion: never null
+    return c.json(serializePost(post!, owner, c.req.url));
+  },
+);
+
 export default app;
