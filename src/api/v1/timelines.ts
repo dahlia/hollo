@@ -15,7 +15,14 @@ import { z } from "zod";
 import { db } from "../../db";
 import { serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { accountOwners, follows, mentions, posts } from "../../schema";
+import {
+  accountOwners,
+  bookmarks,
+  follows,
+  likes,
+  mentions,
+  posts,
+} from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -85,11 +92,21 @@ app.get(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: true,
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: true,
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
       },
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,
@@ -149,11 +166,21 @@ app.get(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: true,
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: true,
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
       },
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,

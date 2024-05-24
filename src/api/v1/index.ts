@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "../../db";
 import { serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { likes } from "../../schema";
+import { bookmarks, likes } from "../../schema";
 import accounts from "./accounts";
 import apps from "./apps";
 import follow_requests from "./follow_requests";
@@ -90,11 +90,21 @@ app.get(
                 application: true,
                 replyTarget: true,
                 mentions: { with: { account: { with: { owner: true } } } },
-                likes: true,
+                likes: {
+                  where: eq(likes.accountId, owner.id),
+                },
+                bookmarks: {
+                  where: eq(bookmarks.accountOwnerId, owner.id),
+                },
               },
             },
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: true,
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
           },
         },
       },

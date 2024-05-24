@@ -14,7 +14,15 @@ import { serializePost } from "../../entities/status";
 import federation from "../../federation";
 import { toCreate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { type Like, type NewLike, likes, mentions, posts } from "../../schema";
+import {
+  type Like,
+  type NewBookmark,
+  type NewLike,
+  bookmarks,
+  likes,
+  mentions,
+  posts,
+} from "../../schema";
 import { formatText } from "../../text";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -117,11 +125,21 @@ app.post(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: true,
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: true,
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
       },
     }))!;
     const activity = toCreate(post, fedCtx);
@@ -208,11 +226,21 @@ app.put(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: true,
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: true,
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
       },
     });
     // biome-ignore lint/style/noNonNullAssertion: never null
@@ -238,11 +266,21 @@ app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
           application: true,
           replyTarget: true,
           mentions: { with: { account: { with: { owner: true } } } },
-          likes: true,
+          likes: {
+            where: eq(likes.accountId, owner.id),
+          },
+          bookmarks: {
+            where: eq(bookmarks.accountOwnerId, owner.id),
+          },
         },
       },
       mentions: { with: { account: { with: { owner: true } } } },
-      likes: true,
+      likes: {
+        where: eq(likes.accountId, owner.id),
+      },
+      bookmarks: {
+        where: eq(bookmarks.accountOwnerId, owner.id),
+      },
     },
   });
   if (post == null) return c.json({ error: "Record not found" }, 404);
@@ -272,11 +310,21 @@ app.get(
           application: true,
           replyTarget: true,
           mentions: { with: { account: { with: { owner: true } } } },
-          likes: true,
+          likes: {
+            where: eq(likes.accountId, owner.id),
+          },
+          bookmarks: {
+            where: eq(bookmarks.accountOwnerId, owner.id),
+          },
         },
       },
       mentions: { with: { account: { with: { owner: true } } } },
-      likes: true,
+      likes: {
+        where: eq(likes.accountId, owner.id),
+      },
+      bookmarks: {
+        where: eq(bookmarks.accountOwnerId, owner.id),
+      },
       replies: true,
     } as const;
     const post = await db.query.posts.findFirst({
@@ -351,11 +399,21 @@ app.post(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: true,
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: true,
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
       },
     });
     if (post == null) {
@@ -409,11 +467,21 @@ app.post(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: true,
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: true,
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
       },
     });
     if (post == null) {
@@ -469,6 +537,61 @@ app.get(
             ),
       ),
     );
+  },
+);
+
+app.post(
+  "/:id/bookmark",
+  tokenRequired,
+  scopeRequired(["write:bookmarks"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const postId = c.req.param("id");
+    try {
+      await db.insert(bookmarks).values({
+        postId,
+        accountOwnerId: owner.id,
+      } satisfies NewBookmark);
+    } catch (_) {
+      return c.json({ error: "Record not found" }, 404);
+    }
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
+      },
+    });
+    // biome-ignore lint/style/noNonNullAssertion: never null
+    return c.json(serializePost(post!, owner, c.req.url));
   },
 );
 

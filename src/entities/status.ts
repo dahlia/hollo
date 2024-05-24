@@ -2,6 +2,7 @@ import type {
   Account,
   AccountOwner,
   Application,
+  Bookmark,
   Like,
   Mention,
   Post,
@@ -22,12 +23,14 @@ export function serializePost(
             account: Account & { owner: AccountOwner | null };
           })[];
           likes: Like[];
+          bookmarks: Bookmark[];
         })
       | null;
     mentions: (Mention & {
       account: Account & { owner: AccountOwner | null };
     })[];
     likes: Like[];
+    bookmarks: Bookmark[];
   },
   currentAccountOwner: { id: string },
   baseUrl: URL | string,
@@ -52,7 +55,9 @@ export function serializePost(
     ),
     reblogged: false, // TODO
     muted: false, // TODO
-    bookmarked: false, // TODO
+    bookmarked: post.bookmarks.some(
+      (bookmark) => bookmark.accountOwnerId === currentAccountOwner.id,
+    ), // TODO
     content: post.contentHtml ?? "",
     reblog:
       post.sharing == null

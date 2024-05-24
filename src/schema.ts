@@ -95,6 +95,7 @@ export const accountOwnerRelations = relations(
       references: [accounts.id],
     }),
     accessTokens: many(accessTokens),
+    bookmarks: many(bookmarks),
   }),
 );
 
@@ -296,6 +297,7 @@ export const postRelations = relations(posts, ({ one, many }) => ({
     relationName: "share",
   }),
   mentions: many(mentions),
+  bookmarks: many(bookmarks),
 }));
 
 export const mentions = pgTable(
@@ -356,5 +358,37 @@ export const likeRelations = relations(likes, ({ one }) => ({
   account: one(accounts, {
     fields: [likes.accountId],
     references: [accounts.id],
+  }),
+}));
+
+export const bookmarks = pgTable(
+  "bookmarks",
+  {
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id),
+    accountOwnerId: uuid("account_owner_id")
+      .notNull()
+      .references(() => accountOwners.id),
+    created: timestamp("created", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.postId, table.accountOwnerId] }),
+  }),
+);
+
+export type Bookmark = typeof bookmarks.$inferSelect;
+export type NewBookmark = typeof bookmarks.$inferInsert;
+
+export const bookmarkRelations = relations(bookmarks, ({ one }) => ({
+  post: one(posts, {
+    fields: [bookmarks.postId],
+    references: [posts.id],
+  }),
+  accountOwner: one(accountOwners, {
+    fields: [bookmarks.accountOwnerId],
+    references: [accountOwners.id],
   }),
 }));
