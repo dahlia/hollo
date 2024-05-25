@@ -121,9 +121,15 @@ app.patch(
     for (const i of [0, 1, 2, 3] as const) {
       const name = form[`fields_attributes[${i}][name]`];
       const value = form[`fields_attributes[${i}][value]`];
-      if (name != null && value != null) {
-        fields[i] = [name, value];
+      if (
+        name == null ||
+        name.trim() === "" ||
+        value == null ||
+        value.trim() === ""
+      ) {
+        continue;
       }
+      fields[i] = [name, value];
       const contentHtml = (await formatText(db, fields[i][1], c.req)).html;
       fieldHtmls.push([fields[i][0], contentHtml]);
     }
@@ -157,6 +163,16 @@ app.patch(
       })
       .where(eq(accountOwners.id, owner.id))
       .returning();
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    await fedCtx.sendActivity(
+      { handle: updatedOwners[0].handle },
+      "followers",
+      new vocab.Update({
+        actor: fedCtx.getActorUri(updatedOwners[0].handle),
+        object: await fedCtx.getActor(updatedOwners[0].handle),
+      }),
+      { preferSharedInbox: true },
+    );
     return c.json(
       serializeAccountOwner(
         {

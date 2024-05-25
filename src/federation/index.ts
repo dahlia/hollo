@@ -6,6 +6,7 @@ import {
   Federation,
   Follow,
   Hashtag,
+  Image,
   InProcessMessageQueue,
   LanguageString,
   Like,
@@ -13,6 +14,7 @@ import {
   Mention,
   Note,
   PUBLIC_COLLECTION,
+  PropertyValue,
   Reject,
   Undo,
   Update,
@@ -58,8 +60,12 @@ federation
       summary: account.bioHtml,
       url: account.url ? new URL(account.url) : null,
       manuallyApprovesFollowers: account.protected,
-      icon: account.avatarUrl ? new URL(account.avatarUrl) : null,
-      image: account.coverUrl ? new URL(account.coverUrl) : null,
+      icon: account.avatarUrl
+        ? new Image({ url: new URL(account.avatarUrl) })
+        : null,
+      image: account.coverUrl
+        ? new Image({ url: new URL(account.coverUrl) })
+        : null,
       published: account.published
         ? toTemporalInstant(account.published)
         : null,
@@ -71,6 +77,13 @@ federation
       endpoints: new Endpoints({
         sharedInbox: ctx.getInboxUri(),
       }),
+      attachments: Object.entries(account.fieldHtmls).map(
+        ([name, value]) =>
+          new PropertyValue({
+            name,
+            value,
+          }),
+      ),
     });
   })
   .setKeyPairDispatcher(async (_ctx, handle) => {

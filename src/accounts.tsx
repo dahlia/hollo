@@ -1,4 +1,4 @@
-import { exportJwk, generateCryptoKeyPair } from "@fedify/fedify";
+import { Update, exportJwk, generateCryptoKeyPair } from "@fedify/fedify";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { FC } from "hono/jsx";
@@ -218,6 +218,16 @@ app.post("/:id", async (c) => {
       .set({ bio })
       .where(eq(accountOwners.id, c.req.param("id")));
   });
+  const fedCtx = federation.createContext(c.req.raw, undefined);
+  await fedCtx.sendActivity(
+    { handle: accountOwner.handle },
+    "followers",
+    new Update({
+      actor: fedCtx.getActorUri(accountOwner.handle),
+      object: await fedCtx.getActor(accountOwner.handle),
+    }),
+    { preferSharedInbox: true },
+  );
   return c.redirect("/accounts");
 });
 
