@@ -91,7 +91,7 @@ app.post(
     ];
     const tags = Object.fromEntries(
       hashtags.map((tag) => [
-        tag,
+        tag.toLowerCase(),
         new URL(`/tags/${encodeURIComponent(tag.substring(1))}`, c.req.url)
           .href,
       ]),
@@ -207,7 +207,7 @@ app.put(
       ];
       const tags = Object.fromEntries(
         hashtags.map((tag) => [
-          tag,
+          tag.toLowerCase(),
           new URL(`/tags/${encodeURIComponent(tag.substring(1))}`, c.req.url)
             .href,
         ]),

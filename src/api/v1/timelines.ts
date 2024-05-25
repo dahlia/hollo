@@ -229,7 +229,7 @@ app.get(
             ),
           ),
         ),
-        sql`${posts.tags} ? ${hashtag}`,
+        sql`${posts.tags} ? ${hashtag.toLowerCase()}`,
         query.local
           ? inArray(
               posts.accountId,

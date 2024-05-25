@@ -85,7 +85,10 @@ export function serializePost(
           ? mention.account.handle.replace(/^@/, "")
           : mention.account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, ""),
     })),
-    tags: Object.entries(post.tags).map(([name, url]) => ({ name, url })),
+    tags: Object.entries(post.tags).map(([name, url]) => ({
+      name: name.toLowerCase(),
+      url,
+    })),
     emojis: [], // TODO
     card: null, // TODO
     poll: null, // TODO
