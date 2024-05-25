@@ -657,4 +657,22 @@ app.get("/:id/followers", async (c) => {
   );
 });
 
+app.get("/:id/following", async (c) => {
+  const accountId = c.req.param("id");
+  const followers = await db.query.follows.findMany({
+    where: eq(follows.followerId, accountId),
+    with: { following: { with: { owner: true } } },
+  });
+  return c.json(
+    followers.map((f) =>
+      f.following.owner == null
+        ? serializeAccount(f.following, c.req.url)
+        : serializeAccountOwner(
+            { ...f.following.owner, account: f.following },
+            c.req.url,
+          ),
+    ),
+  );
+});
+
 export default app;
