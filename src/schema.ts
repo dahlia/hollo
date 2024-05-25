@@ -76,7 +76,7 @@ export type NewAccount = typeof accounts.$inferInsert;
 export const accountOwners = pgTable("account_owners", {
   id: uuid("id")
     .primaryKey()
-    .references(() => accounts.id),
+    .references(() => accounts.id, { onDelete: "cascade" }),
   handle: text("handle").notNull().unique(),
   privateKeyJwk: jsonb("private_key_jwk").$type<JsonWebKey>().notNull(),
   publicKeyJwk: jsonb("public_key_jwk").$type<JsonWebKey>().notNull(),
@@ -105,10 +105,10 @@ export const follows = pgTable(
     iri: text("iri").notNull().unique(),
     followingId: uuid("following_id")
       .notNull()
-      .references(() => accounts.id),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     followerId: uuid("follower_id")
       .notNull()
-      .references(() => accounts.id),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     shares: boolean("shares").notNull().default(true),
     notify: boolean("notify").notNull().default(false),
     languages: text("languages").array(),
@@ -200,8 +200,10 @@ export const accessTokens = pgTable("access_tokens", {
   code: text("code").primaryKey(),
   applicationId: uuid("application_id")
     .notNull()
-    .references(() => applications.id),
-  accountOwnerId: uuid("account_owner_id").references(() => accountOwners.id),
+    .references(() => applications.id, { onDelete: "cascade" }),
+  accountOwnerId: uuid("account_owner_id").references(() => accountOwners.id, {
+    onDelete: "cascade",
+  }),
   grant_type: grantTypeEnum("grant_type")
     .notNull()
     .default("authorization_code"),
@@ -242,7 +244,7 @@ export const posts = pgTable("posts", {
   type: postTypeEnum("type").notNull(),
   accountId: uuid("actor_id")
     .notNull()
-    .references(() => accounts.id),
+    .references(() => accounts.id, { onDelete: "cascade" }),
   applicationId: uuid("application_id").references(() => applications.id, {
     onDelete: "set null",
   }),
@@ -305,10 +307,10 @@ export const mentions = pgTable(
   {
     postId: uuid("post_id")
       .notNull()
-      .references(() => posts.id),
+      .references(() => posts.id, { onDelete: "cascade" }),
     accountId: uuid("account_id")
       .notNull()
-      .references(() => accounts.id),
+      .references(() => accounts.id, { onDelete: "cascade" }),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.accountId] }),
@@ -334,10 +336,10 @@ export const likes = pgTable(
   {
     postId: uuid("post_id")
       .notNull()
-      .references(() => posts.id),
+      .references(() => posts.id, { onDelete: "cascade" }),
     accountId: uuid("account_id")
       .notNull()
-      .references(() => accounts.id),
+      .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -366,10 +368,10 @@ export const bookmarks = pgTable(
   {
     postId: uuid("post_id")
       .notNull()
-      .references(() => posts.id),
+      .references(() => posts.id, { onDelete: "cascade" }),
     accountOwnerId: uuid("account_owner_id")
       .notNull()
-      .references(() => accountOwners.id),
+      .references(() => accountOwners.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
       .notNull()
       .defaultNow(),

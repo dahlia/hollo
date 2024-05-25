@@ -1,4 +1,10 @@
-import { Update, exportJwk, generateCryptoKeyPair } from "@fedify/fedify";
+import {
+  Delete,
+  PUBLIC_COLLECTION,
+  Update,
+  exportJwk,
+  generateCryptoKeyPair,
+} from "@fedify/fedify";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { FC } from "hono/jsx";
@@ -232,10 +238,24 @@ app.post("/:id", async (c) => {
 });
 
 app.post("/:id/delete", async (c) => {
+  const accountId = c.req.param("id");
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, accountId),
+  });
+  if (accountOwner == null) return c.notFound();
+  const fedCtx = federation.createContext(c.req.raw, undefined);
+  await fedCtx.sendActivity(
+    { handle: accountOwner.handle },
+    "followers",
+    new Delete({
+      actor: fedCtx.getActorUri(accountOwner.handle),
+      to: PUBLIC_COLLECTION,
+      object: await fedCtx.getActor(accountOwner.handle),
+    }),
+    { preferSharedInbox: true },
+  );
   await db.transaction(async (tx) => {
-    await tx
-      .delete(accountOwners)
-      .where(eq(accountOwners.id, c.req.param("id")));
+    await tx.delete(accountOwners).where(eq(accountOwners.id, accountId));
     await tx.delete(accounts).where(eq(accounts.id, c.req.param("id")));
   });
   return c.redirect("/accounts");

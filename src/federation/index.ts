@@ -2,6 +2,7 @@ import {
   Accept,
   Article,
   Create,
+  Delete,
   Endpoints,
   Federation,
   Follow,
@@ -288,6 +289,14 @@ federation
       await persistPost(db, object, ctx);
     } else {
       inboxLogger.debug("Unsupported object on Update: {object}", { object });
+    }
+  })
+  .on(Delete, async (_ctx, del) => {
+    const actorId = del.actorId;
+    const objectId = del.objectId;
+    if (actorId == null || objectId == null) return;
+    if (objectId.href === actorId.href) {
+      await db.delete(accounts).where(eq(accounts.iri, actorId.href));
     }
   })
   .on(Undo, async (ctx, undo) => {
