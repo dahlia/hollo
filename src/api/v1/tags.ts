@@ -27,4 +27,16 @@ app.post("/:id/follow", scopeRequired(["write:follows"]), async (c) => {
   return c.json({ ...serializeTag(tag, null, c.req.url), following: true });
 });
 
+app.post("/:id/unfollow", scopeRequired(["write:follows"]), async (c) => {
+  const owner = c.get("token").accountOwner;
+  if (owner == null) {
+    return c.json({ error: "This method requires an authenticated user" }, 422);
+  }
+  const tag = c.req.param("id");
+  await db.update(accountOwners).set({
+    followedTags: sql`array_remove(${accountOwners.followedTags}, ${tag})`,
+  });
+  return c.json({ ...serializeTag(tag, null, c.req.url), following: false });
+});
+
 export default app;
