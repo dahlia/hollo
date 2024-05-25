@@ -1,6 +1,9 @@
+import { sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { db } from "../../db";
 import { serializeTag } from "../../entities/tag";
-import { type Variables, tokenRequired } from "../../oauth";
+import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
+import { accountOwners } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -8,7 +11,20 @@ app.use(tokenRequired);
 
 app.get("/:id", (c) => {
   const owner = c.get("token").accountOwner;
-  return c.json(serializeTag(c.req.param("id"), owner, c.req.url));
+  const tag = c.req.param("id");
+  return c.json(serializeTag(tag, owner, c.req.url));
+});
+
+app.post("/:id/follow", scopeRequired(["write:follows"]), async (c) => {
+  const owner = c.get("token").accountOwner;
+  if (owner == null) {
+    return c.json({ error: "This method requires an authenticated user" }, 422);
+  }
+  const tag = c.req.param("id");
+  await db.update(accountOwners).set({
+    followedTags: sql`array_append(${accountOwners.followedTags}, ${tag})`,
+  });
+  return c.json({ ...serializeTag(tag, null, c.req.url), following: true });
 });
 
 export default app;

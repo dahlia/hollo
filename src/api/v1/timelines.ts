@@ -1,5 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import {
+  type SQL,
   and,
   desc,
   eq,
@@ -128,6 +129,8 @@ app.get(
       );
     }
     const query = c.req.valid("query");
+    // biome-ignore lint/style/useTemplate: nested template strings are rather ugly
+    const followedTags: SQL[] = owner.followedTags.map((t) => sql`${"#" + t}`);
     const timeline = await db.query.posts.findMany({
       where: and(
         or(
@@ -152,6 +155,15 @@ app.get(
                 .where(eq(mentions.accountId, owner.id)),
             ),
           ),
+          owner.followedTags.length < 1
+            ? undefined
+            : and(
+                eq(posts.visibility, "public"),
+                sql`${posts.tags} ?| ARRAY[${sql.join(
+                  followedTags,
+                  sql.raw(","),
+                )}]`,
+              ),
         ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
