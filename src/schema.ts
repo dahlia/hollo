@@ -82,6 +82,7 @@ export const accountOwners = pgTable("account_owners", {
   publicKeyJwk: jsonb("public_key_jwk").$type<JsonWebKey>().notNull(),
   fields: json("fields").notNull().default({}).$type<Record<string, string>>(),
   bio: text("bio"),
+  followedTags: text("followed_tags").array().notNull().default([]),
 });
 
 export type AccountOwner = typeof accountOwners.$inferSelect;

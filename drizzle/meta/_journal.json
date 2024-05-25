@@ -120,6 +120,13 @@
       "when": 1716636520479,
       "tag": "0016_delete-cascade",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1716637980153,
+      "tag": "0017_followed_tags",
+      "breakpoints": true
     }
   ]
 }
