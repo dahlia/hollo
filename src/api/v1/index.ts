@@ -13,6 +13,7 @@ import follow_requests from "./follow_requests";
 import instance from "./instance";
 import notifications from "./notifications";
 import statuses from "./statuses";
+import tags from "./tags";
 import timelines from "./timelines";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -23,6 +24,7 @@ app.route("/follow_requests", follow_requests);
 app.route("/instance", instance);
 app.route("/notifications", notifications);
 app.route("/statuses", statuses);
+app.route("/tags", tags);
 app.route("/timelines", timelines);
 
 app.get(
