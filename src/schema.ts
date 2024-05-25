@@ -13,6 +13,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
+import type { PreviewCard } from "./previewcard";
 
 export const credentials = pgTable("credentials", {
   email: varchar("email", { length: 254 }).primaryKey(),
@@ -263,6 +264,7 @@ export const posts = pgTable("posts", {
   tags: jsonb("tags").notNull().default({}).$type<Record<string, string>>(),
   sensitive: boolean("sensitive").notNull().default(false),
   url: text("url"),
+  previewCard: jsonb("preview_card").$type<PreviewCard>(),
   repliesCount: bigint("replies_count", { mode: "number" }).default(0),
   sharesCount: bigint("shares_count", { mode: "number" }).default(0),
   likesCount: bigint("likes_count", { mode: "number" }).default(0),

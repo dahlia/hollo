@@ -12,10 +12,12 @@ import {
 } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { getLogger } from "@logtape/logtape";
+import * as cheerio from "cheerio";
 import { type ExtractTablesWithRelations, eq, sql } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import { uuidv7 } from "uuidv7-js";
+import { fetchPreviewCard } from "../previewcard";
 import {
   type Account,
   type AccountOwner,
@@ -81,6 +83,12 @@ export async function persistPost(
       tags[tag.name.toString()] = tag.href.href;
     }
   }
+  const previewLink =
+    object.content == null
+      ? null
+      : extractPreviewLink(object.content.toString());
+  const previewCard =
+    previewLink == null ? null : await fetchPreviewCard(previewLink);
   const values = {
     type: object instanceof Article ? "Article" : "Note",
     accountId: account.id,
@@ -102,6 +110,7 @@ export async function persistPost(
         : object.summary instanceof LanguageString
           ? object.summary.language.compact()
           : null,
+    previewCard,
     // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
     tags: sql`${tags}::jsonb`,
     sensitive: object.sensitive ?? false,
@@ -215,4 +224,9 @@ export function toCreate(
     object,
     published: object.published,
   });
+}
+
+function extractPreviewLink(html: string): string | null {
+  const $ = cheerio.load(html);
+  return $("a[href]:not([rel=tag]):not(.mention):last").attr("href") ?? null;
 }

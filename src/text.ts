@@ -1,10 +1,12 @@
 import { type DocumentLoader, isActor, lookupObject } from "@fedify/fedify";
 import { hashtag } from "@fedify/markdown-it-hashtag";
 import { mention } from "@fedify/markdown-it-mention";
+import { getLogger } from "@logtape/logtape";
 import { type ExtractTablesWithRelations, inArray } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import MarkdownIt from "markdown-it";
+import replaceLink from "markdown-it-replace-link";
 import { persistAccount } from "./federation/account";
 import * as schema from "./schema";
 
@@ -12,6 +14,12 @@ export interface FormatResult {
   html: string;
   mentions: string[];
   hashtags: string[];
+  previewLink: string | null;
+}
+
+interface Env {
+  hashtags: string[];
+  previewLink: string | null;
 }
 
 export async function formatText(
@@ -102,13 +110,29 @@ export async function formatText(
       label(tag: string) {
         return `#<span>${Bun.escapeHTML(tag.substring(1))}</span>`;
       },
+    })
+    // biome-ignore lint/suspicious/noExplicitAny: untyped
+    .use(replaceLink as any, {
+      processHTML: false,
+      replaceLink(link: string, env: Env) {
+        if (link.startsWith("http://") || link.startsWith("https://")) {
+          env.previewLink = link;
+          return link;
+        }
+        return new URL(link, new URL("/", options.url)).href;
+      },
     });
-  const env: { hashtags: string[] } = { hashtags: [] };
+  const env: Env = {
+    hashtags: [],
+    previewLink: null,
+  };
   const html = md.render(text, env);
+  getLogger(["hollo", "text"]).debug("Markdown-It environment: {env}", { env });
   return {
     html: html,
     mentions: Object.values(handles).map((v) => v.id),
     hashtags: env.hashtags,
+    previewLink: env.previewLink,
   };
 }
 

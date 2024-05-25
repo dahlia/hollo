@@ -14,6 +14,7 @@ import { serializePost } from "../../entities/status";
 import federation from "../../federation";
 import { toCreate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
+import { type PreviewCard, fetchPreviewCard } from "../../previewcard";
 import {
   type Like,
   type NewBookmark,
@@ -96,6 +97,10 @@ app.post(
           .href,
       ]),
     );
+    let previewCard: PreviewCard | null = null;
+    if (content?.previewLink != null) {
+      previewCard = await fetchPreviewCard(content.previewLink);
+    }
     await db.transaction(async (tx) => {
       await tx.insert(posts).values({
         id,
@@ -113,6 +118,7 @@ app.post(
         tags: sql`${tags}::jsonb`,
         sensitive: data.sensitive,
         url: url.href,
+        previewCard,
         published,
       });
       if (mentionedIds.length > 0) {
@@ -194,24 +200,28 @@ app.put(
     const id = c.req.param("id");
     const data = c.req.valid("json");
     const fedCtx = federation.createContext(c.req.raw, undefined);
+    const content =
+      data.status == null ? null : await formatText(db, data.status, fedCtx);
+    const summary =
+      data.spoiler_text == null
+        ? null
+        : await formatText(db, data.spoiler_text, fedCtx);
+    const hashtags = [
+      ...(content?.hashtags ?? []),
+      ...(summary?.hashtags ?? []),
+    ];
+    const tags = Object.fromEntries(
+      hashtags.map((tag) => [
+        tag.toLowerCase(),
+        new URL(`/tags/${encodeURIComponent(tag.substring(1))}`, c.req.url)
+          .href,
+      ]),
+    );
+    let previewCard: PreviewCard | null = null;
+    if (content?.previewLink != null) {
+      previewCard = await fetchPreviewCard(content.previewLink);
+    }
     await db.transaction(async (tx) => {
-      const content =
-        data.status == null ? null : await formatText(tx, data.status, fedCtx);
-      const summary =
-        data.spoiler_text == null
-          ? null
-          : await formatText(tx, data.spoiler_text, fedCtx);
-      const hashtags = [
-        ...(content?.hashtags ?? []),
-        ...(summary?.hashtags ?? []),
-      ];
-      const tags = Object.fromEntries(
-        hashtags.map((tag) => [
-          tag.toLowerCase(),
-          new URL(`/tags/${encodeURIComponent(tag.substring(1))}`, c.req.url)
-            .href,
-        ]),
-      );
       const result = await tx
         .update(posts)
         .set({
@@ -221,6 +231,7 @@ app.put(
           language: data.language ?? "en", // TODO
           // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
           tags: sql`${tags}::jsonb`,
+          previewCard,
         })
         .where(eq(posts.id, id))
         .returning();

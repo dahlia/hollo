@@ -127,6 +127,13 @@
       "when": 1716637980153,
       "tag": "0017_followed_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1716643360188,
+      "tag": "0018_preview_card",
+      "breakpoints": true
     }
   ]
 }

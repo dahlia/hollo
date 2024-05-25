@@ -1,3 +1,4 @@
+import type { PreviewCard } from "../previewcard";
 import type {
   Account,
   AccountOwner,
@@ -89,8 +90,30 @@ export function serializePost(
       name: name.toLowerCase().replace(/^#/, ""),
       url,
     })),
+    card:
+      post.previewCard == null ? null : serializePreviewCard(post.previewCard),
     emojis: [], // TODO
-    card: null, // TODO
     poll: null, // TODO
+  };
+}
+
+export function serializePreviewCard(
+  card: PreviewCard,
+): Record<string, unknown> {
+  return {
+    url: card.url,
+    title: card.title,
+    description: card.description ?? "",
+    type: "link",
+    author_name: "",
+    author_url: "",
+    provider_name: "",
+    provider_url: "",
+    html: "",
+    width: card.image == null ? 0 : card.image.width,
+    height: card.image == null ? 0 : card.image.height,
+    image: card.image == null ? null : card.image.url,
+    embed_url: "",
+    blurhash: null,
   };
 }
