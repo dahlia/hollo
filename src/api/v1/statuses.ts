@@ -111,7 +111,9 @@ app.post(
         replyTargetId: data.in_reply_to_id,
         sharingId: null,
         visibility: data.visibility ?? owner.visibility,
+        summary: data.spoiler_text,
         summaryHtml: summary?.html,
+        content: data.status,
         contentHtml: content?.html,
         language: data.language ?? owner.language,
         // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
@@ -225,8 +227,10 @@ app.put(
       const result = await tx
         .update(posts)
         .set({
+          content: data.status,
           contentHtml: content?.html,
           sensitive: data.sensitive,
+          summary: data.spoiler_text,
           summaryHtml: summary?.html,
           language: data.language ?? owner.language,
           // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
@@ -322,6 +326,24 @@ app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
   if (post == null) return c.json({ error: "Record not found" }, 404);
   return c.json(serializePost(post, owner, c.req.url));
 });
+
+app.get(
+  "/:id/source",
+  tokenRequired,
+  scopeRequired(["read:statuses"]),
+  async (c) => {
+    const id = c.req.param("id");
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, id),
+    });
+    if (post == null) return c.json({ error: "Record not found" }, 404);
+    return c.json({
+      id: post.id,
+      text: post.content ?? "",
+      spoiler_text: post.summary ?? "",
+    });
+  },
+);
 
 app.get(
   "/:id/context",
