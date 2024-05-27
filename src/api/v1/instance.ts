@@ -1,7 +1,9 @@
+import { and, inArray, isNotNull } from "drizzle-orm";
 import { Hono } from "hono";
 import metadata from "../../../package.json" with { type: "json" };
 import { db } from "../../db";
 import { serializeAccountOwner } from "../../entities/account";
+import { accountOwners, posts } from "../../schema";
 
 const app = new Hono();
 
@@ -13,6 +15,19 @@ app.get("/", async (c) => {
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
+  const languages = await db
+    .select({ language: posts.language })
+    .from(posts)
+    .where(
+      and(
+        isNotNull(posts.language),
+        inArray(
+          posts.accountId,
+          db.select({ id: accountOwners.id }).from(accountOwners),
+        ),
+      ),
+    )
+    .groupBy(posts.language);
   return c.json({
     uri: url.host,
     title: url.host,
@@ -27,7 +42,7 @@ app.get("/", async (c) => {
       domain_count: 0, // TODO
     },
     thumbnail: null, // TODO
-    languages: ["en"], // TODO
+    languages: languages.map(({ language }) => language),
     registrations: false,
     approval_required: true,
     invites_enabled: false,
