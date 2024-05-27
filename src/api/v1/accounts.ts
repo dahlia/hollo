@@ -32,6 +32,7 @@ import {
   bookmarks,
   follows,
   likes,
+  mentions,
   posts,
 } from "../../schema";
 import { formatText } from "../../text";
@@ -445,6 +446,12 @@ app.get(
     if (query.pinned || query.only_media) {
       return c.json([]); // FIXME
     }
+    const following = await db
+      .select({ id: follows.followingId })
+      .from(follows)
+      .where(
+        and(eq(follows.followerId, tokenOwner.id), eq(follows.followingId, id)),
+      );
     const postList = await db.query.posts.findMany({
       where: and(
         eq(posts.accountId, id),
@@ -452,7 +459,17 @@ app.get(
           eq(posts.accountId, tokenOwner.id),
           eq(posts.visibility, "public"),
           eq(posts.visibility, "unlisted"),
-          // TODO: private, direct
+          following.length > 0 ? eq(posts.visibility, "private") : undefined,
+          and(
+            eq(posts.visibility, "direct"),
+            inArray(
+              posts.id,
+              db
+                .select({ id: mentions.postId })
+                .from(mentions)
+                .where(eq(mentions.accountId, tokenOwner.id)),
+            ),
+          ),
         ),
         query.exclude_replies === "true"
           ? isNull(posts.replyTargetId)
