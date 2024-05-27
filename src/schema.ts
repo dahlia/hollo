@@ -55,6 +55,7 @@ export const accounts = pgTable("accounts", {
     .notNull()
     .default({})
     .$type<Record<string, string>>(),
+  sensitive: boolean("sensitive").notNull().default(false),
   published: timestamp("published", { withTimezone: true }),
   updated: timestamp("updated", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -74,6 +75,15 @@ export const accountRelations = relations(accounts, ({ one, many }) => ({
 export type Account = typeof accounts.$inferSelect;
 export type NewAccount = typeof accounts.$inferInsert;
 
+export const postVisibilityEnum = pgEnum("post_visibility", [
+  "public",
+  "unlisted",
+  "private",
+  "direct",
+]);
+
+export type PostVisibility = (typeof postVisibilityEnum.enumValues)[number];
+
 export const accountOwners = pgTable("account_owners", {
   id: uuid("id")
     .primaryKey()
@@ -84,6 +94,8 @@ export const accountOwners = pgTable("account_owners", {
   fields: json("fields").notNull().default({}).$type<Record<string, string>>(),
   bio: text("bio"),
   followedTags: text("followed_tags").array().notNull().default([]),
+  visibility: postVisibilityEnum("visibility").notNull().default("public"),
+  language: text("language").notNull().default("en"),
 });
 
 export type AccountOwner = typeof accountOwners.$inferSelect;
@@ -230,15 +242,6 @@ export const accessTokenRelations = relations(accessTokens, ({ one }) => ({
 export const postTypeEnum = pgEnum("post_type", ["Article", "Note"]);
 
 export type PostType = (typeof postTypeEnum.enumValues)[number];
-
-export const postVisibilityEnum = pgEnum("post_visibility", [
-  "public",
-  "unlisted",
-  "private",
-  "direct",
-]);
-
-export type PostVisibility = (typeof postVisibilityEnum.enumValues)[number];
 
 export const posts = pgTable("posts", {
   id: uuid("id").primaryKey(),

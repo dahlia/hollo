@@ -17,6 +17,7 @@ import { loginRequired } from "./login";
 import {
   type Account,
   type AccountOwner,
+  type PostVisibility,
   accountOwners,
   accounts,
 } from "./schema";
@@ -63,10 +64,22 @@ app.post("/", async (c) => {
   const name = form.get("name")?.toString()?.trim();
   const bio = form.get("bio")?.toString()?.trim();
   const protected_ = form.get("protected") != null;
+  const language = form.get("language")?.toString()?.trim();
+  const visibility = form
+    .get("visibility")
+    ?.toString()
+    ?.trim() as PostVisibility;
   if (username == null || username === "" || name == null || name === "") {
     return c.html(
       <NewAccountPage
-        values={{ username, name, bio, protected: protected_ }}
+        values={{
+          username,
+          name,
+          bio,
+          protected: protected_,
+          language,
+          visibility,
+        }}
         errors={{
           username:
             username == null || username === ""
@@ -107,6 +120,8 @@ app.post("/", async (c) => {
       privateKeyJwk: await exportJwk(keyPair.privateKey),
       publicKeyJwk: await exportJwk(keyPair.publicKey),
       bio: bio ?? "",
+      language: language ?? "en",
+      visibility: visibility ?? "public",
     });
   });
   const owners = await db.query.accountOwners.findMany({
@@ -116,7 +131,7 @@ app.post("/", async (c) => {
 });
 
 app.get("/new", (c) => {
-  return c.html(<NewAccountPage />);
+  return c.html(<NewAccountPage values={{ language: "en" }} />);
 });
 
 export interface NewAccountPageProps {
@@ -125,6 +140,8 @@ export interface NewAccountPageProps {
     name?: string;
     bio?: string;
     protected?: boolean;
+    language?: string;
+    visibility?: PostVisibility;
   };
   errors?: {
     username?: string;
@@ -180,6 +197,8 @@ export const AccountPage: FC<AccountPageProps> = (props) => {
           bio: props.values?.bio ?? props.accountOwner.bio ?? undefined,
           protected:
             props.values?.protected ?? props.accountOwner.account.protected,
+          language: props.values?.language ?? props.accountOwner.language,
+          visibility: props.values?.visibility ?? props.accountOwner.visibility,
         }}
         errors={props.errors}
         submitLabel="Save changes"
@@ -198,11 +217,22 @@ app.post("/:id", async (c) => {
   const name = form.get("name")?.toString()?.trim();
   const bio = form.get("bio")?.toString()?.trim();
   const protected_ = form.get("protected") != null;
+  const language = form.get("language")?.toString()?.trim();
+  const visibility = form
+    .get("visibility")
+    ?.toString()
+    ?.trim() as PostVisibility;
   if (name == null || name === "") {
     return c.html(
       <AccountPage
         accountOwner={accountOwner}
-        values={{ name, bio, protected: protected_ }}
+        values={{
+          name,
+          bio,
+          protected: protected_,
+          language,
+          visibility,
+        }}
         errors={{
           name: name == null || name === "" ? "Display name is required." : "",
         }}
@@ -221,7 +251,7 @@ app.post("/:id", async (c) => {
       .where(eq(accounts.id, c.req.param("id")));
     await tx
       .update(accountOwners)
-      .set({ bio })
+      .set({ bio, language, visibility })
       .where(eq(accountOwners.id, c.req.param("id")));
   });
   const fedCtx = federation.createContext(c.req.raw, undefined);

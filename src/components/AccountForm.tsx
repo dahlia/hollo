@@ -1,4 +1,6 @@
 import type { FC } from "hono/jsx";
+import iso6391 from "iso-639-1";
+import type { PostVisibility } from "../schema";
 
 export interface AccountFormProps {
   method?: string;
@@ -11,6 +13,8 @@ export interface AccountFormProps {
     name?: string;
     bio?: string;
     protected?: boolean;
+    language?: string;
+    visibility?: PostVisibility;
   };
   errors?: {
     username?: string;
@@ -82,6 +86,51 @@ export const AccountForm: FC<AccountFormProps> = (props) => {
           />{" "}
           Protect your account &mdash; only approved followers can see your
           posts
+        </label>
+      </fieldset>
+      <fieldset class="grid">
+        <label>
+          Default language{" "}
+          <select name="language">
+            {iso6391
+              .getAllCodes()
+              .map((code) => [code, iso6391.getNativeName(code)])
+              .sort(([_, nameA], [__, nameB]) => nameA.localeCompare(nameB))
+              .map(([code, nativeName]) => (
+                <option value={code} selected={props.values?.language === code}>
+                  {nativeName} ({iso6391.getName(code)})
+                </option>
+              ))}
+          </select>
+        </label>
+        <label>
+          Default visibility{" "}
+          <select name="visibility">
+            <option
+              value="public"
+              selected={props.values?.visibility === "public"}
+            >
+              Public
+            </option>
+            <option
+              value="unlisted"
+              selected={props.values?.visibility === "unlisted"}
+            >
+              Unlisted
+            </option>
+            <option
+              value="private"
+              selected={props.values?.visibility === "private"}
+            >
+              Followers only
+            </option>
+            <option
+              value="direct"
+              selected={props.values?.visibility === "direct"}
+            >
+              Direct message
+            </option>
+          </select>
         </label>
       </fieldset>
       <button type="submit">{props.submitLabel}</button>

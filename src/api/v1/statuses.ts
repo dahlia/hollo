@@ -110,10 +110,10 @@ app.post(
         applicationId: token.applicationId,
         replyTargetId: data.in_reply_to_id,
         sharingId: null,
-        visibility: data.visibility ?? "public", // TODO
+        visibility: data.visibility ?? owner.visibility,
         summaryHtml: summary?.html,
         contentHtml: content?.html,
-        language: data.language ?? "en", // TODO
+        language: data.language ?? owner.language,
         // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
         tags: sql`${tags}::jsonb`,
         sensitive: data.sensitive,
@@ -228,7 +228,7 @@ app.put(
           contentHtml: content?.html,
           sensitive: data.sensitive,
           summaryHtml: summary?.html,
-          language: data.language ?? "en", // TODO
+          language: data.language ?? owner.language,
           // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
           tags: sql`${tags}::jsonb`,
           previewCard,

@@ -39,9 +39,9 @@ export function serializeAccountOwner(
     ...serializeAccount(accountOwner.account, baseUrl),
     source: accountOwner && {
       note: accountOwner.bio,
-      privacy: "public",
-      sensitive: false,
-      language: "en",
+      privacy: accountOwner.visibility,
+      sensitive: accountOwner.account.sensitive,
+      language: accountOwner.language,
       follow_requests_count: 0,
       fields: Object.entries(accountOwner.fields).map(([name, value]) => ({
         name,

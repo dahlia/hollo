@@ -147,6 +147,10 @@ app.patch(
         fieldHtmls: Object.fromEntries(fieldHtmls),
         protected:
           form.locked == null ? account.protected : form.locked === "true",
+        sensitive:
+          form["source[sensitive]"] == null
+            ? account.sensitive
+            : form["source[sensitive]"] === "true",
         type:
           form.bot == null
             ? account.type
@@ -161,6 +165,8 @@ app.patch(
       .set({
         bio: form.note ?? owner.bio,
         fields: Object.fromEntries(fields),
+        visibility: form["source[privacy]"] ?? owner.visibility,
+        language: form["source[language]"] ?? owner.language,
       })
       .where(eq(accountOwners.id, owner.id))
       .returning();
