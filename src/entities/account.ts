@@ -3,7 +3,14 @@ import type { Account, AccountOwner } from "../schema";
 
 export function serializeAccount(account: Account, baseUrl: URL | string) {
   const username = account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
-  const defaultAvatarUrl = new URL("/image/default_avatar", baseUrl).href;
+  const defaultAvatarUrl = new URL(
+    "/image/avatars/original/missing.png",
+    baseUrl,
+  ).href;
+  const defaultHeaderUrl = new URL(
+    "/image/headers/original/missing.png",
+    baseUrl,
+  ).href;
   return {
     id: account.id,
     username,
@@ -16,8 +23,8 @@ export function serializeAccount(account: Account, baseUrl: URL | string) {
     url: account.url ?? account.iri,
     avatar: account.avatarUrl ?? defaultAvatarUrl,
     avatar_static: account.avatarUrl ?? defaultAvatarUrl,
-    header: account.coverUrl,
-    header_static: account.coverUrl,
+    header: account.coverUrl ?? defaultHeaderUrl,
+    header_static: account.coverUrl ?? defaultHeaderUrl,
     followers_count: account.followersCount,
     following_count: account.followingCount,
     statuses_count: account.postsCount,
