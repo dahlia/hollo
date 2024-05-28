@@ -1,13 +1,11 @@
 import type { FC } from "hono/jsx";
-import type { Account, AccountOwner, Post as DbPost } from "../schema";
-import Post from "./Post";
+import type { Account, AccountOwner } from "../schema";
 
 export interface ProfileProps {
   accountOwner: AccountOwner & { account: Account };
-  posts: (DbPost & { account: Account })[];
 }
 
-export const Profile: FC<ProfileProps> = ({ accountOwner, posts }) => {
+export const Profile: FC<ProfileProps> = ({ accountOwner }) => {
   const account = accountOwner.account;
   return (
     <>
@@ -62,9 +60,6 @@ export const Profile: FC<ProfileProps> = ({ accountOwner, posts }) => {
           </tbody>
         </table>
       )}
-      {posts.map((post) => (
-        <Post post={post} />
-      ))}
     </>
   );
 };

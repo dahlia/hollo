@@ -1,7 +1,8 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
 import type { FC } from "hono/jsx";
 import Layout from "./components/Layout";
+import { Post as PostView } from "./components/Post";
 import { Profile } from "./components/Profile";
 import { db } from "./db";
 import {
@@ -24,7 +25,10 @@ app.get("/", async (c) => {
   });
   if (owner == null) return c.notFound();
   const postList = await db.query.posts.findMany({
-    where: eq(posts.accountId, owner.id),
+    where: and(
+      eq(posts.accountId, owner.id),
+      or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
+    ),
     orderBy: desc(posts.id),
     with: { account: true },
   });
@@ -39,7 +43,10 @@ export interface ProfilePageProps {
 export const ProfilePage: FC<ProfilePageProps> = ({ accountOwner, posts }) => {
   return (
     <Layout title={accountOwner.account.name}>
-      <Profile accountOwner={accountOwner} posts={posts} />
+      <Profile accountOwner={accountOwner} />
+      {posts.map((post) => (
+        <PostView post={post} />
+      ))}
     </Layout>
   );
 };

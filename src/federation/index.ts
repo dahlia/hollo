@@ -360,6 +360,23 @@ federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
     with: { replyTarget: true, mentions: { with: { account: true } } },
   });
   if (post == null) return null;
+  if (post.visibility === "private") {
+    const keyOwner = await ctx.getSignedKeyOwner();
+    if (keyOwner?.id == null) return null;
+    const found = await db.query.follows.findFirst({
+      where: and(
+        eq(follows.followerId, keyOwner.id.href),
+        eq(follows.followingId, owner.id),
+      ),
+    });
+    if (found == null) return null;
+  } else if (post.visibility === "direct") {
+    const keyOwner = await ctx.getSignedKeyOwner();
+    const keyOwnerId = keyOwner?.id;
+    if (keyOwnerId == null) return null;
+    const found = post.mentions.some((m) => m.account.iri === keyOwnerId.href);
+    if (!found) return null;
+  }
   return new Note({
     id: ctx.getObjectUri(Note, values),
     attribution: ctx.getActorUri(values.handle),
