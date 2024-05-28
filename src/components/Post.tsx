@@ -30,16 +30,25 @@ export const Post: FC<PostProps> = ({ post }) => {
       </header>
       {post.summaryHtml == null ? (
         post.contentHtml && (
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
-          <div dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+          <div
+            // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
+            dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+            lang={post.language ?? undefined}
+          />
         )
       ) : (
         <details>
-          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: xss */}
-          <summary dangerouslySetInnerHTML={{ __html: post.summaryHtml }} />
-          {post.contentHtml && (
+          <summary
             // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
-            <div dangerouslySetInnerHTML={{ __html: post.contentHtml }} />
+            dangerouslySetInnerHTML={{ __html: post.summaryHtml }}
+            lang={post.language ?? undefined}
+          />
+          {post.contentHtml && (
+            <div
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
+              dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+              lang={post.language ?? undefined}
+            />
           )}
         </details>
       )}
