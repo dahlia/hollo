@@ -8,6 +8,7 @@ import type {
   Mention,
   Post,
 } from "../schema";
+import { extractText } from "../text";
 import { serializeAccount } from "./account";
 
 export function serializePost(
@@ -43,7 +44,7 @@ export function serializePost(
     in_reply_to_id: post.replyTargetId,
     in_reply_to_account_id: post.replyTarget?.accountId,
     sensitive: post.sensitive,
-    spoiler_text: post.summaryHtml ?? "",
+    spoiler_text: extractText(post.summaryHtml) ?? "",
     visibility: post.visibility,
     language: post.language,
     uri: post.iri,

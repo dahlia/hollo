@@ -12,7 +12,6 @@ import {
 } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { getLogger } from "@logtape/logtape";
-import * as cheerio from "cheerio";
 import { type ExtractTablesWithRelations, eq, sql } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
@@ -27,6 +26,7 @@ import {
   posts,
 } from "../schema";
 import type * as schema from "../schema";
+import { extractPreviewLink } from "../text";
 import { persistAccount, persistAccountByIri } from "./account";
 import { toDate, toTemporalInstant } from "./date";
 
@@ -224,9 +224,4 @@ export function toCreate(
     object,
     published: object.published,
   });
-}
-
-function extractPreviewLink(html: string): string | null {
-  const $ = cheerio.load(html);
-  return $("a[href]:not([rel=tag]):not(.mention):last").attr("href") ?? null;
 }

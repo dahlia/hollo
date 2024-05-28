@@ -2,6 +2,7 @@ import { type DocumentLoader, isActor, lookupObject } from "@fedify/fedify";
 import { hashtag } from "@fedify/markdown-it-hashtag";
 import { mention } from "@fedify/markdown-it-mention";
 import { getLogger } from "@logtape/logtape";
+import * as cheerio from "cheerio";
 import { type ExtractTablesWithRelations, inArray } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
@@ -134,6 +135,17 @@ export async function formatText(
     hashtags: env.hashtags,
     previewLink: env.previewLink,
   };
+}
+
+export function extractPreviewLink(html: string): string | null {
+  const $ = cheerio.load(html);
+  return $("a[href]:not([rel=tag]):not(.mention):last").attr("href") ?? null;
+}
+
+export function extractText(html: string | null): string | null {
+  if (html == null) return null;
+  const $ = cheerio.load(html);
+  return $(":root").text();
 }
 
 // cSpell: ignore linkify
