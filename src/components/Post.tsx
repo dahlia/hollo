@@ -43,6 +43,17 @@ export const Post: FC<PostProps> = ({ post }) => {
           )}
         </details>
       )}
+      <footer>
+        <p>
+          <a href={post.url ?? post.iri}>
+            <small>
+              <time dateTime={(post.published ?? post.updated).toISOString()}>
+                {(post.published ?? post.updated).toLocaleString()}
+              </time>
+            </small>
+          </a>
+        </p>
+      </footer>
     </article>
   );
 };
