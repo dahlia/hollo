@@ -6,6 +6,7 @@ import fedi from "./federation";
 import image from "./image";
 import login from "./login";
 import oauth from "./oauth";
+import profile from "./profile";
 import setup from "./setup";
 import "./logging";
 import { behindProxy } from "x-forwarded-fetch";
@@ -14,6 +15,7 @@ const app = new Hono();
 
 app.use(federation(fedi, (_) => undefined));
 
+app.route("/:handle{@[^/]+}", profile);
 app.route("/setup", setup);
 app.route("/login", login);
 app.route("/accounts", accounts);
