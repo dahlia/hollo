@@ -36,6 +36,7 @@ Current features and roadmap
 - [x] Deleting account
 - [x] Public timeline
 - [x] Local timeline
+- [ ] Lists
 - [ ] Trends
 - [ ] Search
 - [x] Following/unfollowing accounts
