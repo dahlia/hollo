@@ -110,6 +110,7 @@ export const accountOwnerRelations = relations(
     }),
     accessTokens: many(accessTokens),
     bookmarks: many(bookmarks),
+    markers: many(markers),
   }),
 );
 
@@ -399,6 +400,38 @@ export const bookmarkRelations = relations(bookmarks, ({ one }) => ({
   }),
   accountOwner: one(accountOwners, {
     fields: [bookmarks.accountOwnerId],
+    references: [accountOwners.id],
+  }),
+}));
+
+export const markerTypeEnum = pgEnum("marker_type", ["notifications", "home"]);
+
+export type MarkerType = (typeof markerTypeEnum.enumValues)[number];
+
+export const markers = pgTable(
+  "markers",
+  {
+    accountOwnerId: uuid("account_owner_id")
+      .notNull()
+      .references(() => accountOwners.id, { onDelete: "cascade" }),
+    type: markerTypeEnum("type").notNull(),
+    lastReadId: text("last_read_id").notNull(),
+    version: bigint("version", { mode: "number" }).notNull().default(1),
+    updated: timestamp("updated", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.accountOwnerId, table.type] }),
+  }),
+);
+
+export type Marker = typeof markers.$inferSelect;
+export type NewMarker = typeof markers.$inferInsert;
+
+export const markerRelations = relations(markers, ({ one }) => ({
+  accountOwner: one(accountOwners, {
+    fields: [markers.accountOwnerId],
     references: [accountOwners.id],
   }),
 }));

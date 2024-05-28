@@ -64,7 +64,7 @@ app.get(
     const queries = {
       mention: db
         .select({
-          id: sql<string>`'mention:' || ${posts.id}`,
+          id: sql`${posts.id}::text`,
           type: sql<NotificationType>`'mention'`,
           created: sql<Date>`coalesce(${posts.published}, ${posts.updated})`,
           accountId: posts.accountId,
@@ -76,7 +76,7 @@ app.get(
         .orderBy(desc(posts.published)),
       follow: db
         .select({
-          id: sql<string>`'follow:' || ${follows.followerId}`,
+          id: sql<string>`${follows.followerId}::text`,
           type: sql<NotificationType>`'follow'`,
           created: sql<Date>`${follows.approved}`,
           accountId: follows.followerId,
@@ -89,7 +89,7 @@ app.get(
         .orderBy(desc(follows.approved)),
       follow_request: db
         .select({
-          id: sql<string>`'follow_request:' || ${follows.followerId}`,
+          id: sql<string>`${follows.followerId}::text`,
           type: sql<NotificationType>`'follow_request'`,
           created: follows.created,
           accountId: follows.followerId,
@@ -100,7 +100,7 @@ app.get(
         .orderBy(desc(follows.created)),
       favourite: db
         .select({
-          id: sql<string>`'favourite:' || ${likes.postId} || ':' || ${likes.accountId}`,
+          id: sql<string>`${likes.postId} || ':' || ${likes.accountId}`,
           type: sql<NotificationType>`'favourite'`,
           created: likes.created,
           accountId: likes.accountId,
@@ -187,28 +187,31 @@ app.get(
       ).map((p) => [p.id, p]),
     );
     return c.json(
-      notifications.map((n) => ({
-        id: n.id,
-        type: n.type,
-        created_at:
+      notifications.map((n) => {
+        const created_at =
           n.created instanceof Date
             ? n.created.toISOString()
-            : new Date(n.created).toISOString(),
-        account:
-          accountMap[n.accountId].owner == null
-            ? serializeAccount(accountMap[n.accountId], c.req.url)
-            : serializeAccountOwner(
-                {
-                  ...accountMap[n.accountId].owner,
-                  account: accountMap[n.accountId],
-                },
-                c.req.url,
-              ),
-        status:
-          n.postId == null
-            ? null
-            : serializePost(postMap[n.postId], owner, c.req.url),
-      })),
+            : new Date(n.created).toISOString();
+        return {
+          id: `${created_at}/${n.type}/${n.id}`,
+          type: n.type,
+          created_at,
+          account:
+            accountMap[n.accountId].owner == null
+              ? serializeAccount(accountMap[n.accountId], c.req.url)
+              : serializeAccountOwner(
+                  {
+                    ...accountMap[n.accountId].owner,
+                    account: accountMap[n.accountId],
+                  },
+                  c.req.url,
+                ),
+          status:
+            n.postId == null
+              ? null
+              : serializePost(postMap[n.postId], owner, c.req.url),
+        };
+      }),
     );
   },
 );
