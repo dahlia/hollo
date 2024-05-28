@@ -43,6 +43,7 @@
     "microblog",
     "microblogging",
     "nodeinfo",
+    "Phanpy",
     "previewcard",
     "reblog",
     "reblogged",
@@ -50,6 +51,7 @@
     "unbookmark",
     "unfavourite",
     "unfollow",
+    "unfollowing",
     "uuidv7",
     "webfinger"
   ]

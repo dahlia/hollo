@@ -15,6 +15,44 @@ Mastodon, Misskey, and so on.
 [ActivityPub]: https://www.w3.org/TR/activitypub/
 
 
+Current features and roadmap
+----------------------------
+
+- [x] Logging in
+- [x] Composing a post
+- [x] Editing a post
+- [x] Writing a reply
+- [x] View posts
+- [x] Post visibility
+- [x] Post language
+- [x] Mentions
+- [x] Likes (favorites)
+- [ ] Shares (reblogs)
+- [x] Editing profile
+- [x] Deleting account
+- [x] Public timeline
+- [x] Local timeline
+- [ ] Trends
+- [ ] Search
+- [x] Following/unfollowing accounts
+- [x] Following/unfollowing hashtags
+- [x] Notifications
+- [x] Bookmarks
+- [x] Markers
+
+
+Tested clients
+--------------
+
+ -  [Elk]
+ -  [Phanpy]
+ -  [Woolly]
+
+[Elk]: https://elk.zone/
+[Phanpy]: https://phanpy.social/
+[Woolly]: https://apps.apple.com/us/app/woolly-for-mastodon/id6444360628
+
+
 Etymology
 ---------
 
