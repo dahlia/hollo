@@ -58,6 +58,11 @@ app.get("/", async (c) => {
           />
         </article>
       ))}
+      <div>
+        <a role="button" href="/accounts">
+          Manage accounts (signing in required)
+        </a>
+      </div>
     </Layout>,
   );
 });
