@@ -11,6 +11,10 @@ Although it is for single-user, it is designed to be federated through
 from other instances, even from other software that supports ActivityPub like
 Mastodon, Misskey, and so on.
 
+Hollo does not have its own web interface.  Instead, it implements
+Mastodon-compatible APIs so that you can integrate it with the most of
+the [existing Mastodon clients](#tested-clients).
+
 [Fedify]: https://fedify.dev/
 [ActivityPub]: https://www.w3.org/TR/activitypub/
 
