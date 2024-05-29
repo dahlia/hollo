@@ -351,7 +351,7 @@ federation
 
 federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
   const owner = await db.query.accountOwners.findFirst({
-    where: like(accounts.handle, `@${values.handle}@%`),
+    where: like(accountOwners.handle, values.handle),
     with: { account: true },
   });
   if (owner == null) return null;
