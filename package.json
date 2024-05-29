@@ -1,5 +1,6 @@
 {
   "name": "@fedify/hollo",
+  "description": "Federated single-user microblogging software",
   "version": "0.1.0",
   "private": true,
   "scripts": {

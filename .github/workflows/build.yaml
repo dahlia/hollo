@@ -54,6 +54,8 @@ jobs:
           ghcr.io/${{ github.repository }}:git-${{ github.sha }}
           ghcr.io/${{ github.repository }}:${{ steps.version.outputs.value }}
           ghcr.io/${{ github.repository }}:latest
+        labels:
+          org.opencontainers.image.revision=${{ github.sha }}
         cache-from:
           type=registry,ref=ghcr.io/${{ github.repository }}:build-cache
         cache-to:
