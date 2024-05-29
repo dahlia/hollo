@@ -39,6 +39,16 @@ jobs:
           ghcr.io/${{ github.repository }}:git-${{ github.sha }}
           ghcr.io/${{ github.repository }}:${{ steps.version.outputs.value }}-dev.${{ github.run_number }}
           ghcr.io/${{ github.repository }}:latest
+        labels:
+          org.opencontainers.image.revision=${{ github.sha }}
+        annotations:
+          org.opencontainers.image.title=Hollo
+          org.opencontainers.image.description=Federated single-user microblogging software
+          org.opencontainers.image.url=https://github.com/dahlia/hollo
+          org.opencontainers.image.source=https://github.com/dahlia/hollo
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.licenses=AGPL-3.0-only
+          org.opencontainers.image.version=${{ steps.version.outputs.value }}-dev.${{ github.run_number }}
         cache-from:
           type=registry,ref=ghcr.io/${{ github.repository }}:build-cache
         cache-to:
@@ -56,6 +66,14 @@ jobs:
           ghcr.io/${{ github.repository }}:latest
         labels:
           org.opencontainers.image.revision=${{ github.sha }}
+        annotations:
+          org.opencontainers.image.title=Hollo
+          org.opencontainers.image.description=Federated single-user microblogging software
+          org.opencontainers.image.url=https://github.com/dahlia/hollo
+          org.opencontainers.image.source=https://github.com/dahlia/hollo
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.licenses=AGPL-3.0-only
+          org.opencontainers.image.version=${{ steps.version.outputs.value }}
         cache-from:
           type=registry,ref=ghcr.io/${{ github.repository }}:build-cache
         cache-to:
