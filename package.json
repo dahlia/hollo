@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prod": "bun run src/index.tsx",
-    "dev": "bun run --hot src/index.tsx",
+    "prod": "bun run migrate && bun run src/index.tsx",
+    "dev": "bun run migrate && bun run --hot src/index.tsx",
     "check": "bunx tsc && bunx biome check .",
     "migrate": "bunx drizzle-kit migrate",
     "migrate:generate": "bunx drizzle-kit generate"
