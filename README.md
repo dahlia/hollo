@@ -25,11 +25,16 @@ Current features and roadmap
 - [x] Logging in
 - [x] Composing a post
 - [x] Editing a post
+- [x] Deleting a post
 - [x] Writing a reply
 - [x] View posts
 - [x] Post visibility
 - [x] Post language
+- [ ] Pinned posts
 - [x] Mentions
+- [x] Hashtags
+- [ ] Images
+- [ ] Polls
 - [x] Likes (favorites)
 - [ ] Shares (reblogs)
 - [x] Editing profile
@@ -44,6 +49,8 @@ Current features and roadmap
 - [x] Notifications
 - [x] Bookmarks
 - [x] Markers
+- [ ] Featured hashtags
+- [ ] Featured accounts
 
 
 Tested clients

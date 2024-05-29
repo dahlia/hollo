@@ -327,6 +327,58 @@ app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
   return c.json(serializePost(post, owner, c.req.url));
 });
 
+app.delete(
+  "/:id",
+  tokenRequired,
+  scopeRequired(["write:statuses"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const id = c.req.param("id");
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, id),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: {
+              where: eq(likes.accountId, owner.id),
+            },
+            bookmarks: {
+              where: eq(bookmarks.accountOwnerId, owner.id),
+            },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: {
+          where: eq(likes.accountId, owner.id),
+        },
+        bookmarks: {
+          where: eq(bookmarks.accountOwnerId, owner.id),
+        },
+      },
+    });
+    if (post == null) return c.json({ error: "Record not found" }, 404);
+    await db.delete(posts).where(eq(posts.id, id));
+    return c.json({
+      ...serializePost(post, owner, c.req.url),
+      text: post.content ?? "",
+      spoiler_text: post.summary ?? "",
+    });
+  },
+);
+
 app.get(
   "/:id/source",
   tokenRequired,
