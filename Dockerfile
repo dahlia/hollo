@@ -23,4 +23,5 @@ RUN \
     && mv .pkg.json package.json; \
   fi
 
+EXPOSE 3000
 CMD ["bun", "run", "prod"]
