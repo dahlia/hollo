@@ -112,7 +112,15 @@ app.get(
       orderBy: [desc(posts.id)],
       limit: query.limit,
     });
-    return c.json(timeline.map((p) => serializePost(p, owner, c.req.url)));
+    const nextMaxId =
+      timeline.length >= query.limit ? timeline[timeline.length - 1].id : null;
+    const nextLink = nextMaxId == null ? undefined : new URL(c.req.url);
+    nextLink?.searchParams.set("max_id", nextMaxId ?? "");
+    return c.json(
+      timeline.map((p) => serializePost(p, owner, c.req.url)),
+      200,
+      nextLink == null ? undefined : { Link: `<${nextLink.href}>; rel="next"` },
+    );
   },
 );
 
@@ -197,7 +205,15 @@ app.get(
       orderBy: [desc(posts.id)],
       limit: query.limit,
     });
-    return c.json(timeline.map((p) => serializePost(p, owner, c.req.url)));
+    const nextMaxId =
+      timeline.length >= query.limit ? timeline[timeline.length - 1].id : null;
+    const nextLink = nextMaxId == null ? undefined : new URL(c.req.url);
+    nextLink?.searchParams.set("max_id", nextMaxId ?? "");
+    return c.json(
+      timeline.map((p) => serializePost(p, owner, c.req.url)),
+      200,
+      nextLink == null ? undefined : { Link: `<${nextLink.href}>; rel="next"` },
+    );
   },
 );
 
@@ -286,7 +302,15 @@ app.get(
       orderBy: [desc(posts.id)],
       limit: query.limit,
     });
-    return c.json(timeline.map((p) => serializePost(p, owner, c.req.url)));
+    const nextMaxId =
+      timeline.length >= query.limit ? timeline[timeline.length - 1].id : null;
+    const nextLink = nextMaxId == null ? undefined : new URL(c.req.url);
+    nextLink?.searchParams.set("max_id", nextMaxId ?? "");
+    return c.json(
+      timeline.map((p) => serializePost(p, owner, c.req.url)),
+      200,
+      nextLink == null ? undefined : { Link: `<${nextLink.href}>; rel="next"` },
+    );
   },
 );
 
