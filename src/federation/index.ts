@@ -297,6 +297,8 @@ federation
     if (actorId == null || objectId == null) return;
     if (objectId.href === actorId.href) {
       await db.delete(accounts).where(eq(accounts.iri, actorId.href));
+    } else {
+      await db.delete(posts).where(eq(posts.iri, objectId.href));
     }
   })
   .on(Undo, async (ctx, undo) => {

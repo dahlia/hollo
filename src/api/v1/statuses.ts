@@ -371,6 +371,19 @@ app.delete(
     });
     if (post == null) return c.json({ error: "Record not found" }, 404);
     await db.delete(posts).where(eq(posts.id, id));
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    await fedCtx.sendActivity(
+      { handle: owner.handle },
+      "followers",
+      new vocab.Delete({
+        actor: new URL(owner.account.iri),
+        to: vocab.PUBLIC_COLLECTION,
+        object: new vocab.Tombstone({
+          id: new URL(post.iri),
+        }),
+      }),
+      { preferSharedInbox: true },
+    );
     return c.json({
       ...serializePost(post, owner, c.req.url),
       text: post.content ?? "",
