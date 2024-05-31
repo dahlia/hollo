@@ -6,6 +6,7 @@ import {
   eq,
   gt,
   inArray,
+  isNull,
   lt,
   ne,
   notInArray,
@@ -172,6 +173,27 @@ app.get(
                   sql.raw(","),
                 )}]`,
               ),
+        ),
+        or(
+          isNull(posts.replyTargetId),
+          inArray(
+            posts.replyTargetId,
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .where(
+                or(
+                  eq(posts.accountId, owner.id),
+                  inArray(
+                    posts.accountId,
+                    db
+                      .select({ id: follows.followingId })
+                      .from(follows)
+                      .where(eq(follows.followerId, owner.id)),
+                  ),
+                ),
+              ),
+          ),
         ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
