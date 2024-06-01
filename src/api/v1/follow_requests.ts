@@ -1,5 +1,5 @@
 import { Accept, Follow, Reject } from "@fedify/fedify";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import db from "../../db";
 import {
@@ -78,6 +78,16 @@ app.post(
         }),
       );
     }
+    const rows = await db
+      .select({ cnt: count() })
+      .from(follows)
+      .where(eq(follows.followingId, owner.id));
+    await db
+      .update(accounts)
+      .set({
+        followersCount: rows.length < 1 ? 0 : rows[0].cnt,
+      })
+      .where(eq(accounts.id, owner.id));
     const follow = await db.query.follows.findFirst({
       where: and(
         eq(follows.followingId, followerId),

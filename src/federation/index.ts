@@ -25,7 +25,7 @@ import {
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
-import { and, count, eq, ilike, inArray, like } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, like, sql } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
 import {
@@ -101,11 +101,13 @@ federation
 federation
   .setFollowersDispatcher(
     "/@{handle}/followers",
-    async (_ctx, handle, _cursor, filter) => {
+    async (_ctx, handle, cursor, filter) => {
       const owner = await db.query.accountOwners.findFirst({
         where: eq(accountOwners.handle, handle),
       });
-      if (owner == null) return null;
+      if (owner == null || cursor == null) return null;
+      const offset = Number.parseInt(cursor);
+      if (!Number.isInteger(offset)) return null;
       const followers = await db.query.accounts.findMany({
         where: and(
           inArray(
@@ -119,19 +121,23 @@ federation
             ? undefined
             : ilike(accounts.iri, `${filter.origin}/%`),
         ),
+        offset,
+        orderBy: accounts.id,
+        limit: 41,
       });
-      // TODO: pagination
       return {
-        items: followers.map((f) => ({
+        items: followers.slice(0, 40).map((f) => ({
           id: new URL(f.iri),
           inboxId: new URL(f.inboxUrl),
           endpoints: {
             sharedInbox: f.sharedInboxUrl ? new URL(f.sharedInboxUrl) : null,
           },
         })),
+        nextCursor: followers.length > 40 ? `${offset + 40}` : null,
       };
     },
   )
+  .setFirstCursor(async (_ctx, _handle) => "0")
   .setCounter(async (_ctx, handle) => {
     const result = await db
       .select({ cnt: count() })
@@ -204,6 +210,16 @@ federation
           object: follow,
         }),
       );
+      const result = await db
+        .select({ cnt: count() })
+        .from(follows)
+        .where(eq(follows.followingId, following.id));
+      await db
+        .update(accounts)
+        .set({
+          followersCount: result.length < 1 ? 0 : result[0].cnt,
+        })
+        .where(eq(accounts.id, following.id));
     }
   })
   .on(Accept, async (ctx, accept) => {
@@ -312,14 +328,27 @@ federation
       }
       const account = await persistAccount(db, actor, ctx);
       if (account == null) return;
-      await db
+      const deleted = await db
         .delete(follows)
         .where(
           and(
             eq(follows.iri, object.id.href),
             eq(follows.followerId, account.id),
           ),
-        );
+        )
+        .returning({ followingId: follows.followingId });
+      if (deleted.length > 0) {
+        const result = await db
+          .select({ cnt: count() })
+          .from(follows)
+          .where(eq(follows.followingId, deleted[0].followingId));
+        await db
+          .update(accounts)
+          .set({
+            followersCount: result.length < 1 ? 0 : result[0].cnt,
+          })
+          .where(eq(accounts.id, deleted[0].followingId));
+      }
     } else if (object instanceof Like) {
       const like = object;
       if (like.objectId == null) return;
