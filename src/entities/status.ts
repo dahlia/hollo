@@ -25,6 +25,7 @@ export function serializePost(
             account: Account & { owner: AccountOwner | null };
           })[];
           likes: Like[];
+          shares: Post[];
           bookmarks: Bookmark[];
         })
       | null;
@@ -32,6 +33,7 @@ export function serializePost(
       account: Account & { owner: AccountOwner | null };
     })[];
     likes: Like[];
+    shares: Post[];
     bookmarks: Bookmark[];
   },
   currentAccountOwner: { id: string },
@@ -49,13 +51,15 @@ export function serializePost(
     language: post.language,
     uri: post.iri,
     url: post.url,
-    replies_count: post.repliesCount,
-    reblogs_count: post.sharesCount,
-    favourites_count: post.likesCount,
+    replies_count: post.repliesCount ?? 0,
+    reblogs_count: post.sharesCount ?? 0,
+    favourites_count: post.likesCount ?? 0,
     favourited: post.likes.some(
       (like) => like.accountId === currentAccountOwner.id,
     ),
-    reblogged: false, // TODO
+    reblogged: post.shares.some(
+      (share) => share.accountId === currentAccountOwner.id,
+    ),
     muted: false, // TODO
     bookmarked: post.bookmarks.some(
       (bookmark) => bookmark.accountOwnerId === currentAccountOwner.id,

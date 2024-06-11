@@ -12,6 +12,7 @@ import {
 } from "../../entities/account";
 import { serializePost } from "../../entities/status";
 import federation from "../../federation";
+import { toTemporalInstant } from "../../federation/date";
 import { toCreate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type PreviewCard, fetchPreviewCard } from "../../previewcard";
@@ -19,6 +20,7 @@ import {
   type Like,
   type NewBookmark,
   type NewLike,
+  type NewPost,
   bookmarks,
   likes,
   mentions,
@@ -145,21 +147,15 @@ app.post(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: {
-              where: eq(likes.accountId, owner.id),
-            },
-            bookmarks: {
-              where: eq(bookmarks.accountOwnerId, owner.id),
-            },
+            likes: { where: eq(likes.accountId, owner.id) },
+            shares: { where: eq(posts.accountId, owner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: {
-          where: eq(likes.accountId, owner.id),
-        },
-        bookmarks: {
-          where: eq(bookmarks.accountOwnerId, owner.id),
-        },
+        likes: { where: eq(likes.accountId, owner.id) },
+        shares: { where: eq(posts.accountId, owner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
       },
     }))!;
     const activity = toCreate(post, fedCtx);
@@ -175,10 +171,14 @@ app.post(
               : { sharedInbox: new URL(m.account.sharedInboxUrl) },
         })),
         activity,
+        {
+          excludeBaseUris: [new URL(c.req.url)],
+        },
       );
     } else {
       await fedCtx.sendActivity({ handle }, "followers", activity, {
         preferSharedInbox: true,
+        excludeBaseUris: [new URL(c.req.url)],
       });
     }
     return c.json(serializePost(post, owner, c.req.url));
@@ -266,21 +266,15 @@ app.put(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: {
-              where: eq(likes.accountId, owner.id),
-            },
-            bookmarks: {
-              where: eq(bookmarks.accountOwnerId, owner.id),
-            },
+            likes: { where: eq(likes.accountId, owner.id) },
+            shares: { where: eq(posts.accountId, owner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: {
-          where: eq(likes.accountId, owner.id),
-        },
-        bookmarks: {
-          where: eq(bookmarks.accountOwnerId, owner.id),
-        },
+        likes: { where: eq(likes.accountId, owner.id) },
+        shares: { where: eq(posts.accountId, owner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
       },
     });
     // biome-ignore lint/style/noNonNullAssertion: never null
@@ -306,21 +300,15 @@ app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
           application: true,
           replyTarget: true,
           mentions: { with: { account: { with: { owner: true } } } },
-          likes: {
-            where: eq(likes.accountId, owner.id),
-          },
-          bookmarks: {
-            where: eq(bookmarks.accountOwnerId, owner.id),
-          },
+          likes: { where: eq(likes.accountId, owner.id) },
+          shares: { where: eq(posts.accountId, owner.id) },
+          bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
         },
       },
       mentions: { with: { account: { with: { owner: true } } } },
-      likes: {
-        where: eq(likes.accountId, owner.id),
-      },
-      bookmarks: {
-        where: eq(bookmarks.accountOwnerId, owner.id),
-      },
+      likes: { where: eq(likes.accountId, owner.id) },
+      shares: { where: eq(posts.accountId, owner.id) },
+      bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
     },
   });
   if (post == null) return c.json({ error: "Record not found" }, 404);
@@ -352,21 +340,15 @@ app.delete(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: {
-              where: eq(likes.accountId, owner.id),
-            },
-            bookmarks: {
-              where: eq(bookmarks.accountOwnerId, owner.id),
-            },
+            likes: { where: eq(likes.accountId, owner.id) },
+            shares: { where: eq(posts.accountId, owner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: {
-          where: eq(likes.accountId, owner.id),
-        },
-        bookmarks: {
-          where: eq(bookmarks.accountOwnerId, owner.id),
-        },
+        likes: { where: eq(likes.accountId, owner.id) },
+        shares: { where: eq(posts.accountId, owner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
       },
     });
     if (post == null) return c.json({ error: "Record not found" }, 404);
@@ -382,7 +364,10 @@ app.delete(
           id: new URL(post.iri),
         }),
       }),
-      { preferSharedInbox: true },
+      {
+        preferSharedInbox: true,
+        excludeBaseUris: [new URL(c.req.url)],
+      },
     );
     return c.json({
       ...serializePost(post, owner, c.req.url),
@@ -433,21 +418,15 @@ app.get(
           application: true,
           replyTarget: true,
           mentions: { with: { account: { with: { owner: true } } } },
-          likes: {
-            where: eq(likes.accountId, owner.id),
-          },
-          bookmarks: {
-            where: eq(bookmarks.accountOwnerId, owner.id),
-          },
+          likes: { where: eq(likes.accountId, owner.id) },
+          shares: { where: eq(posts.accountId, owner.id) },
+          bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
         },
       },
       mentions: { with: { account: { with: { owner: true } } } },
-      likes: {
-        where: eq(likes.accountId, owner.id),
-      },
-      bookmarks: {
-        where: eq(bookmarks.accountOwnerId, owner.id),
-      },
+      likes: { where: eq(likes.accountId, owner.id) },
+      shares: { where: eq(posts.accountId, owner.id) },
+      bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
       replies: true,
     } as const;
     const post = await db.query.posts.findFirst({
@@ -522,21 +501,15 @@ app.post(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: {
-              where: eq(likes.accountId, owner.id),
-            },
-            bookmarks: {
-              where: eq(bookmarks.accountOwnerId, owner.id),
-            },
+            likes: { where: eq(likes.accountId, owner.id) },
+            shares: { where: eq(posts.accountId, owner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: {
-          where: eq(likes.accountId, owner.id),
-        },
-        bookmarks: {
-          where: eq(bookmarks.accountOwnerId, owner.id),
-        },
+        likes: { where: eq(likes.accountId, owner.id) },
+        shares: { where: eq(posts.accountId, owner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
       },
     });
     if (post == null) {
@@ -554,6 +527,10 @@ app.post(
         actor: new URL(owner.account.iri),
         object: new URL(post.iri),
       }),
+      {
+        preferSharedInbox: true,
+        excludeBaseUris: [new URL(c.req.url)],
+      },
     );
     return c.json(serializePost(post, owner, c.req.url));
   },
@@ -590,21 +567,15 @@ app.post(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: {
-              where: eq(likes.accountId, owner.id),
-            },
-            bookmarks: {
-              where: eq(bookmarks.accountOwnerId, owner.id),
-            },
+            likes: { where: eq(likes.accountId, owner.id) },
+            shares: { where: eq(posts.accountId, owner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: {
-          where: eq(likes.accountId, owner.id),
-        },
-        bookmarks: {
-          where: eq(bookmarks.accountOwnerId, owner.id),
-        },
+        likes: { where: eq(likes.accountId, owner.id) },
+        shares: { where: eq(posts.accountId, owner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
       },
     });
     if (post == null) {
@@ -628,6 +599,10 @@ app.post(
           object: new URL(post.iri),
         }),
       }),
+      {
+        preferSharedInbox: true,
+        excludeBaseUris: [new URL(c.req.url)],
+      },
     );
     return c.json(serializePost(post, owner, c.req.url));
   },
@@ -664,6 +639,117 @@ app.get(
 );
 
 app.post(
+  "/:id/reblog",
+  tokenRequired,
+  scopeRequired(["write:statuses"]),
+  zValidator(
+    "form",
+    z.object({
+      visibility: z.enum(["public", "unlisted", "private"]).default("public"),
+    }),
+  ),
+  async (c) => {
+    const token = c.get("token");
+    const owner = token.accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const originalPostId = c.req.param("id");
+    const visibility = c.req.valid("form").visibility;
+    const originalPost = await db.query.posts.findFirst({
+      where: eq(posts.id, originalPostId),
+      with: { account: true },
+    });
+    if (
+      originalPost == null ||
+      originalPost.visibility === "private" ||
+      originalPost.visibility === "direct"
+    ) {
+      return c.json({ error: "Record not found" }, 404);
+    }
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    const id = uuidv7();
+    const url = fedCtx.getObjectUri(Note, { handle: owner.handle, id });
+    const published = new Date();
+    await db.transaction(async (tx) => {
+      await tx.insert(posts).values({
+        ...originalPost,
+        id,
+        iri: url.href,
+        accountId: owner.id,
+        applicationId: token.applicationId,
+        replyTargetId: null,
+        sharingId: originalPostId,
+        visibility,
+        url: url.href,
+        published,
+        updated: published,
+      } satisfies NewPost);
+      await tx
+        .update(posts)
+        .set({ sharesCount: sql`coalesce(${posts.sharesCount}, 0) + 1` })
+        .where(eq(posts.id, originalPostId));
+    });
+    await fedCtx.sendActivity(
+      { handle: owner.handle },
+      "followers",
+      new vocab.Announce({
+        id: new URL("#activity", url),
+        actor: new URL(owner.account.iri),
+        object: new URL(originalPost.iri),
+        published: toTemporalInstant(published),
+        to:
+          visibility === "public"
+            ? vocab.PUBLIC_COLLECTION
+            : fedCtx.getFollowersUri(owner.handle),
+        ccs: [
+          new URL(originalPost.account.iri),
+          ...(visibility === "private"
+            ? []
+            : [
+                visibility === "public"
+                  ? fedCtx.getFollowersUri(owner.handle)
+                  : vocab.PUBLIC_COLLECTION,
+              ]),
+        ],
+      }),
+      {
+        preferSharedInbox: true,
+        excludeBaseUris: [new URL(c.req.url)],
+      },
+    );
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, id),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: { where: eq(likes.accountId, owner.id) },
+            shares: { where: eq(posts.accountId, owner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: { where: eq(likes.accountId, owner.id) },
+        shares: { where: eq(posts.accountId, owner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
+      },
+    });
+    // biome-ignore lint/style/noNonNullAssertion: never null
+    return c.json(serializePost(post!, owner, c.req.url));
+  },
+);
+
+app.post(
   "/:id/bookmark",
   tokenRequired,
   scopeRequired(["write:bookmarks"]),
@@ -696,21 +782,15 @@ app.post(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: {
-              where: eq(likes.accountId, owner.id),
-            },
-            bookmarks: {
-              where: eq(bookmarks.accountOwnerId, owner.id),
-            },
+            likes: { where: eq(likes.accountId, owner.id) },
+            shares: { where: eq(posts.accountId, owner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: {
-          where: eq(likes.accountId, owner.id),
-        },
-        bookmarks: {
-          where: eq(bookmarks.accountOwnerId, owner.id),
-        },
+        likes: { where: eq(likes.accountId, owner.id) },
+        shares: { where: eq(posts.accountId, owner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
       },
     });
     // biome-ignore lint/style/noNonNullAssertion: never null
@@ -755,21 +835,15 @@ app.post(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: {
-              where: eq(likes.accountId, owner.id),
-            },
-            bookmarks: {
-              where: eq(bookmarks.accountOwnerId, owner.id),
-            },
+            likes: { where: eq(likes.accountId, owner.id) },
+            shares: { where: eq(posts.accountId, owner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: {
-          where: eq(likes.accountId, owner.id),
-        },
-        bookmarks: {
-          where: eq(bookmarks.accountOwnerId, owner.id),
-        },
+        likes: { where: eq(likes.accountId, owner.id) },
+        shares: { where: eq(posts.accountId, owner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
       },
     });
     // biome-ignore lint/style/noNonNullAssertion: never null

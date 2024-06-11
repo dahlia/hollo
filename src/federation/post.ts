@@ -1,4 +1,5 @@
 import {
+  type Announce,
   Article,
   type Context,
   Create,
@@ -21,6 +22,7 @@ import {
   type Account,
   type AccountOwner,
   type Mention,
+  type NewPost,
   type Post,
   mentions,
   posts,
@@ -149,6 +151,57 @@ export async function persistPost(
     }
   }
   return post;
+}
+
+export async function persistSharingPost(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  announce: Announce,
+  object: Article | Note,
+  options: {
+    contextLoader?: DocumentLoader;
+    documentLoader?: DocumentLoader;
+  } = {},
+): Promise<Post | null> {
+  if (announce.id == null) return null;
+  const actor = await announce.getActor(options);
+  if (actor == null) return null;
+  const account = await persistAccount(db, actor, options);
+  if (account == null) return null;
+  const originalPost = await persistPost(db, object, options);
+  if (originalPost == null) return null;
+  const id = uuidv7();
+  const updated = new Date();
+  const result = await db
+    .insert(posts)
+    .values({
+      ...originalPost,
+      id,
+      iri: announce.id.href,
+      accountId: account.id,
+      applicationId: null,
+      replyTargetId: null,
+      sharingId: originalPost.id,
+      visibility: announce.toIds
+        .map((iri) => iri.href)
+        .includes(PUBLIC_COLLECTION.href)
+        ? "public"
+        : announce.ccIds.map((iri) => iri.href).includes(PUBLIC_COLLECTION.href)
+          ? "unlisted"
+          : "private",
+      url: originalPost.url,
+      published: toDate(announce.published) ?? updated,
+      updated,
+    } satisfies NewPost)
+    .returning();
+  await db
+    .update(posts)
+    .set({ sharesCount: sql`coalesce(${posts.sharesCount}, 0) + 1` })
+    .where(eq(posts.id, originalPost.id));
+  return result[0] ?? null;
 }
 
 export function toObject(

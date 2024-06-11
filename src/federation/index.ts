@@ -1,5 +1,6 @@
 import {
   Accept,
+  Announce,
   Article,
   Create,
   Delete,
@@ -25,7 +26,7 @@ import {
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
-import { and, count, eq, ilike, inArray, like, sql } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, like } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
 import {
@@ -38,7 +39,7 @@ import {
 } from "../schema";
 import { persistAccount } from "./account";
 import { toTemporalInstant } from "./date";
-import { persistPost } from "./post";
+import { persistPost, persistSharingPost } from "./post";
 
 export const federation = new Federation({
   kv: new MemoryKvStore(),
@@ -295,6 +296,16 @@ federation
       inboxLogger.debug("Unsupported object on Like: {objectId}", {
         objectId: like.objectId,
       });
+    }
+  })
+  .on(Announce, async (ctx, announce) => {
+    const object = await announce.getObject();
+    if (object instanceof Article || object instanceof Note) {
+      await db.transaction(async (tx) => {
+        await persistSharingPost(tx, announce, object, ctx);
+      });
+    } else {
+      inboxLogger.debug("Unsupported object on Announce: {object}", { object });
     }
   })
   .on(Update, async (ctx, update) => {

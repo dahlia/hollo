@@ -493,21 +493,15 @@ app.get(
             application: true,
             replyTarget: true,
             mentions: { with: { account: { with: { owner: true } } } },
-            likes: {
-              where: eq(likes.accountId, tokenOwner.id),
-            },
-            bookmarks: {
-              where: eq(bookmarks.accountOwnerId, tokenOwner.id),
-            },
+            likes: { where: eq(likes.accountId, tokenOwner.id) },
+            shares: { where: eq(posts.accountId, tokenOwner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, tokenOwner.id) },
           },
         },
         mentions: { with: { account: { with: { owner: true } } } },
-        likes: {
-          where: eq(likes.accountId, tokenOwner.id),
-        },
-        bookmarks: {
-          where: eq(bookmarks.accountOwnerId, tokenOwner.id),
-        },
+        likes: { where: eq(likes.accountId, tokenOwner.id) },
+        shares: { where: eq(posts.accountId, tokenOwner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, tokenOwner.id) },
       },
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,

@@ -166,21 +166,15 @@ app.get(
                   application: true,
                   replyTarget: true,
                   mentions: { with: { account: { with: { owner: true } } } },
-                  likes: {
-                    where: eq(likes.accountId, owner.id),
-                  },
-                  bookmarks: {
-                    where: eq(bookmarks.accountOwnerId, owner.id),
-                  },
+                  likes: { where: eq(likes.accountId, owner.id) },
+                  shares: { where: eq(posts.accountId, owner.id) },
+                  bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
                 },
               },
               mentions: { with: { account: { with: { owner: true } } } },
-              likes: {
-                where: eq(likes.accountId, owner.id),
-              },
-              bookmarks: {
-                where: eq(bookmarks.accountOwnerId, owner.id),
-              },
+              likes: { where: eq(likes.accountId, owner.id) },
+              shares: { where: eq(posts.accountId, owner.id) },
+              bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
             },
           })
         : []

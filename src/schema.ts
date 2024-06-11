@@ -12,7 +12,6 @@ import {
   timestamp,
   uuid,
   varchar,
-  index,
 } from "drizzle-orm/pg-core";
 import type { PreviewCard } from "./previewcard";
 

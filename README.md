@@ -46,6 +46,9 @@ Current features and roadmap
 - [ ] Search
 - [x] Following/unfollowing accounts
 - [x] Following/unfollowing hashtags
+- [ ] Blocking accounts
+- [ ] Blocking domains
+- [ ] Muting accounts
 - [x] Notifications
 - [x] Bookmarks
 - [x] Markers
