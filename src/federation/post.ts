@@ -278,3 +278,34 @@ export function toCreate(
     published: object.published,
   });
 }
+
+export function toAnnounce(
+  post: Post & {
+    account: Account;
+    sharing: (Post & { account: Account }) | null;
+  },
+  ctx: Context<unknown>,
+): Announce {
+  if (post.sharing == null) throw new Error("The post is not shared");
+  const handle = post.account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
+  return new vocab.Announce({
+    id: new URL("#activity", post.iri),
+    actor: new URL(post.account.iri),
+    object: new URL(post.sharing.iri),
+    published: toTemporalInstant(post.published),
+    to:
+      post.visibility === "public"
+        ? vocab.PUBLIC_COLLECTION
+        : ctx.getFollowersUri(handle),
+    ccs: [
+      new URL(post.sharing.account.iri),
+      ...(post.visibility === "private"
+        ? []
+        : [
+            post.visibility === "public"
+              ? ctx.getFollowersUri(handle)
+              : vocab.PUBLIC_COLLECTION,
+          ]),
+    ],
+  });
+}

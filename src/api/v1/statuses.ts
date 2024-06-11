@@ -1,4 +1,4 @@
-import { Note } from "@fedify/fedify";
+import { Note, Undo } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, sql } from "drizzle-orm";
@@ -12,8 +12,7 @@ import {
 } from "../../entities/account";
 import { serializePost } from "../../entities/status";
 import federation from "../../federation";
-import { toTemporalInstant } from "../../federation/date";
-import { toCreate } from "../../federation/post";
+import { toAnnounce, toCreate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type PreviewCard, fetchPreviewCard } from "../../previewcard";
 import {
@@ -693,34 +692,6 @@ app.post(
         .set({ sharesCount: sql`coalesce(${posts.sharesCount}, 0) + 1` })
         .where(eq(posts.id, originalPostId));
     });
-    await fedCtx.sendActivity(
-      { handle: owner.handle },
-      "followers",
-      new vocab.Announce({
-        id: new URL("#activity", url),
-        actor: new URL(owner.account.iri),
-        object: new URL(originalPost.iri),
-        published: toTemporalInstant(published),
-        to:
-          visibility === "public"
-            ? vocab.PUBLIC_COLLECTION
-            : fedCtx.getFollowersUri(owner.handle),
-        ccs: [
-          new URL(originalPost.account.iri),
-          ...(visibility === "private"
-            ? []
-            : [
-                visibility === "public"
-                  ? fedCtx.getFollowersUri(owner.handle)
-                  : vocab.PUBLIC_COLLECTION,
-              ]),
-        ],
-      }),
-      {
-        preferSharedInbox: true,
-        excludeBaseUris: [new URL(c.req.url)],
-      },
-    );
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, id),
       with: {
@@ -744,8 +715,98 @@ app.post(
         bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
       },
     });
+    await fedCtx.sendActivity(
+      { handle: owner.handle },
+      "followers",
+      // biome-ignore lint/style/noNonNullAssertion: never null
+      toAnnounce(post!, fedCtx),
+      {
+        preferSharedInbox: true,
+        excludeBaseUris: [new URL(c.req.url)],
+      },
+    );
     // biome-ignore lint/style/noNonNullAssertion: never null
     return c.json(serializePost(post!, owner, c.req.url));
+  },
+);
+
+app.post(
+  "/:id/unreblog",
+  tokenRequired,
+  scopeRequired(["write:statuses"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const originalPostId = c.req.param("id");
+    const postList = await db.query.posts.findMany({
+      where: and(
+        eq(posts.accountId, owner.id),
+        eq(posts.sharingId, originalPostId),
+      ),
+      with: {
+        account: true,
+        sharing: {
+          with: { account: true },
+        },
+      },
+    });
+    if (postList.length < 1) return c.json({ error: "Record not found" }, 404);
+    await db
+      .delete(posts)
+      .where(
+        and(eq(posts.accountId, owner.id), eq(posts.sharingId, originalPostId)),
+      );
+    await db
+      .update(posts)
+      .set({
+        sharesCount: sql`coalesce(${posts.sharesCount} - ${postList.length}, 0)`,
+      })
+      .where(eq(posts.id, originalPostId));
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    for (const post of postList) {
+      await fedCtx.sendActivity(
+        { handle: owner.handle },
+        "followers",
+        new Undo({
+          actor: new URL(owner.account.iri),
+          object: toAnnounce(post, fedCtx),
+        }),
+        {
+          preferSharedInbox: true,
+          excludeBaseUris: [new URL(c.req.url)],
+        },
+      );
+    }
+    const originalPost = await db.query.posts.findFirst({
+      where: eq(posts.id, originalPostId),
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        sharing: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: { where: eq(likes.accountId, owner.id) },
+            shares: { where: eq(posts.accountId, owner.id) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: { where: eq(likes.accountId, owner.id) },
+        shares: { where: eq(posts.accountId, owner.id) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
+      },
+    });
+    // biome-ignore lint/style/noNonNullAssertion: never null
+    return c.json(serializePost(originalPost!, owner, c.req.url));
   },
 );
 

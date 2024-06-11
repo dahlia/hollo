@@ -1,5 +1,6 @@
 import {
   Accept,
+  Activity,
   Announce,
   Article,
   Create,
@@ -26,7 +27,7 @@ import {
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
-import { and, count, eq, ilike, inArray, like } from "drizzle-orm";
+import { and, count, eq, ilike, inArray, like, sql } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
 import {
@@ -330,6 +331,12 @@ federation
   })
   .on(Undo, async (ctx, undo) => {
     const object = await undo.getObject();
+    if (
+      object instanceof Activity &&
+      object.actorId?.href !== undo.actorId?.href
+    ) {
+      return;
+    }
     if (object instanceof Follow) {
       if (object.id == null) return;
       const actor = await undo.getActor();
@@ -386,6 +393,39 @@ federation
           objectId: like.objectId,
         });
       }
+    } else if (object instanceof Announce) {
+      const sharer = object.actorId;
+      const originalPost = object.objectId;
+      if (sharer == null || originalPost == null) return;
+      await db.transaction(async (tx) => {
+        const deleted = await tx
+          .delete(posts)
+          .where(
+            and(
+              eq(
+                posts.accountId,
+                db
+                  .select({ id: accounts.id })
+                  .from(accounts)
+                  .where(eq(accounts.iri, sharer.href)),
+              ),
+              eq(
+                posts.sharingId,
+                db
+                  .select({ id: posts.id })
+                  .from(posts)
+                  .where(eq(posts.iri, originalPost.href)),
+              ),
+            ),
+          )
+          .returning();
+        await tx
+          .update(posts)
+          .set({
+            sharesCount: sql`coalesce(${posts.sharesCount} - ${deleted.length}, 0)`,
+          })
+          .where(eq(posts.iri, originalPost.href));
+      });
     } else {
       inboxLogger.debug("Unsupported object on Undo: {object}", { object });
     }
