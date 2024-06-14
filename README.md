@@ -36,7 +36,7 @@ Current features and roadmap
 - [ ] Images
 - [ ] Polls
 - [x] Likes (favorites)
-- [ ] Shares (reblogs)
+- [x] Shares (reblogs)
 - [x] Editing profile
 - [x] Deleting account
 - [x] Public timeline
