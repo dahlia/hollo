@@ -30,6 +30,7 @@
     "markdown-it-replace-link": "^1.2.1",
     "open-graph-scraper": "^6.5.1",
     "postgres": "^3.4.4",
+    "sharp": "^0.33.4",
     "uuidv7-js": "^1.0.12",
     "x-forwarded-fetch": "^0.2.0",
     "xss": "^1.0.15",

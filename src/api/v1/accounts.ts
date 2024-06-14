@@ -20,7 +20,7 @@ import {
   serializeAccount,
   serializeAccountOwner,
 } from "../../entities/account";
-import { serializePost } from "../../entities/status";
+import { getPostRelations, serializePost } from "../../entities/status";
 import { federation } from "../../federation";
 import { persistAccount } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
@@ -29,9 +29,7 @@ import {
   type NewFollow,
   accountOwners,
   accounts,
-  bookmarks,
   follows,
-  likes,
   mentions,
   posts,
 } from "../../schema";
@@ -483,26 +481,7 @@ app.get(
         query.max_id == null ? undefined : lte(posts.id, query.max_id),
         query.min_id == null ? undefined : gte(posts.id, query.min_id),
       ),
-      with: {
-        account: true,
-        application: true,
-        replyTarget: true,
-        sharing: {
-          with: {
-            account: true,
-            application: true,
-            replyTarget: true,
-            mentions: { with: { account: { with: { owner: true } } } },
-            likes: { where: eq(likes.accountId, tokenOwner.id) },
-            shares: { where: eq(posts.accountId, tokenOwner.id) },
-            bookmarks: { where: eq(bookmarks.accountOwnerId, tokenOwner.id) },
-          },
-        },
-        mentions: { with: { account: { with: { owner: true } } } },
-        likes: { where: eq(likes.accountId, tokenOwner.id) },
-        shares: { where: eq(posts.accountId, tokenOwner.id) },
-        bookmarks: { where: eq(bookmarks.accountOwnerId, tokenOwner.id) },
-      },
+      with: getPostRelations(tokenOwner.id),
       orderBy: [desc(posts.id)],
       limit: query.limit ?? 20,
     });

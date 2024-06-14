@@ -50,14 +50,19 @@ app.get("/", async (c) => {
       statuses: {
         // TODO
         max_characters: 4096,
-        max_media_attachments: 0,
+        max_media_attachments: 8,
         characters_reserved_per_url: 256,
       },
       media_attachments: {
+        supported_mime_types: [
+          "image/jpeg",
+          "image/png",
+          "image/gif",
+          "image/webp",
+        ],
+        image_size_limit: 1024 * 1024 * 32, // 32MiB
+        image_matrix_limit: 16_777_216,
         // TODO
-        supported_mime_types: [],
-        image_size_limit: 0,
-        image_matrix_limit: 0,
         video_size_limit: 0,
         video_frame_rate_limit: 0,
         video_matrix_limit: 0,

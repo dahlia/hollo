@@ -8,15 +8,11 @@ import {
   Endpoints,
   Federation,
   Follow,
-  Hashtag,
   Image,
   InProcessMessageQueue,
-  LanguageString,
   Like,
   MemoryKvStore,
-  Mention,
   Note,
-  PUBLIC_COLLECTION,
   PropertyValue,
   Reject,
   Undo,
@@ -40,7 +36,7 @@ import {
 } from "../schema";
 import { persistAccount } from "./account";
 import { toTemporalInstant } from "./date";
-import { persistPost, persistSharingPost } from "./post";
+import { persistPost, persistSharingPost, toObject } from "./post";
 
 export const federation = new Federation({
   kv: new MemoryKvStore(),
@@ -439,7 +435,12 @@ federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
   if (owner == null) return null;
   const post = await db.query.posts.findFirst({
     where: and(eq(posts.id, values.id), eq(posts.accountId, owner.account.id)),
-    with: { replyTarget: true, mentions: { with: { account: true } } },
+    with: {
+      account: { with: { owner: true } },
+      replyTarget: true,
+      media: true,
+      mentions: { with: { account: true } },
+    },
   });
   if (post == null) return null;
   if (post.visibility === "private") {
@@ -459,46 +460,7 @@ federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
     const found = post.mentions.some((m) => m.account.iri === keyOwnerId.href);
     if (!found) return null;
   }
-  return new Note({
-    id: ctx.getObjectUri(Note, values),
-    attribution: ctx.getActorUri(values.handle),
-    replyTarget:
-      post.replyTarget == null ? null : new URL(post.replyTarget.iri),
-    tos:
-      post.visibility === "direct"
-        ? post.mentions.map((m) => new URL(m.account.iri))
-        : post.visibility === "public"
-          ? [PUBLIC_COLLECTION]
-          : post.visibility === "private"
-            ? [ctx.getFollowersUri(values.handle)]
-            : [],
-    cc: post.visibility === "direct" ? PUBLIC_COLLECTION : null,
-    summary:
-      post.summaryHtml == null
-        ? null
-        : post.language == null
-          ? post.summaryHtml
-          : new LanguageString(post.summaryHtml, post.language),
-    content:
-      post.contentHtml == null
-        ? null
-        : post.language == null
-          ? post.contentHtml
-          : new LanguageString(post.contentHtml, post.language),
-    tags: [
-      ...Object.entries(post.tags).map(
-        ([name, url]) => new Hashtag({ name: `#${name}`, href: new URL(url) }),
-      ),
-      ...post.mentions.map(
-        (m) =>
-          new Mention({ name: m.account.handle, href: new URL(m.account.iri) }),
-      ),
-    ],
-    sensitive: post.sensitive,
-    url: post.url ? new URL(post.url) : null,
-    published: post.published ? toTemporalInstant(post.published) : null,
-    updated: toTemporalInstant(post.updated),
-  });
+  return toObject(post, ctx);
 });
 
 federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {

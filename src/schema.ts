@@ -3,6 +3,7 @@ import {
   type AnyPgColumn,
   bigint,
   boolean,
+  integer,
   json,
   jsonb,
   pgEnum,
@@ -307,8 +308,34 @@ export const postRelations = relations(posts, ({ one, many }) => ({
   shares: many(posts, {
     relationName: "share",
   }),
+  media: many(media),
   mentions: many(mentions),
   bookmarks: many(bookmarks),
+}));
+
+export const media = pgTable("media", {
+  id: uuid("id").primaryKey(),
+  postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  url: text("url").notNull(),
+  width: integer("width").notNull(),
+  height: integer("height").notNull(),
+  description: text("description"),
+  thumbnailType: text("thumbnail_type").notNull(),
+  thumbnailUrl: text("thumbnail_url").notNull(),
+  thumbnailWidth: integer("thumbnail_width").notNull(),
+  thumbnailHeight: integer("thumbnail_height").notNull(),
+  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type Medium = typeof media.$inferSelect;
+export type NewMedium = typeof media.$inferInsert;
+
+export const mediumRelations = relations(media, ({ one }) => ({
+  post: one(posts, {
+    fields: [media.postId],
+    references: [posts.id],
+  }),
 }));
 
 export const mentions = pgTable(

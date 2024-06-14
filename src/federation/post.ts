@@ -16,14 +16,19 @@ import { getLogger } from "@logtape/logtape";
 import { type ExtractTablesWithRelations, eq, sql } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+import sharp from "sharp";
 import { uuidv7 } from "uuidv7-js";
+import { uploadThumbnail } from "../media";
 import { fetchPreviewCard } from "../previewcard";
 import {
   type Account,
   type AccountOwner,
+  type Medium,
   type Mention,
+  type NewMedium,
   type NewPost,
   type Post,
+  media,
   mentions,
   posts,
 } from "../schema";
@@ -140,7 +145,7 @@ export async function persistPost(
   });
   if (post == null) return null;
   await db.delete(mentions).where(eq(mentions.postId, post.id));
-  for await (const tag of object.getTags()) {
+  for await (const tag of object.getTags(options)) {
     if (tag instanceof vocab.Mention && tag.name != null && tag.href != null) {
       const account = await persistAccountByIri(db, tag.href.href, options);
       if (account == null) continue;
@@ -149,6 +154,40 @@ export async function persistPost(
         postId: post.id,
       });
     }
+  }
+  await db.delete(media).where(eq(media.postId, post.id));
+  for await (const attachment of object.getAttachments(options)) {
+    if (
+      !(
+        attachment instanceof vocab.Image ||
+        attachment instanceof vocab.Document
+      )
+    ) {
+      continue;
+    }
+    const url =
+      attachment.url instanceof Link
+        ? attachment.url.href?.href
+        : attachment.url?.href;
+    if (url == null) continue;
+    const response = await fetch(url);
+    const mediaType =
+      response.headers.get("Content-Type") ?? attachment.mediaType;
+    if (mediaType == null) continue;
+    const image = sharp(await response.arrayBuffer());
+    const metadata = await image.metadata();
+    const id = uuidv7();
+    const thumbnail = await uploadThumbnail(id, image);
+    await db.insert(media).values({
+      id,
+      postId: post.id,
+      type: mediaType,
+      url,
+      description: attachment.name?.toString(),
+      width: attachment.width ?? metadata.width!,
+      height: attachment.height ?? metadata.height!,
+      ...thumbnail,
+    } satisfies NewMedium);
   }
   return post;
 }
@@ -208,6 +247,7 @@ export function toObject(
   post: Post & {
     account: Account & { owner: AccountOwner | null };
     replyTarget: Post | null;
+    media: Medium[];
     mentions: (Mention & { account: Account })[];
   },
   ctx: Context<unknown>,
@@ -248,14 +288,32 @@ export function toObject(
       ...Object.entries(post.tags).map(
         ([name, url]) =>
           new vocab.Hashtag({
-            name,
+            name: `#${name}`,
             href: new URL(url),
           }),
       ),
     ],
     replyTarget:
       post.replyTarget == null ? null : new URL(post.replyTarget.iri),
+    attachments: post.media.map(
+      (medium) =>
+        new vocab.Image({
+          mediaType: medium.type,
+          url: new URL(medium.url),
+          name: medium.description,
+          width: medium.width,
+          height: medium.height,
+        }),
+    ),
     published: toTemporalInstant(post.published),
+    url: post.url ? new URL(post.url) : null,
+    updated: toTemporalInstant(
+      post.published == null
+        ? post.updated
+        : +post.updated === +post.published
+          ? null
+          : post.updated,
+    ),
   });
 }
 
@@ -263,13 +321,13 @@ export function toCreate(
   post: Post & {
     account: Account & { owner: AccountOwner | null };
     replyTarget: Post | null;
+    media: Medium[];
     mentions: (Mention & { account: Account })[];
   },
   ctx: Context<unknown>,
 ): Create {
   const object = toObject(post, ctx);
   return new Create({
-    // biome-ignore lint/style/noNonNullAssertion: id is never null
     id: new URL("#create", object.id!),
     actor: object.attributionId,
     tos: object.toIds,

@@ -6,16 +6,9 @@ import {
   serializeAccount,
   serializeAccountOwner,
 } from "../../entities/account";
-import { serializePost } from "../../entities/status";
+import { getPostRelations, serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import {
-  accounts,
-  bookmarks,
-  follows,
-  likes,
-  mentions,
-  posts,
-} from "../../schema";
+import { accounts, follows, likes, mentions, posts } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -141,7 +134,6 @@ app.get(
     const accountIds = notifications.map((n) => n.accountId);
     const postIds = notifications
       .filter((n) => n.postId != null)
-      // biome-ignore lint/style/noNonNullAssertion: filtered
       .map((n) => n.postId!);
     const accountMap = Object.fromEntries(
       (accountIds.length > 0
@@ -156,26 +148,7 @@ app.get(
       (postIds.length > 0
         ? await db.query.posts.findMany({
             where: inArray(posts.id, postIds),
-            with: {
-              account: { with: { owner: true } },
-              application: true,
-              replyTarget: true,
-              sharing: {
-                with: {
-                  account: true,
-                  application: true,
-                  replyTarget: true,
-                  mentions: { with: { account: { with: { owner: true } } } },
-                  likes: { where: eq(likes.accountId, owner.id) },
-                  shares: { where: eq(posts.accountId, owner.id) },
-                  bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-                },
-              },
-              mentions: { with: { account: { with: { owner: true } } } },
-              likes: { where: eq(likes.accountId, owner.id) },
-              shares: { where: eq(posts.accountId, owner.id) },
-              bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-            },
+            with: getPostRelations(owner.id),
           })
         : []
       ).map((p) => [p.id, p]),

@@ -16,16 +16,9 @@ import {
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
-import { serializePost } from "../../entities/status";
+import { getPostRelations, serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import {
-  accountOwners,
-  bookmarks,
-  follows,
-  likes,
-  mentions,
-  posts,
-} from "../../schema";
+import { accountOwners, follows, mentions, posts } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -84,26 +77,7 @@ app.get(
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
-      with: {
-        account: true,
-        application: true,
-        replyTarget: true,
-        sharing: {
-          with: {
-            account: true,
-            application: true,
-            replyTarget: true,
-            mentions: { with: { account: { with: { owner: true } } } },
-            likes: { where: eq(likes.accountId, owner.id) },
-            shares: { where: eq(posts.accountId, owner.id) },
-            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-          },
-        },
-        mentions: { with: { account: { with: { owner: true } } } },
-        likes: { where: eq(likes.accountId, owner.id) },
-        shares: { where: eq(posts.accountId, owner.id) },
-        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-      },
+      with: getPostRelations(owner.id),
       orderBy: [desc(posts.id)],
       limit: query.limit,
     });
@@ -192,26 +166,7 @@ app.get(
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
-      with: {
-        account: true,
-        application: true,
-        replyTarget: true,
-        sharing: {
-          with: {
-            account: true,
-            application: true,
-            replyTarget: true,
-            mentions: { with: { account: { with: { owner: true } } } },
-            likes: { where: eq(likes.accountId, owner.id) },
-            shares: { where: eq(posts.accountId, owner.id) },
-            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-          },
-        },
-        mentions: { with: { account: { with: { owner: true } } } },
-        likes: { where: eq(likes.accountId, owner.id) },
-        shares: { where: eq(posts.accountId, owner.id) },
-        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-      },
+      with: getPostRelations(owner.id),
       orderBy: [desc(posts.id)],
       limit: query.limit,
     });
@@ -283,26 +238,7 @@ app.get(
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
-      with: {
-        account: true,
-        application: true,
-        replyTarget: true,
-        sharing: {
-          with: {
-            account: true,
-            application: true,
-            replyTarget: true,
-            mentions: { with: { account: { with: { owner: true } } } },
-            likes: { where: eq(likes.accountId, owner.id) },
-            shares: { where: eq(posts.accountId, owner.id) },
-            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-          },
-        },
-        mentions: { with: { account: { with: { owner: true } } } },
-        likes: { where: eq(likes.accountId, owner.id) },
-        shares: { where: eq(posts.accountId, owner.id) },
-        bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-      },
+      with: getPostRelations(owner.id),
       orderBy: [desc(posts.id)],
       limit: query.limit,
     });

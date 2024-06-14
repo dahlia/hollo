@@ -1,15 +1,46 @@
+import { eq } from "drizzle-orm";
 import type { PreviewCard } from "../previewcard";
-import type {
-  Account,
-  AccountOwner,
-  Application,
-  Bookmark,
-  Like,
-  Mention,
-  Post,
+import {
+  type Account,
+  type AccountOwner,
+  type Application,
+  type Bookmark,
+  type Like,
+  type Medium,
+  type Mention,
+  type Post,
+  bookmarks,
+  likes,
+  posts,
 } from "../schema";
 import { extractText } from "../text";
 import { serializeAccount } from "./account";
+import { serializeMedium } from "./medium";
+
+export function getPostRelations(ownerId: string) {
+  return {
+    account: { with: { owner: true } },
+    application: true,
+    replyTarget: true,
+    sharing: {
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
+        media: true,
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: { where: eq(likes.accountId, ownerId) },
+        shares: { where: eq(posts.accountId, ownerId) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
+      },
+    },
+    media: true,
+    mentions: { with: { account: { with: { owner: true } } } },
+    likes: { where: eq(likes.accountId, ownerId) },
+    shares: { where: eq(posts.accountId, ownerId) },
+    bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
+  } as const;
+}
 
 export function serializePost(
   post: Post & {
@@ -21,6 +52,7 @@ export function serializePost(
           account: Account;
           application: Application | null;
           replyTarget: Post | null;
+          media: Medium[];
           mentions: (Mention & {
             account: Account & { owner: AccountOwner | null };
           })[];
@@ -29,6 +61,7 @@ export function serializePost(
           bookmarks: Bookmark[];
         })
       | null;
+    media: Medium[];
     mentions: (Mention & {
       account: Account & { owner: AccountOwner | null };
     })[];
@@ -81,7 +114,7 @@ export function serializePost(
             website: post.application.website,
           },
     account: serializeAccount(post.account, baseUrl),
-    media_attachments: [], // TODO
+    media_attachments: post.media.map(serializeMedium),
     mentions: post.mentions.map((mention) => ({
       id: mention.accountId,
       username: mention.account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, ""),

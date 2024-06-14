@@ -3,15 +3,16 @@ import { and, desc, eq, lt } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
-import { serializePost } from "../../entities/status";
+import { getPostRelations, serializePost } from "../../entities/status";
 import { serializeTag } from "../../entities/tag";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { bookmarks, likes, posts } from "../../schema";
+import { bookmarks, likes } from "../../schema";
 import accounts from "./accounts";
 import apps from "./apps";
 import follow_requests from "./follow_requests";
 import instance from "./instance";
 import markers from "./markers";
+import media from "./media";
 import notifications from "./notifications";
 import statuses from "./statuses";
 import tags from "./tags";
@@ -24,6 +25,7 @@ app.route("/accounts", accounts);
 app.route("/follow_requests", follow_requests);
 app.route("/instance", instance);
 app.route("/markers", markers);
+app.route("/media", media);
 app.route("/notifications", notifications);
 app.route("/statuses", statuses);
 app.route("/tags", tags);
@@ -84,28 +86,7 @@ app.get(
           : lt(likes.created, new Date(query.before)),
       ),
       with: {
-        post: {
-          with: {
-            account: { with: { owner: true } },
-            application: true,
-            replyTarget: true,
-            sharing: {
-              with: {
-                account: true,
-                application: true,
-                replyTarget: true,
-                mentions: { with: { account: { with: { owner: true } } } },
-                likes: { where: eq(likes.accountId, owner.id) },
-                shares: { where: eq(posts.accountId, owner.id) },
-                bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-              },
-            },
-            mentions: { with: { account: { with: { owner: true } } } },
-            likes: { where: eq(likes.accountId, owner.id) },
-            shares: { where: eq(posts.accountId, owner.id) },
-            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-          },
-        },
+        post: { with: getPostRelations(owner.id) },
       },
       orderBy: [desc(likes.created)],
       limit: query.limit,
@@ -160,28 +141,7 @@ app.get(
           : lt(bookmarks.created, new Date(query.before)),
       ),
       with: {
-        post: {
-          with: {
-            account: { with: { owner: true } },
-            application: true,
-            replyTarget: true,
-            sharing: {
-              with: {
-                account: true,
-                application: true,
-                replyTarget: true,
-                mentions: { with: { account: { with: { owner: true } } } },
-                likes: { where: eq(likes.accountId, owner.id) },
-                shares: { where: eq(posts.accountId, owner.id) },
-                bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-              },
-            },
-            mentions: { with: { account: { with: { owner: true } } } },
-            likes: { where: eq(likes.accountId, owner.id) },
-            shares: { where: eq(posts.accountId, owner.id) },
-            bookmarks: { where: eq(bookmarks.accountOwnerId, owner.id) },
-          },
-        },
+        post: { with: getPostRelations(owner.id) },
       },
       orderBy: [desc(bookmarks.created)],
       limit: query.limit,

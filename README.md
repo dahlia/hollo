@@ -33,7 +33,7 @@ Current features and roadmap
 - [ ] Pinned posts
 - [x] Mentions
 - [x] Hashtags
-- [ ] Images
+- [x] Media attachments
 - [ ] Polls
 - [x] Likes (favorites)
 - [x] Shares (reblogs)

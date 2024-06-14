@@ -7,7 +7,7 @@ LABEL org.opencontainers.image.url https://github.com/dahlia/hollo
 LABEL org.opencontainers.image.source https://github.com/dahlia/hollo
 LABEL org.opencontainers.image.licenses AGPL-3.0-only
 
-RUN apk add --no-cache jq
+RUN apk add --no-cache jq libstdc++
 
 COPY bun.lockb package.json /app/
 WORKDIR /app/
