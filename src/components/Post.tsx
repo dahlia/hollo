@@ -1,8 +1,8 @@
 import type { FC } from "hono/jsx";
-import type { Account, Post as DbPost } from "../schema";
+import type { Account, Medium as DbMedium, Post as DbPost } from "../schema";
 
 export interface PostProps {
-  post: DbPost & { account: Account };
+  post: DbPost & { account: Account; media: DbMedium[] };
 }
 
 export const Post: FC<PostProps> = ({ post }) => {
@@ -28,14 +28,8 @@ export const Post: FC<PostProps> = ({ post }) => {
           </p>
         </hgroup>
       </header>
-      {post.summaryHtml == null ? (
-        post.contentHtml && (
-          <div
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
-            dangerouslySetInnerHTML={{ __html: post.contentHtml }}
-            lang={post.language ?? undefined}
-          />
-        )
+      {post.summaryHtml == null || post.summaryHtml.trim() === "" ? (
+        <PostContent post={post} />
       ) : (
         <details>
           <summary
@@ -43,13 +37,7 @@ export const Post: FC<PostProps> = ({ post }) => {
             dangerouslySetInnerHTML={{ __html: post.summaryHtml }}
             lang={post.language ?? undefined}
           />
-          {post.contentHtml && (
-            <div
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
-              dangerouslySetInnerHTML={{ __html: post.contentHtml }}
-              lang={post.language ?? undefined}
-            />
-          )}
+          <PostContent post={post} />
         </details>
       )}
       <footer>
@@ -64,6 +52,56 @@ export const Post: FC<PostProps> = ({ post }) => {
         </p>
       </footer>
     </article>
+  );
+};
+
+interface PostContentProps {
+  readonly post: DbPost & { media: DbMedium[] };
+}
+
+const PostContent: FC<PostContentProps> = ({ post }: PostContentProps) => {
+  return (
+    <>
+      {post.contentHtml && (
+        <div
+          // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
+          dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+          lang={post.language ?? undefined}
+        />
+      )}
+      {post.media.length > 0 && (
+        <div>
+          {post.media.map((medium) =>
+            medium.description && medium.description.trim() !== "" ? (
+              <figure>
+                <Medium medium={medium} />
+                <figcaption>{medium.description}</figcaption>
+              </figure>
+            ) : (
+              <Medium medium={medium} />
+            ),
+          )}
+        </div>
+      )}
+    </>
+  );
+};
+
+interface MediumProps {
+  medium: DbMedium;
+}
+
+const Medium: FC<MediumProps> = ({ medium }) => {
+  return (
+    <a href={medium.url}>
+      <img
+        key={medium.id}
+        src={medium.thumbnailUrl}
+        alt={medium.description ?? ""}
+        width={medium.thumbnailWidth}
+        height={medium.thumbnailHeight}
+      />
+    </a>
   );
 };
 

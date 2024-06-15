@@ -81,7 +81,7 @@ app.post(
     const content =
       data.status == null ? null : await formatText(db, data.status, fedCtx);
     const summary =
-      data.spoiler_text == null
+      data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
         : await formatText(db, data.spoiler_text, fedCtx);
     const mentionedIds = [
@@ -198,7 +198,7 @@ app.put(
     const content =
       data.status == null ? null : await formatText(db, data.status, fedCtx);
     const summary =
-      data.spoiler_text == null
+      data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
         : await formatText(db, data.spoiler_text, fedCtx);
     const hashtags = [

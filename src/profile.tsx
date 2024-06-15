@@ -8,6 +8,7 @@ import { db } from "./db";
 import {
   type Account,
   type AccountOwner,
+  type Medium,
   type Post,
   accountOwners,
   posts,
@@ -30,14 +31,14 @@ app.get("/", async (c) => {
       or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
     ),
     orderBy: desc(posts.id),
-    with: { account: true },
+    with: { account: true, media: true },
   });
   return c.html(<ProfilePage accountOwner={owner} posts={postList} />);
 });
 
 export interface ProfilePageProps {
   accountOwner: AccountOwner & { account: Account };
-  posts: (Post & { account: Account })[];
+  posts: (Post & { account: Account; media: Medium[] })[];
 }
 
 export const ProfilePage: FC<ProfilePageProps> = ({ accountOwner, posts }) => {
@@ -73,14 +74,14 @@ app.get("/:id", async (c) => {
       eq(posts.id, postId),
       or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
     ),
-    with: { account: true },
+    with: { account: true, media: true },
   });
   if (post == null) return c.notFound();
   return c.html(<PostPage post={post} />);
 });
 
 export interface PostPageProps {
-  post: Post & { account: Account };
+  post: Post & { account: Account; media: Medium[] };
 }
 
 export const PostPage: FC<PostPageProps> = ({ post }) => {
