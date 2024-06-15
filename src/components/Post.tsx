@@ -2,10 +2,23 @@ import type { FC } from "hono/jsx";
 import type { Account, Medium as DbMedium, Post as DbPost } from "../schema";
 
 export interface PostProps {
-  post: DbPost & { account: Account; media: DbMedium[] };
+  post: DbPost & {
+    account: Account;
+    media: DbMedium[];
+    sharing:
+      | (DbPost & {
+          account: Account;
+          media: DbMedium[];
+          replyTarget: (DbPost & { account: Account }) | null;
+        })
+      | null;
+    replyTarget: (DbPost & { account: Account }) | null;
+  };
 }
 
 export const Post: FC<PostProps> = ({ post }) => {
+  if (post.sharing != null)
+    return <Post post={{ ...post.sharing, sharing: null }} />;
   const account = post.account;
   return (
     <article>
@@ -25,6 +38,18 @@ export const Post: FC<PostProps> = ({ post }) => {
           </h5>
           <p>
             <small style="user-select: all;">{account.handle}</small>
+            {post.replyTarget != null && (
+              <>
+                {" "}
+                &middot;{" "}
+                <small>
+                  Reply to{" "}
+                  <a href={post.replyTarget.url ?? post.replyTarget.iri}>
+                    {post.replyTarget.account.name}'s post
+                  </a>
+                </small>{" "}
+              </>
+            )}
           </p>
         </hgroup>
       </header>

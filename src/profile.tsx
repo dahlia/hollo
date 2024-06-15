@@ -31,14 +31,36 @@ app.get("/", async (c) => {
       or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
     ),
     orderBy: desc(posts.id),
-    with: { account: true, media: true },
+    with: {
+      account: true,
+      media: true,
+      sharing: {
+        with: {
+          account: true,
+          media: true,
+          replyTarget: { with: { account: true } },
+        },
+      },
+      replyTarget: { with: { account: true } },
+    },
   });
   return c.html(<ProfilePage accountOwner={owner} posts={postList} />);
 });
 
 export interface ProfilePageProps {
   accountOwner: AccountOwner & { account: Account };
-  posts: (Post & { account: Account; media: Medium[] })[];
+  posts: (Post & {
+    account: Account;
+    media: Medium[];
+    sharing:
+      | (Post & {
+          account: Account;
+          media: Medium[];
+          replyTarget: (Post & { account: Account }) | null;
+        })
+      | null;
+    replyTarget: (Post & { account: Account }) | null;
+  })[];
 }
 
 export const ProfilePage: FC<ProfilePageProps> = ({ accountOwner, posts }) => {
@@ -74,14 +96,62 @@ app.get("/:id", async (c) => {
       eq(posts.id, postId),
       or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
     ),
-    with: { account: true, media: true },
+    with: {
+      account: true,
+      media: true,
+      sharing: {
+        with: {
+          account: true,
+          media: true,
+          replyTarget: { with: { account: true } },
+        },
+      },
+      replyTarget: { with: { account: true } },
+      replies: {
+        with: {
+          account: true,
+          media: true,
+          sharing: {
+            with: {
+              account: true,
+              media: true,
+              replyTarget: { with: { account: true } },
+            },
+          },
+          replyTarget: { with: { account: true } },
+        },
+      },
+    },
   });
   if (post == null) return c.notFound();
   return c.html(<PostPage post={post} />);
 });
 
 export interface PostPageProps {
-  post: Post & { account: Account; media: Medium[] };
+  post: Post & {
+    account: Account;
+    media: Medium[];
+    sharing:
+      | (Post & {
+          account: Account;
+          media: Medium[];
+          replyTarget: (Post & { account: Account }) | null;
+        })
+      | null;
+    replyTarget: (Post & { account: Account }) | null;
+    replies: (Post & {
+      account: Account;
+      media: Medium[];
+      sharing:
+        | (Post & {
+            account: Account;
+            media: Medium[];
+            replyTarget: (Post & { account: Account }) | null;
+          })
+        | null;
+      replyTarget: (Post & { account: Account }) | null;
+    })[];
+  };
 }
 
 export const PostPage: FC<PostPageProps> = ({ post }) => {
@@ -98,7 +168,10 @@ export const PostPage: FC<PostPageProps> = ({ post }) => {
       imageUrl={post.account.avatarUrl}
       url={post.url ?? post.iri}
     >
-      {<PostView post={post} />}
+      <PostView post={post} />
+      {post.replies.map((reply) => (
+        <PostView post={reply} />
+      ))}
     </Layout>
   );
 };
