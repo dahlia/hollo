@@ -95,8 +95,12 @@ federation
     if (owner == null) return [];
     return [
       {
-        privateKey: await importJwk(owner.privateKeyJwk, "private"),
-        publicKey: await importJwk(owner.publicKeyJwk, "public"),
+        privateKey: await importJwk(owner.rsaPrivateKeyJwk, "private"),
+        publicKey: await importJwk(owner.rsaPublicKeyJwk, "public"),
+      },
+      {
+        privateKey: await importJwk(owner.ed25519PrivateKeyJwk, "private"),
+        publicKey: await importJwk(owner.ed25519PublicKeyJwk, "public"),
       },
     ];
   });

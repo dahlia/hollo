@@ -113,12 +113,15 @@ app.post("/", async (c) => {
         published: new Date(),
       })
       .returning();
-    const keyPair = await generateCryptoKeyPair();
+    const rsaKeyPair = await generateCryptoKeyPair("RSASSA-PKCS1-v1_5");
+    const ed25519KeyPair = await generateCryptoKeyPair("Ed25519");
     await tx.insert(accountOwners).values({
       id: account[0].id,
       handle: username,
-      privateKeyJwk: await exportJwk(keyPair.privateKey),
-      publicKeyJwk: await exportJwk(keyPair.publicKey),
+      rsaPrivateKeyJwk: await exportJwk(rsaKeyPair.privateKey),
+      rsaPublicKeyJwk: await exportJwk(rsaKeyPair.publicKey),
+      ed25519PrivateKeyJwk: await exportJwk(ed25519KeyPair.privateKey),
+      ed25519PublicKeyJwk: await exportJwk(ed25519KeyPair.publicKey),
       bio: bio ?? "",
       language: language ?? "en",
       visibility: visibility ?? "public",

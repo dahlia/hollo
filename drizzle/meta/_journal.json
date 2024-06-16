@@ -162,6 +162,13 @@
       "when": 1718378766046,
       "tag": "0022_media",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1718518714023,
+      "tag": "0023_ed25519-keys",
+      "breakpoints": true
     }
   ]
 }

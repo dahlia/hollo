@@ -90,8 +90,14 @@ export const accountOwners = pgTable("account_owners", {
     .primaryKey()
     .references(() => accounts.id, { onDelete: "cascade" }),
   handle: text("handle").notNull().unique(),
-  privateKeyJwk: jsonb("private_key_jwk").$type<JsonWebKey>().notNull(),
-  publicKeyJwk: jsonb("public_key_jwk").$type<JsonWebKey>().notNull(),
+  rsaPrivateKeyJwk: jsonb("rsa_private_key_jwk").$type<JsonWebKey>().notNull(),
+  rsaPublicKeyJwk: jsonb("rsa_public_key_jwk").$type<JsonWebKey>().notNull(),
+  ed25519PrivateKeyJwk: jsonb("ed25519_private_key_jwk")
+    .$type<JsonWebKey>()
+    .notNull(),
+  ed25519PublicKeyJwk: jsonb("ed25519_public_key_jwk")
+    .$type<JsonWebKey>()
+    .notNull(),
   fields: json("fields").notNull().default({}).$type<Record<string, string>>(),
   bio: text("bio"),
   followedTags: text("followed_tags").array().notNull().default([]),
