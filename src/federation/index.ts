@@ -44,7 +44,7 @@ export const federation = new Federation({
 });
 
 federation
-  .setActorDispatcher("/@{handle}", async (ctx, handle, key) => {
+  .setActorDispatcher("/@{handle}", async (ctx, handle) => {
     const owner = await db.query.accountOwners.findFirst({
       where: eq(accountOwners.handle, handle),
       with: { account: true },
@@ -68,7 +68,10 @@ federation
       published: account.published
         ? toTemporalInstant(account.published)
         : null,
-      publicKey: key,
+      publicKey: (await ctx.getActorKeyPairs(handle))[0].cryptographicKey,
+      assertionMethods: (await ctx.getActorKeyPairs(handle)).map(
+        (pair) => pair.multikey,
+      ),
       followers: ctx.getFollowersUri(handle),
       following: ctx.getFollowingUri(handle),
       outbox: ctx.getOutboxUri(handle),
@@ -85,15 +88,17 @@ federation
       ),
     });
   })
-  .setKeyPairDispatcher(async (_ctx, handle) => {
+  .setKeyPairsDispatcher(async (_ctx, handle) => {
     const owner = await db.query.accountOwners.findFirst({
       where: eq(accountOwners.handle, handle),
     });
-    if (owner == null) return null;
-    return {
-      privateKey: await importJwk(owner.privateKeyJwk, "private"),
-      publicKey: await importJwk(owner.publicKeyJwk, "public"),
-    };
+    if (owner == null) return [];
+    return [
+      {
+        privateKey: await importJwk(owner.privateKeyJwk, "private"),
+        publicKey: await importJwk(owner.publicKeyJwk, "public"),
+      },
+    ];
   });
 
 federation
