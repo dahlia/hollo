@@ -510,7 +510,7 @@ app.post(
     const result = await db
       .insert(follows)
       .values({
-        iri: `urn:uuid:${crypto.randomUUID()}`,
+        iri: new URL(`#follows/${crypto.randomUUID()}`, owner.account.iri).href,
         followingId: following.id,
         followerId: owner.id,
         shares: true,
@@ -602,6 +602,7 @@ app.post(
             },
           ],
           new vocab.Undo({
+            id: new URL(`#unfollows/${crypto.randomUUID()}`, owner.account.iri),
             actor: new URL(owner.account.iri),
             object: new vocab.Follow({
               id: new URL(result[0].iri),

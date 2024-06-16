@@ -213,6 +213,10 @@ federation
         following.owner,
         actor,
         new Accept({
+          id: new URL(
+            `#accepts/${follower.iri}`,
+            ctx.getActorUri(following.owner.handle),
+          ),
           actor: object.id,
           object: follow,
         }),
@@ -230,43 +234,76 @@ federation
     }
   })
   .on(Accept, async (ctx, accept) => {
-    const object = await accept.getObject();
-    if (object instanceof Follow) {
-      if (object.id == null) return;
-      const actor = await accept.getActor();
-      if (!isActor(actor) || actor.id == null) {
-        inboxLogger.debug("Invalid actor: {actor}", { actor });
-        return;
-      }
-      const account = await persistAccount(db, actor, ctx);
-      if (account == null) return;
+    const actor = await accept.getActor();
+    if (!isActor(actor) || actor.id == null) {
+      inboxLogger.debug("Invalid actor: {actor}", { actor });
+      return;
+    }
+    const account = await persistAccount(db, actor, ctx);
+    if (account == null) return;
+    if (accept.objectId != null) {
       await db
         .update(follows)
         .set({ approved: new Date() })
         .where(
           and(
-            eq(follows.iri, object.id.href),
+            eq(follows.iri, accept.objectId.href),
+            eq(follows.followingId, account.id),
+          ),
+        );
+    }
+    const object = await accept.getObject();
+    if (object instanceof Follow) {
+      if (object.actorId == null) return;
+      await db
+        .update(follows)
+        .set({ approved: new Date() })
+        .where(
+          and(
+            eq(
+              follows.followerId,
+              db
+                .select({ id: accounts.id })
+                .from(accounts)
+                .where(eq(accounts.iri, object.actorId.href)),
+            ),
             eq(follows.followingId, account.id),
           ),
         );
     }
   })
   .on(Reject, async (ctx, reject) => {
-    const object = await reject.getObject();
-    if (object instanceof Follow) {
-      if (object.id == null) return;
-      const actor = await reject.getActor();
-      if (!isActor(actor) || actor.id == null) {
-        inboxLogger.debug("Invalid actor: {actor}", { actor });
-        return;
-      }
-      const account = await persistAccount(db, actor, ctx);
-      if (account == null) return;
+    const actor = await reject.getActor();
+    if (!isActor(actor) || actor.id == null) {
+      inboxLogger.debug("Invalid actor: {actor}", { actor });
+      return;
+    }
+    const account = await persistAccount(db, actor, ctx);
+    if (account == null) return;
+    if (reject.objectId != null) {
       await db
         .delete(follows)
         .where(
           and(
-            eq(follows.iri, object.id.href),
+            eq(follows.iri, reject.objectId.href),
+            eq(follows.followingId, account.id),
+          ),
+        );
+    }
+    const object = await reject.getObject();
+    if (object instanceof Follow) {
+      if (object.actorId == null) return;
+      await db
+        .delete(follows)
+        .where(
+          and(
+            eq(
+              follows.followerId,
+              db
+                .select({ id: accounts.id })
+                .from(accounts)
+                .where(eq(accounts.iri, object.actorId.href)),
+            ),
             eq(follows.followingId, account.id),
           ),
         );

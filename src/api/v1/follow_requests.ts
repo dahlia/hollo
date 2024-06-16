@@ -69,6 +69,7 @@ app.post(
         owner,
         { id: new URL(follower.iri), inboxId: new URL(follower.inboxUrl) },
         new Accept({
+          id: new URL(`#accepts/${follower.iri}`, owner.account.iri),
           actor: new URL(owner.account.iri),
           object: new Follow({
             id: new URL(result[0].iri),
@@ -149,6 +150,7 @@ app.post(
         owner,
         { id: new URL(follower.iri), inboxId: new URL(follower.inboxUrl) },
         new Reject({
+          id: new URL(`#rejects/${follower.iri}`, owner.account.iri),
           actor: new URL(owner.account.iri),
           object: new Follow({
             id: new URL(result[0].iri),
