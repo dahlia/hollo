@@ -264,18 +264,24 @@ export function toObject(
             ? []
             : [ctx.getFollowersUri(post.account.owner.handle)],
     cc: post.visibility === "unlisted" ? PUBLIC_COLLECTION : null,
-    summary:
+    summaries:
       post.summaryHtml == null
-        ? null
+        ? []
         : post.language == null
-          ? post.summaryHtml
-          : new LanguageString(post.summaryHtml, post.language),
-    content:
+          ? [post.summaryHtml]
+          : [
+              post.summaryHtml,
+              new LanguageString(post.summaryHtml, post.language),
+            ],
+    contents:
       post.contentHtml == null
-        ? null
+        ? []
         : post.language == null
-          ? post.contentHtml
-          : new LanguageString(post.contentHtml, post.language),
+          ? [post.contentHtml]
+          : [
+              post.contentHtml,
+              new LanguageString(post.contentHtml, post.language),
+            ],
     sensitive: post.sensitive,
     tags: [
       ...post.mentions.map(
@@ -288,7 +294,7 @@ export function toObject(
       ...Object.entries(post.tags).map(
         ([name, url]) =>
           new vocab.Hashtag({
-            name: `#${name}`,
+            name,
             href: new URL(url),
           }),
       ),
