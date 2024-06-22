@@ -179,6 +179,10 @@ const inboxLogger = getLogger(["hollo", "inbox"]);
 
 federation
   .setInboxListeners("/@{handle}/inbox", "/inbox")
+  .setSharedKeyDispatcher(async (_) => {
+    const anyOwner = await db.query.accountOwners.findFirst();
+    return anyOwner ?? null;
+  })
   .on(Follow, async (ctx, follow) => {
     if (follow.id == null) return;
     const actor = await follow.getActor();
