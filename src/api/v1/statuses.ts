@@ -12,7 +12,7 @@ import {
 } from "../../entities/account";
 import { getPostRelations, serializePost } from "../../entities/status";
 import federation from "../../federation";
-import { toAnnounce, toCreate } from "../../federation/post";
+import { toAnnounce, toCreate, toUpdate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type PreviewCard, fetchPreviewCard } from "../../previewcard";
 import {
@@ -239,6 +239,7 @@ app.put(
           // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
           tags: sql`${tags}::jsonb`,
           previewCard,
+          updated: new Date(),
         })
         .where(eq(posts.id, id))
         .returning();
@@ -260,6 +261,10 @@ app.put(
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, id),
       with: getPostRelations(owner.id),
+    });
+    await fedCtx.sendActivity(owner, "followers", toUpdate(post!, fedCtx), {
+      preferSharedInbox: true,
+      excludeBaseUris: [new URL(c.req.url)],
     });
     return c.json(serializePost(post!, owner, c.req.url));
   },

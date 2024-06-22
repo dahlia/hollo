@@ -9,6 +9,7 @@ import {
   Link,
   Note,
   PUBLIC_COLLECTION,
+  Update,
   isActor,
 } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
@@ -340,6 +341,26 @@ export function toCreate(
     ccs: object.ccIds,
     object,
     published: object.published,
+  });
+}
+
+export function toUpdate(
+  post: Post & {
+    account: Account & { owner: AccountOwner | null };
+    replyTarget: Post | null;
+    media: Medium[];
+    mentions: (Mention & { account: Account })[];
+  },
+  ctx: Context<unknown>,
+): Update {
+  const object = toObject(post, ctx);
+  return new Update({
+    id: new URL(`#update-${object.updated?.toString()}`, object.id!),
+    actor: object.attributionId,
+    tos: object.toIds,
+    ccs: object.ccIds,
+    object,
+    published: object.updated,
   });
 }
 
