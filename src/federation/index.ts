@@ -6,26 +6,26 @@ import {
   Create,
   Delete,
   Endpoints,
-  Federation,
   Follow,
   Image,
-  InProcessMessageQueue,
   Like,
-  MemoryKvStore,
   Note,
   PropertyValue,
   Reject,
   Undo,
   Update,
+  createFederation,
   getActorClassByTypeName,
   importJwk,
   isActor,
 } from "@fedify/fedify";
+import { RedisKvStore, RedisMessageQueue } from "@fedify/redis";
 import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
 import { and, count, eq, ilike, inArray, like, sql } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
+import redis, { createRedis } from "../redis";
 import {
   type NewLike,
   accountOwners,
@@ -38,9 +38,11 @@ import { persistAccount } from "./account";
 import { toTemporalInstant } from "./date";
 import { persistPost, persistSharingPost, toObject } from "./post";
 
-export const federation = new Federation({
-  kv: new MemoryKvStore(),
-  queue: new InProcessMessageQueue(),
+export const federation = createFederation({
+  kv: new RedisKvStore(redis),
+  queue: new RedisMessageQueue(createRedis, {
+    loopInterval: { seconds: 2, milliseconds: 500 },
+  }),
 });
 
 federation

@@ -63,10 +63,11 @@ so you'll need to use a client app like [Phanpy] for now.
 
 The official Docker images are available on [GitHub Packages]:
 `ghcr.io/dahlia/hollo`.  Besides this image, you need to set up a PostgreSQL
-database and an S3-compatible object storage for media storage.  You can use
-the following environment variables to configure Hollo:
+database, Redis, and an S3-compatible object storage for media storage.
+You can use the following environment variables to configure Hollo:
 
  -  `DATABASE_URL`: The URL of the PostgreSQL database.
+ -  `REDIS_URL`: The URL of the Redis server.
  -  `SECRET_KEY`: The secret key for securing the session.
  -  `LOG_LEVEL`: The log level for the application.  `debug`, `info`, `warning`,
     `error`, and `fatal` are available.
@@ -82,6 +83,7 @@ The image exposes the port 3000, so you can run it like this:
 ~~~~ sh
 docker run -d -p 3000:3000 \
   -e DATABASE_URL=postgres://user:password@host:port/database \
+  -e REDIS_URL=redis://host:port/0 \
   -e SECRET_KEY=your-secret-key \
   -e LOG_LEVEL=info \
   -e BEHIND_PROXY=true \
