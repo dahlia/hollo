@@ -73,17 +73,22 @@ app.post(
       );
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
+    const fmtOpts = {
+      url: fedCtx.url,
+      contextLoader: fedCtx.contextLoader,
+      documentLoader: await fedCtx.getDocumentLoader(owner),
+    };
     const data = c.req.valid("json");
     const handle = owner.handle;
     const id = uuidv7();
     const url = fedCtx.getObjectUri(Note, { handle, id });
     const published = new Date();
     const content =
-      data.status == null ? null : await formatText(db, data.status, fedCtx);
+      data.status == null ? null : await formatText(db, data.status, fmtOpts);
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
-        : await formatText(db, data.spoiler_text, fedCtx);
+        : await formatText(db, data.spoiler_text, fmtOpts);
     const mentionedIds = [
       ...(content?.mentions ?? []),
       ...(summary?.mentions ?? []),
@@ -195,12 +200,17 @@ app.put(
     const id = c.req.param("id");
     const data = c.req.valid("json");
     const fedCtx = federation.createContext(c.req.raw, undefined);
+    const fmtOpts = {
+      url: fedCtx.url,
+      contextLoader: fedCtx.contextLoader,
+      documentLoader: await fedCtx.getDocumentLoader(owner),
+    };
     const content =
-      data.status == null ? null : await formatText(db, data.status, fedCtx);
+      data.status == null ? null : await formatText(db, data.status, fmtOpts);
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
-        : await formatText(db, data.spoiler_text, fedCtx);
+        : await formatText(db, data.spoiler_text, fmtOpts);
     const hashtags = [
       ...(content?.hashtags ?? []),
       ...(summary?.hashtags ?? []),

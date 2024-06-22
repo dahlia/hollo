@@ -115,6 +115,12 @@ app.patch(
       );
       coverUrl = new URL(`covers/${account.id}`, S3_URL_BASE).href;
     }
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    const fmtOpts = {
+      url: fedCtx.url,
+      contextLoader: fedCtx.contextLoader,
+      documentLoader: await fedCtx.getDocumentLoader(owner),
+    };
     const fields = Object.entries(owner.fields);
     const fieldHtmls: [string, string][] = [];
     for (const i of [0, 1, 2, 3] as const) {
@@ -129,7 +135,7 @@ app.patch(
         continue;
       }
       fields[i] = [name, value];
-      const contentHtml = (await formatText(db, fields[i][1], c.req)).html;
+      const contentHtml = (await formatText(db, fields[i][1], fmtOpts)).html;
       fieldHtmls.push([fields[i][0], contentHtml]);
     }
     const updatedAccounts = await db
@@ -139,7 +145,7 @@ app.patch(
         bioHtml:
           form.note == null
             ? account.bioHtml
-            : (await formatText(db, form.note, c.req)).html,
+            : (await formatText(db, form.note, fmtOpts)).html,
         avatarUrl,
         coverUrl,
         fieldHtmls: Object.fromEntries(fieldHtmls),
@@ -168,7 +174,6 @@ app.patch(
       })
       .where(eq(accountOwners.id, owner.id))
       .returning();
-    const fedCtx = federation.createContext(c.req.raw, undefined);
     await fedCtx.sendActivity(
       { handle: updatedOwners[0].handle },
       "followers",
@@ -254,6 +259,7 @@ app.get(
     }),
   ),
   async (c) => {
+    const owner = c.get("token")?.accountOwner;
     const query = c.req.valid("query");
     const acct = query.acct;
     const account = await db.query.accounts.findFirst({
@@ -268,9 +274,16 @@ app.get(
         return c.json({ error: "Record not found" }, 404);
       }
       const fedCtx = federation.createContext(c.req.raw, undefined);
-      const actor = await lookupObject(acct, fedCtx);
+      const options =
+        owner == null
+          ? fedCtx
+          : {
+              contextLoader: fedCtx.contextLoader,
+              documentLoader: await fedCtx.getDocumentLoader(owner),
+            };
+      const actor = await lookupObject(acct, options);
       if (!isActor(actor)) return c.json({ error: "Record not found" }, 404);
-      const loadedAccount = await persistAccount(db, actor, fedCtx);
+      const loadedAccount = await persistAccount(db, actor, options);
       if (loadedAccount == null) {
         return c.json({ error: "Record not found" }, 404);
       }
@@ -322,8 +335,12 @@ app.get(
       });
       if (exactMatch != null) {
         const fedCtx = federation.createContext(c.req.raw, undefined);
-        const actor = await lookupObject(query.q, fedCtx);
-        if (isActor(actor)) await persistAccount(db, actor, fedCtx);
+        const options = {
+          contextLoader: fedCtx.contextLoader,
+          documentLoader: await fedCtx.getDocumentLoader(exactMatch),
+        };
+        const actor = await lookupObject(query.q, options);
+        if (isActor(actor)) await persistAccount(db, actor, options);
       }
     }
     const accountList = await db.query.accounts.findMany({

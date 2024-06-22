@@ -243,12 +243,18 @@ app.post("/:id", async (c) => {
       400,
     );
   }
+  const fedCtx = federation.createContext(c.req.raw, undefined);
+  const fmtOpts = {
+    url: fedCtx.url,
+    contextLoader: fedCtx.contextLoader,
+    documentLoader: await fedCtx.getDocumentLoader(accountOwner),
+  };
   await db.transaction(async (tx) => {
     await tx
       .update(accounts)
       .set({
         name,
-        bioHtml: (await formatText(tx, bio ?? "", c.req)).html,
+        bioHtml: (await formatText(tx, bio ?? "", fmtOpts)).html,
         protected: protected_,
       })
       .where(eq(accounts.id, c.req.param("id")));
@@ -257,7 +263,6 @@ app.post("/:id", async (c) => {
       .set({ bio, language, visibility })
       .where(eq(accountOwners.id, c.req.param("id")));
   });
-  const fedCtx = federation.createContext(c.req.raw, undefined);
   await fedCtx.sendActivity(
     { handle: accountOwner.handle },
     "followers",
