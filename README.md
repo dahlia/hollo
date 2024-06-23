@@ -1,5 +1,13 @@
+<picture>
+  <source srcset="logo-white.svg" media="(prefers-color-scheme: dark)">
+  <img src="logo.svg" width="50" height="50">
+</picture>
+
+
 Hollo
 =====
+
+[![Official Hollo][Official Hollo badge]][Official Hollo]
 
 > [!NOTE]
 > This project is still in the early stage of development.  It is not ready for
@@ -15,6 +23,8 @@ Hollo does not have its own web interface.  Instead, it implements
 Mastodon-compatible APIs so that you can integrate it with the most of
 the [existing Mastodon clients](#tested-clients).
 
+[Official Hollo]: https://hollo.social/@hollo
+[Official Hollo badge]: https://fedi-badge.deno.dev/@hollo@hollo.social/followers.svg
 [Fedify]: https://fedify.dev/
 [ActivityPub]: https://www.w3.org/TR/activitypub/
 
@@ -63,11 +73,13 @@ so you'll need to use a client app like [Phanpy] for now.
 
 The official Docker images are available on [GitHub Packages]:
 `ghcr.io/dahlia/hollo`.  Besides this image, you need to set up a PostgreSQL
-database, Redis, and an S3-compatible object storage for media storage.
-You can use the following environment variables to configure Hollo:
+database, Redis, Meilisearch, and an S3-compatible object storage for media
+storage.  You can use the following environment variables to configure Hollo:
 
  -  `DATABASE_URL`: The URL of the PostgreSQL database.
  -  `REDIS_URL`: The URL of the Redis server.
+ -  `MEILI_URL`: The host URL of the Meilisearch server.
+ -  `MEILI_MASTER_KEY`: The API key for the Meilisearch server.
  -  `SECRET_KEY`: The secret key for securing the session.
  -  `LOG_LEVEL`: The log level for the application.  `debug`, `info`, `warning`,
     `error`, and `fatal` are available.
@@ -84,6 +96,8 @@ The image exposes the port 3000, so you can run it like this:
 docker run -d -p 3000:3000 \
   -e DATABASE_URL=postgres://user:password@host:port/database \
   -e REDIS_URL=redis://host:port/0 \
+  -e MEILI_URL=http://host:7700 \
+  -e MEILI_MASTER_KEY=your-master-key \
   -e SECRET_KEY=your-secret-key \
   -e LOG_LEVEL=info \
   -e BEHIND_PROXY=true \
@@ -122,7 +136,7 @@ Current features and roadmap
 - [x] Local timeline
 - [ ] Lists
 - [ ] Trends
-- [ ] Search
+- [x] Search
 - [x] Following/unfollowing accounts
 - [x] Following/unfollowing hashtags
 - [ ] Blocking accounts

@@ -21,6 +21,7 @@ import {
   accountOwners,
   accounts,
 } from "./schema";
+import { search } from "./search";
 import { formatText } from "./text";
 
 const app = new Hono();
@@ -104,7 +105,7 @@ app.post("/", async (c) => {
         type: "Person",
         name,
         handle: `@${username}@${fedCtx.url.host}`,
-        bioHtml: (await formatText(tx, bio ?? "", fedCtx)).html,
+        bioHtml: (await formatText(tx, search, bio ?? "", fedCtx)).html,
         url: fedCtx.getActorUri(username).href,
         protected: protected_,
         inboxUrl: fedCtx.getInboxUri(username).href,
@@ -126,6 +127,7 @@ app.post("/", async (c) => {
       language: language ?? "en",
       visibility: visibility ?? "public",
     });
+    search.index("accounts").addDocuments(account, { primaryKey: "id" });
   });
   const owners = await db.query.accountOwners.findMany({
     with: { account: true },
@@ -249,20 +251,25 @@ app.post("/:id", async (c) => {
     contextLoader: fedCtx.contextLoader,
     documentLoader: await fedCtx.getDocumentLoader(accountOwner),
   };
+  const accountId = c.req.param("id");
   await db.transaction(async (tx) => {
     await tx
       .update(accounts)
       .set({
         name,
-        bioHtml: (await formatText(tx, bio ?? "", fmtOpts)).html,
+        bioHtml: (await formatText(tx, search, bio ?? "", fmtOpts)).html,
         protected: protected_,
       })
-      .where(eq(accounts.id, c.req.param("id")));
+      .where(eq(accounts.id, accountId));
     await tx
       .update(accountOwners)
       .set({ bio, language, visibility })
-      .where(eq(accountOwners.id, c.req.param("id")));
+      .where(eq(accountOwners.id, accountId));
   });
+  const account = await db.query.accounts.findFirst({
+    where: eq(accounts.id, accountId),
+  });
+  await search.index("accounts").addDocuments([account!], { primaryKey: "id" });
   await fedCtx.sendActivity(
     { handle: accountOwner.handle },
     "followers",

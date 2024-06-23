@@ -34,6 +34,7 @@ import {
   likes,
   posts,
 } from "../schema";
+import { search } from "../search";
 import { persistAccount } from "./account";
 import { toTemporalInstant } from "./date";
 import { persistPost, persistSharingPost, toObject } from "./post";
@@ -203,7 +204,7 @@ federation
       inboxLogger.debug("Invalid following: {following}", { following });
       return;
     }
-    const follower = await persistAccount(db, actor, ctx);
+    const follower = await persistAccount(db, search, actor, ctx);
     if (follower == null) return;
     await db
       .insert(follows)
@@ -245,7 +246,7 @@ federation
       inboxLogger.debug("Invalid actor: {actor}", { actor });
       return;
     }
-    const account = await persistAccount(db, actor, ctx);
+    const account = await persistAccount(db, search, actor, ctx);
     if (account == null) return;
     if (accept.objectId != null) {
       await db
@@ -284,7 +285,7 @@ federation
       inboxLogger.debug("Invalid actor: {actor}", { actor });
       return;
     }
-    const account = await persistAccount(db, actor, ctx);
+    const account = await persistAccount(db, search, actor, ctx);
     if (account == null) return;
     if (reject.objectId != null) {
       await db
@@ -318,7 +319,7 @@ federation
   .on(Create, async (ctx, create) => {
     const object = await create.getObject();
     if (object instanceof Article || object instanceof Note) {
-      await persistPost(db, object, ctx);
+      await persistPost(db, search, object, ctx);
     } else {
       inboxLogger.debug("Unsupported object on Create: {object}", { object });
     }
@@ -334,7 +335,7 @@ federation
     ) {
       const actor = await like.getActor();
       if (actor == null) return;
-      const account = await persistAccount(db, actor, ctx);
+      const account = await persistAccount(db, search, actor, ctx);
       if (account == null) return;
       await db.insert(likes).values({
         // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
@@ -351,7 +352,7 @@ federation
     const object = await announce.getObject();
     if (object instanceof Article || object instanceof Note) {
       await db.transaction(async (tx) => {
-        await persistSharingPost(tx, announce, object, ctx);
+        await persistSharingPost(tx, search, announce, object, ctx);
       });
     } else {
       inboxLogger.debug("Unsupported object on Announce: {object}", { object });
@@ -360,9 +361,9 @@ federation
   .on(Update, async (ctx, update) => {
     const object = await update.getObject();
     if (isActor(object)) {
-      await persistAccount(db, object, ctx);
+      await persistAccount(db, search, object, ctx);
     } else if (object instanceof Article || object instanceof Note) {
-      await persistPost(db, object, ctx);
+      await persistPost(db, search, object, ctx);
     } else {
       inboxLogger.debug("Unsupported object on Update: {object}", { object });
     }
@@ -392,7 +393,7 @@ federation
         inboxLogger.debug("Invalid actor: {actor}", { actor });
         return;
       }
-      const account = await persistAccount(db, actor, ctx);
+      const account = await persistAccount(db, search, actor, ctx);
       if (account == null) return;
       const deleted = await db
         .delete(follows)
@@ -427,7 +428,7 @@ federation
       ) {
         const actor = await like.getActor();
         if (actor == null) return;
-        const account = await persistAccount(db, actor, ctx);
+        const account = await persistAccount(db, search, actor, ctx);
         if (account == null) return;
         await db.delete(likes).where(
           and(

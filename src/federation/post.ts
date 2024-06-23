@@ -17,6 +17,7 @@ import { getLogger } from "@logtape/logtape";
 import { type ExtractTablesWithRelations, eq, sql } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+import type MeiliSearch from "meilisearch";
 import sharp from "sharp";
 import { uuidv7 } from "uuidv7-js";
 import { uploadThumbnail } from "../media";
@@ -46,6 +47,7 @@ export async function persistPost(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
+  search: MeiliSearch,
   object: Article | Note,
   options: {
     contextLoader?: DocumentLoader;
@@ -56,7 +58,7 @@ export async function persistPost(
   const actor = await object.getAttribution();
   logger.debug("Fetched actor: {actor}", { actor });
   if (!isActor(actor)) return null;
-  const account = await persistAccount(db, actor, options);
+  const account = await persistAccount(db, search, actor, options);
   logger.debug("Persisted account: {account}", { account });
   if (account == null) return null;
   let replyTargetId: string | null = null;
@@ -75,7 +77,12 @@ export async function persistPost(
       logger.debug("Persisting the reply target...");
       const replyTarget = await object.getReplyTarget();
       if (replyTarget instanceof Note || replyTarget instanceof Article) {
-        const replyTargetObj = await persistPost(db, replyTarget, options);
+        const replyTargetObj = await persistPost(
+          db,
+          search,
+          replyTarget,
+          options,
+        );
         logger.debug("Persisted the reply target: {replyTarget}", {
           replyTarget: replyTargetObj,
         });
@@ -141,14 +148,19 @@ export async function persistPost(
       set: values,
       setWhere: eq(posts.iri, object.id.href),
     });
-  const post = await db.query.posts.findFirst({
+  let post = await db.query.posts.findFirst({
     where: eq(posts.iri, object.id.href),
   });
   if (post == null) return null;
   await db.delete(mentions).where(eq(mentions.postId, post.id));
   for await (const tag of object.getTags(options)) {
     if (tag instanceof vocab.Mention && tag.name != null && tag.href != null) {
-      const account = await persistAccountByIri(db, tag.href.href, options);
+      const account = await persistAccountByIri(
+        db,
+        search,
+        tag.href.href,
+        options,
+      );
       if (account == null) continue;
       await db.insert(mentions).values({
         accountId: account.id,
@@ -190,7 +202,12 @@ export async function persistPost(
       ...thumbnail,
     } satisfies NewMedium);
   }
-  return post;
+  post = await db.query.posts.findFirst({
+    where: eq(posts.iri, object.id.href),
+    with: { account: true, media: true },
+  });
+  await search.index("posts").addDocuments([post!], { primaryKey: "id" });
+  return post!;
 }
 
 export async function persistSharingPost(
@@ -199,6 +216,7 @@ export async function persistSharingPost(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
+  search: MeiliSearch,
   announce: Announce,
   object: Article | Note,
   options: {
@@ -209,9 +227,9 @@ export async function persistSharingPost(
   if (announce.id == null) return null;
   const actor = await announce.getActor(options);
   if (actor == null) return null;
-  const account = await persistAccount(db, actor, options);
+  const account = await persistAccount(db, search, actor, options);
   if (account == null) return null;
-  const originalPost = await persistPost(db, object, options);
+  const originalPost = await persistPost(db, search, object, options);
   if (originalPost == null) return null;
   const id = uuidv7();
   const updated = new Date();

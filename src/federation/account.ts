@@ -11,6 +11,7 @@ import {
 import { type ExtractTablesWithRelations, eq } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+import type MeiliSearch from "meilisearch";
 import { uuidv7 } from "uuidv7-js";
 import * as schema from "../schema";
 import { toDate } from "./date";
@@ -21,12 +22,14 @@ export async function persistAccount(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
+  search: MeiliSearch,
   actor: Actor,
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
   } = {},
 ): Promise<schema.Account | null> {
+  const opts = { ...options, suppressError: true };
   if (
     actor.id == null ||
     actor.inboxId == null ||
@@ -41,11 +44,11 @@ export async function persistAccount(
     if (e instanceof TypeError) return null;
     throw e;
   }
-  const avatar = await actor.getIcon(options);
-  const cover = await actor.getImage(options);
-  const followers = await actor.getFollowers(options);
+  const avatar = await actor.getIcon(opts);
+  const cover = await actor.getImage(opts);
+  const followers = await actor.getFollowers(opts);
   const fieldHtmls: Record<string, string> = {};
-  for await (const attachment of actor.getAttachments(options)) {
+  for await (const attachment of actor.getAttachments(opts)) {
     if (
       attachment instanceof PropertyValue &&
       attachment.name != null &&
@@ -68,9 +71,9 @@ export async function persistAccount(
     inboxUrl: actor.inboxId.href,
     followersUrl: followers?.id?.href,
     sharedInboxUrl: actor.endpoints?.sharedInbox?.href,
-    followingCount: (await actor.getFollowing(options))?.totalItems ?? 0,
+    followingCount: (await actor.getFollowing(opts))?.totalItems ?? 0,
     followersCount: followers?.totalItems ?? 0,
-    postsCount: (await actor.getOutbox(options))?.totalItems ?? 0,
+    postsCount: (await actor.getOutbox(opts))?.totalItems ?? 0,
     fieldHtmls,
     published: toDate(actor.published),
   };
@@ -86,11 +89,12 @@ export async function persistAccount(
       set: values,
       setWhere: eq(schema.accounts.iri, actor.id.href),
     });
-  return (
-    (await db.query.accounts.findFirst({
-      where: eq(schema.accounts.iri, actor.id.href),
-    })) ?? null
-  );
+  const account = await db.query.accounts.findFirst({
+    where: eq(schema.accounts.iri, actor.id.href),
+  });
+  if (account == null) return null;
+  await search.index("accounts").addDocuments([account], { primaryKey: "id" });
+  return account;
 }
 
 export async function persistAccountByIri(
@@ -99,6 +103,7 @@ export async function persistAccountByIri(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
+  search: MeiliSearch,
   iri: string,
   options: {
     contextLoader?: DocumentLoader;
@@ -111,5 +116,5 @@ export async function persistAccountByIri(
   if (account != null) return account;
   const actor = await lookupObject(iri, options);
   if (!isActor(actor) || actor.id == null) return null;
-  return await persistAccount(db, actor, options);
+  return await persistAccount(db, search, actor, options);
 }

@@ -33,6 +33,7 @@ import {
   mentions,
   posts,
 } from "../../schema";
+import { search } from "../../search";
 import { formatText } from "../../text";
 import { timelineQuerySchema } from "./timelines";
 
@@ -135,7 +136,8 @@ app.patch(
         continue;
       }
       fields[i] = [name, value];
-      const contentHtml = (await formatText(db, fields[i][1], fmtOpts)).html;
+      const contentHtml = (await formatText(db, search, fields[i][1], fmtOpts))
+        .html;
       fieldHtmls.push([fields[i][0], contentHtml]);
     }
     const updatedAccounts = await db
@@ -145,7 +147,7 @@ app.patch(
         bioHtml:
           form.note == null
             ? account.bioHtml
-            : (await formatText(db, form.note, fmtOpts)).html,
+            : (await formatText(db, search, form.note, fmtOpts)).html,
         avatarUrl,
         coverUrl,
         fieldHtmls: Object.fromEntries(fieldHtmls),
@@ -283,7 +285,7 @@ app.get(
             };
       const actor = await lookupObject(acct, options);
       if (!isActor(actor)) return c.json({ error: "Record not found" }, 404);
-      const loadedAccount = await persistAccount(db, actor, options);
+      const loadedAccount = await persistAccount(db, search, actor, options);
       if (loadedAccount == null) {
         return c.json({ error: "Record not found" }, 404);
       }
@@ -340,7 +342,7 @@ app.get(
           documentLoader: await fedCtx.getDocumentLoader(exactMatch),
         };
         const actor = await lookupObject(query.q, options);
-        if (isActor(actor)) await persistAccount(db, actor, options);
+        if (isActor(actor)) await persistAccount(db, search, actor, options);
       }
     }
     const accountList = await db.query.accounts.findMany({

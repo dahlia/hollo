@@ -26,6 +26,7 @@ import {
   mentions,
   posts,
 } from "../../schema";
+import search from "../../search";
 import { formatText } from "../../text";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -84,11 +85,13 @@ app.post(
     const url = fedCtx.getObjectUri(Note, { handle, id });
     const published = new Date();
     const content =
-      data.status == null ? null : await formatText(db, data.status, fmtOpts);
+      data.status == null
+        ? null
+        : await formatText(db, search, data.status, fmtOpts);
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
-        : await formatText(db, data.spoiler_text, fmtOpts);
+        : await formatText(db, search, data.spoiler_text, fmtOpts);
     const mentionedIds = [
       ...(content?.mentions ?? []),
       ...(summary?.mentions ?? []),
@@ -179,6 +182,7 @@ app.post(
         excludeBaseUris: [new URL(c.req.url)],
       });
     }
+    await search.index("posts").addDocuments([post], { primaryKey: "id" });
     return c.json(serializePost(post, owner, c.req.url));
   },
 );
@@ -206,11 +210,13 @@ app.put(
       documentLoader: await fedCtx.getDocumentLoader(owner),
     };
     const content =
-      data.status == null ? null : await formatText(db, data.status, fmtOpts);
+      data.status == null
+        ? null
+        : await formatText(db, search, data.status, fmtOpts);
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
-        : await formatText(db, data.spoiler_text, fmtOpts);
+        : await formatText(db, search, data.spoiler_text, fmtOpts);
     const hashtags = [
       ...(content?.hashtags ?? []),
       ...(summary?.hashtags ?? []),
@@ -266,6 +272,7 @@ app.put(
       preferSharedInbox: true,
       excludeBaseUris: [new URL(c.req.url)],
     });
+    await search.index("posts").addDocuments([post!], { primaryKey: "id" });
     return c.json(serializePost(post!, owner, c.req.url));
   },
 );
@@ -319,6 +326,7 @@ app.delete(
         excludeBaseUris: [new URL(c.req.url)],
       },
     );
+    await search.index("posts").deleteDocument(post.id);
     return c.json({
       ...serializePost(post, owner, c.req.url),
       text: post.content ?? "",
