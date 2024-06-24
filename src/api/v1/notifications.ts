@@ -1,5 +1,5 @@
 import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
-import { union } from "drizzle-orm/pg-core";
+import { alias, union } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { db } from "../../db";
 import {
@@ -54,6 +54,7 @@ app.get(
       ];
     }
     types = types.filter((t) => !excludeTypes?.includes(t));
+    const sharingPosts = alias(posts, "sharingPosts");
     const queries = {
       mention: db
         .select({
@@ -66,6 +67,18 @@ app.get(
         .from(posts)
         .leftJoin(mentions, eq(posts.id, mentions.postId))
         .where(eq(mentions.accountId, owner.id))
+        .orderBy(desc(posts.published)),
+      reblog: db
+        .select({
+          id: sql`${posts.id}::text`,
+          type: sql<NotificationType>`'reblog'`,
+          created: sql<Date>`coalesce(${posts.published}, ${posts.updated})`,
+          accountId: posts.accountId,
+          postId: sql<string | null>`${sharingPosts.id}`,
+        })
+        .from(posts)
+        .leftJoin(sharingPosts, eq(posts.sharingId, sharingPosts.id))
+        .where(eq(sharingPosts.accountId, owner.id))
         .orderBy(desc(posts.published)),
       follow: db
         .select({

@@ -408,6 +408,7 @@ export function toAnnounce(
             post.visibility === "public"
               ? ctx.getFollowersUri(handle)
               : vocab.PUBLIC_COLLECTION,
+            new URL(post.sharing.account.iri),
           ]),
     ],
   });
