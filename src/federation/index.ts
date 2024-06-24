@@ -22,7 +22,16 @@ import {
 import { RedisKvStore, RedisMessageQueue } from "@fedify/redis";
 import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
-import { and, count, eq, ilike, inArray, like, sql } from "drizzle-orm";
+import {
+  and,
+  count,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  like,
+  sql,
+} from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
 import redis, { createRedis } from "../redis";
@@ -125,7 +134,12 @@ federation
             db
               .select({ id: follows.followerId })
               .from(follows)
-              .where(eq(follows.followingId, owner.id)),
+              .where(
+                and(
+                  eq(follows.followingId, owner.id),
+                  isNotNull(follows.approved),
+                ),
+              ),
           ),
           filter == null
             ? undefined
@@ -149,26 +163,54 @@ federation
   )
   .setFirstCursor(async (_ctx, _handle) => "0")
   .setCounter(async (_ctx, handle) => {
-    const result = await db
-      .select({ cnt: count() })
-      .from(follows)
-      .where(
-        eq(
-          follows.followingId,
-          db
-            .select({ id: accountOwners.id })
-            .from(accountOwners)
-            .where(eq(accountOwners.handle, handle)),
-        ),
-      );
-    return result.length > 0 ? result[0].cnt : 0;
+    const owner = await db.query.accountOwners.findFirst({
+      where: eq(accountOwners.handle, handle),
+      with: { account: true },
+    });
+    return owner == null ? 0 : owner.account.followersCount;
   });
 
-federation.setFollowingDispatcher("/@{handle}/following", async (_ctx, _) => {
-  return {
-    items: [], // TODO: Implement this
-  };
-});
+federation
+  .setFollowingDispatcher(
+    "/@{handle}/following",
+    async (_ctx, handle, cursor) => {
+      const owner = await db.query.accountOwners.findFirst({
+        where: eq(accountOwners.handle, handle),
+      });
+      if (owner == null || cursor == null) return null;
+      const offset = Number.parseInt(cursor);
+      if (!Number.isInteger(offset)) return null;
+      const following = await db.query.accounts.findMany({
+        where: inArray(
+          accounts.id,
+          db
+            .select({ id: follows.followingId })
+            .from(follows)
+            .where(
+              and(
+                eq(follows.followerId, owner.id),
+                isNotNull(follows.approved),
+              ),
+            ),
+        ),
+        offset,
+        orderBy: accounts.id,
+        limit: 41,
+      });
+      return {
+        items: following.slice(0, 40).map((f) => new URL(f.iri)),
+        nextCursor: following.length > 40 ? `${offset + 40}` : null,
+      };
+    },
+  )
+  .setFirstCursor(async (_ctx, _handle) => "0")
+  .setCounter(async (_ctx, handle) => {
+    const owner = await db.query.accountOwners.findFirst({
+      where: eq(accountOwners.handle, handle),
+      with: { account: true },
+    });
+    return owner == null ? 0 : owner.account.followingCount;
+  });
 
 federation.setOutboxDispatcher("/@{handle}/outbox", async (_ctx, _) => {
   return {
@@ -228,14 +270,18 @@ federation
           object: follow,
         }),
       );
-      const result = await db
-        .select({ cnt: count() })
-        .from(follows)
-        .where(eq(follows.followingId, following.id));
       await db
         .update(accounts)
         .set({
-          followersCount: result.length < 1 ? 0 : result[0].cnt,
+          followersCount: sql`${db
+            .select({ cnt: count() })
+            .from(follows)
+            .where(
+              and(
+                eq(follows.followingId, following.id),
+                isNotNull(follows.approved),
+              ),
+            )}`,
         })
         .where(eq(accounts.id, following.id));
     }
@@ -277,6 +323,26 @@ federation
             eq(follows.followingId, account.id),
           ),
         );
+      await db
+        .update(accounts)
+        .set({
+          followingCount: sql`${db
+            .select({ cnt: count() })
+            .from(follows)
+            .where(
+              and(
+                eq(
+                  follows.followerId,
+                  db
+                    .select({ id: accounts.id })
+                    .from(accounts)
+                    .where(eq(accounts.iri, object.actorId.href)),
+                ),
+                isNotNull(follows.approved),
+              ),
+            )}`,
+        })
+        .where(eq(accounts.iri, object.actorId.href));
     }
   })
   .on(Reject, async (ctx, reject) => {
@@ -314,6 +380,26 @@ federation
             eq(follows.followingId, account.id),
           ),
         );
+      await db
+        .update(accounts)
+        .set({
+          followingCount: sql`${db
+            .select({ cnt: count() })
+            .from(follows)
+            .where(
+              and(
+                eq(
+                  follows.followerId,
+                  db
+                    .select({ id: accounts.id })
+                    .from(accounts)
+                    .where(eq(accounts.iri, object.actorId.href)),
+                ),
+                isNotNull(follows.approved),
+              ),
+            )}`,
+        })
+        .where(eq(accounts.iri, object.actorId.href));
     }
   })
   .on(Create, async (ctx, create) => {

@@ -1,5 +1,5 @@
 import { Accept, Follow, Reject } from "@fedify/fedify";
-import { and, count, eq, isNull } from "drizzle-orm";
+import { and, count, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import db from "../../db";
 import {
@@ -62,6 +62,17 @@ app.post(
         ),
       )
       .returning({ iri: follows.iri });
+    await db
+      .update(accounts)
+      .set({
+        followersCount: sql`${db
+          .select({ cnt: count() })
+          .from(follows)
+          .where(
+            and(eq(follows.followingId, owner.id), isNotNull(follows.approved)),
+          )}`,
+      })
+      .where(eq(accounts.id, owner.id));
     if (result.length < 1) return c.json({ error: "Record not found" }, 404);
     if (follower.owner == null) {
       const fedCtx = federation.createContext(c.req.raw, undefined);

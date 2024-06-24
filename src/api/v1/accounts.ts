@@ -4,14 +4,17 @@ import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import {
   and,
+  count,
   desc,
   eq,
   gte,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   lte,
   or,
+  sql,
 } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -631,6 +634,20 @@ app.post(
           }),
         );
       }
+      await db
+        .update(accounts)
+        .set({
+          followingCount: sql`${db
+            .select({ cnt: count() })
+            .from(follows)
+            .where(
+              and(
+                eq(follows.followerId, owner.id),
+                isNotNull(follows.approved),
+              ),
+            )}`,
+        })
+        .where(eq(accounts.id, owner.id));
     }
     const reverse = await db.query.follows.findFirst({
       where: and(eq(follows.followingId, owner.id), eq(follows.followerId, id)),
