@@ -12,6 +12,7 @@ import {
 } from "../../entities/account";
 import { getPostRelations, serializePost } from "../../entities/status";
 import federation from "../../federation";
+import { updateAccountStats } from "../../federation/account";
 import { toAnnounce, toCreate, toUpdate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type PreviewCard, fetchPreviewCard } from "../../previewcard";
@@ -154,6 +155,7 @@ app.post(
           })),
         );
       }
+      await updateAccountStats(tx, owner);
     });
     const post = (await db.query.posts.findFirst({
       where: eq(posts.id, id),
@@ -309,7 +311,10 @@ app.delete(
       with: getPostRelations(owner.id),
     });
     if (post == null) return c.json({ error: "Record not found" }, 404);
-    await db.delete(posts).where(eq(posts.id, id));
+    await db.transaction(async (tx) => {
+      await tx.delete(posts).where(eq(posts.id, id));
+      await updateAccountStats(tx, owner);
+    });
     const fedCtx = federation.createContext(c.req.raw, undefined);
     await fedCtx.sendActivity(
       { handle: owner.handle },

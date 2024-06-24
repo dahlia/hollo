@@ -351,26 +351,6 @@ export function toObject(
   });
 }
 
-export function toCreate(
-  post: Post & {
-    account: Account & { owner: AccountOwner | null };
-    replyTarget: Post | null;
-    media: Medium[];
-    mentions: (Mention & { account: Account })[];
-  },
-  ctx: Context<unknown>,
-): Create {
-  const object = toObject(post, ctx);
-  return new Create({
-    id: new URL("#create", object.id!),
-    actor: object.attributionId,
-    tos: object.toIds,
-    ccs: object.ccIds,
-    object,
-    published: object.published,
-  });
-}
-
 export async function updatePostStats(
   db: PgDatabase<
     PostgresJsQueryResultHKT,
@@ -407,6 +387,26 @@ export async function updatePostStats(
         ),
       ),
     );
+}
+
+export function toCreate(
+  post: Post & {
+    account: Account & { owner: AccountOwner | null };
+    replyTarget: Post | null;
+    media: Medium[];
+    mentions: (Mention & { account: Account })[];
+  },
+  ctx: Context<unknown>,
+): Create {
+  const object = toObject(post, ctx);
+  return new Create({
+    id: new URL("#create", object.id!),
+    actor: object.attributionId,
+    tos: object.toIds,
+    ccs: object.ccIds,
+    object,
+    published: object.published,
+  });
 }
 
 export function toUpdate(

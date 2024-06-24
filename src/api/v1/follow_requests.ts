@@ -1,5 +1,5 @@
 import { Accept, Follow, Reject } from "@fedify/fedify";
-import { and, count, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Hono } from "hono";
 import db from "../../db";
 import {
@@ -7,6 +7,7 @@ import {
   serializeAccountOwner,
 } from "../../entities/account";
 import { federation } from "../../federation";
+import { updateAccountStats } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { accounts, follows } from "../../schema";
 
@@ -62,17 +63,6 @@ app.post(
         ),
       )
       .returning({ iri: follows.iri });
-    await db
-      .update(accounts)
-      .set({
-        followersCount: sql`${db
-          .select({ cnt: count() })
-          .from(follows)
-          .where(
-            and(eq(follows.followingId, owner.id), isNotNull(follows.approved)),
-          )}`,
-      })
-      .where(eq(accounts.id, owner.id));
     if (result.length < 1) return c.json({ error: "Record not found" }, 404);
     if (follower.owner == null) {
       const fedCtx = federation.createContext(c.req.raw, undefined);
@@ -90,16 +80,7 @@ app.post(
         }),
       );
     }
-    const rows = await db
-      .select({ cnt: count() })
-      .from(follows)
-      .where(eq(follows.followingId, owner.id));
-    await db
-      .update(accounts)
-      .set({
-        followersCount: rows.length < 1 ? 0 : rows[0].cnt,
-      })
-      .where(eq(accounts.id, owner.id));
+    await updateAccountStats(db, { id: owner.id });
     const follow = await db.query.follows.findFirst({
       where: and(
         eq(follows.followingId, followerId),

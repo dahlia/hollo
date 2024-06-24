@@ -8,7 +8,15 @@ import {
   isActor,
   lookupObject,
 } from "@fedify/fedify";
-import { type ExtractTablesWithRelations, eq } from "drizzle-orm";
+import {
+  type ExtractTablesWithRelations,
+  and,
+  count,
+  eq,
+  inArray,
+  isNotNull,
+  sql,
+} from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import type MeiliSearch from "meilisearch";
@@ -117,4 +125,61 @@ export async function persistAccountByIri(
   const actor = await lookupObject(iri, options);
   if (!isActor(actor) || actor.id == null) return null;
   return await persistAccount(db, search, actor, options);
+}
+
+export async function updateAccountStats(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  account: { id: string } | { iri: string },
+): Promise<void> {
+  const id =
+    "id" in account
+      ? account.id
+      : db
+          .select({ id: schema.accounts.id })
+          .from(schema.accounts)
+          .where(eq(schema.accounts.iri, account.iri));
+  const followingCount = db
+    .select({ cnt: count() })
+    .from(schema.follows)
+    .where(
+      and(
+        eq(schema.follows.followerId, id),
+        isNotNull(schema.follows.approved),
+      ),
+    );
+  const followersCount = db
+    .select({ cnt: count() })
+    .from(schema.follows)
+    .where(
+      and(
+        eq(schema.follows.followingId, id),
+        isNotNull(schema.follows.approved),
+      ),
+    );
+  const postsCount = db
+    .select({ cnt: count() })
+    .from(schema.posts)
+    .where(eq(schema.posts.accountId, id));
+  await db
+    .update(schema.accounts)
+    .set({
+      followingCount: sql`${followingCount}`,
+      followersCount: sql`${followersCount}`,
+      postsCount: sql`${postsCount}`,
+    })
+    .where(
+      and(
+        "id" in account
+          ? eq(schema.accounts.id, account.id)
+          : eq(schema.accounts.iri, account.iri),
+        inArray(
+          schema.accounts.id,
+          db.select({ id: schema.accountOwners.id }).from(schema.accountOwners),
+        ),
+      ),
+    );
 }

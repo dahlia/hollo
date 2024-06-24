@@ -22,16 +22,7 @@ import {
 import { RedisKvStore, RedisMessageQueue } from "@fedify/redis";
 import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
-import {
-  and,
-  count,
-  eq,
-  ilike,
-  inArray,
-  isNotNull,
-  like,
-  sql,
-} from "drizzle-orm";
+import { and, eq, ilike, inArray, isNotNull, like } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
 import redis, { createRedis } from "../redis";
@@ -44,7 +35,7 @@ import {
   posts,
 } from "../schema";
 import { search } from "../search";
-import { persistAccount } from "./account";
+import { persistAccount, updateAccountStats } from "./account";
 import { toTemporalInstant } from "./date";
 import {
   persistPost,
@@ -275,20 +266,7 @@ federation
           object: follow,
         }),
       );
-      await db
-        .update(accounts)
-        .set({
-          followersCount: sql`${db
-            .select({ cnt: count() })
-            .from(follows)
-            .where(
-              and(
-                eq(follows.followingId, following.id),
-                isNotNull(follows.approved),
-              ),
-            )}`,
-        })
-        .where(eq(accounts.id, following.id));
+      await updateAccountStats(db, { id: following.id });
     }
   })
   .on(Accept, async (ctx, accept) => {
@@ -300,7 +278,7 @@ federation
     const account = await persistAccount(db, search, actor, ctx);
     if (account == null) return;
     if (accept.objectId != null) {
-      await db
+      const updated = await db
         .update(follows)
         .set({ approved: new Date() })
         .where(
@@ -308,7 +286,12 @@ federation
             eq(follows.iri, accept.objectId.href),
             eq(follows.followingId, account.id),
           ),
-        );
+        )
+        .returning();
+      if (updated.length > 0) {
+        await updateAccountStats(db, { id: updated[0].followerId });
+        return;
+      }
     }
     const object = await accept.getObject();
     if (object instanceof Follow) {
@@ -328,26 +311,7 @@ federation
             eq(follows.followingId, account.id),
           ),
         );
-      await db
-        .update(accounts)
-        .set({
-          followingCount: sql`${db
-            .select({ cnt: count() })
-            .from(follows)
-            .where(
-              and(
-                eq(
-                  follows.followerId,
-                  db
-                    .select({ id: accounts.id })
-                    .from(accounts)
-                    .where(eq(accounts.iri, object.actorId.href)),
-                ),
-                isNotNull(follows.approved),
-              ),
-            )}`,
-        })
-        .where(eq(accounts.iri, object.actorId.href));
+      await updateAccountStats(db, { iri: object.actorId.href });
     }
   })
   .on(Reject, async (ctx, reject) => {
@@ -359,14 +323,19 @@ federation
     const account = await persistAccount(db, search, actor, ctx);
     if (account == null) return;
     if (reject.objectId != null) {
-      await db
+      const deleted = await db
         .delete(follows)
         .where(
           and(
             eq(follows.iri, reject.objectId.href),
             eq(follows.followingId, account.id),
           ),
-        );
+        )
+        .returning();
+      if (deleted.length > 0) {
+        await updateAccountStats(db, { id: deleted[0].followerId });
+        return;
+      }
     }
     const object = await reject.getObject();
     if (object instanceof Follow) {
@@ -385,26 +354,7 @@ federation
             eq(follows.followingId, account.id),
           ),
         );
-      await db
-        .update(accounts)
-        .set({
-          followingCount: sql`${db
-            .select({ cnt: count() })
-            .from(follows)
-            .where(
-              and(
-                eq(
-                  follows.followerId,
-                  db
-                    .select({ id: accounts.id })
-                    .from(accounts)
-                    .where(eq(accounts.iri, object.actorId.href)),
-                ),
-                isNotNull(follows.approved),
-              ),
-            )}`,
-        })
-        .where(eq(accounts.iri, object.actorId.href));
+      await updateAccountStats(db, { iri: object.actorId.href });
     }
   })
   .on(Create, async (ctx, create) => {
@@ -527,16 +477,7 @@ federation
         )
         .returning({ followingId: follows.followingId });
       if (deleted.length > 0) {
-        const result = await db
-          .select({ cnt: count() })
-          .from(follows)
-          .where(eq(follows.followingId, deleted[0].followingId));
-        await db
-          .update(accounts)
-          .set({
-            followersCount: result.length < 1 ? 0 : result[0].cnt,
-          })
-          .where(eq(accounts.id, deleted[0].followingId));
+        await updateAccountStats(db, { id: deleted[0].followingId });
       }
     } else if (object instanceof Like) {
       const like = object;
@@ -593,12 +534,9 @@ federation
             ),
           )
           .returning();
-        await tx
-          .update(posts)
-          .set({
-            sharesCount: sql`coalesce(${posts.sharesCount} - ${deleted.length}, 0)`,
-          })
-          .where(eq(posts.iri, originalPost.href));
+        if (deleted.length > 0 && deleted[0].sharingId != null) {
+          await updatePostStats(tx, { id: deleted[0].sharingId });
+        }
       });
     } else {
       inboxLogger.debug("Unsupported object on Undo: {object}", { object });
