@@ -271,6 +271,44 @@ export async function persistSharingPost(
   return result[0] ?? null;
 }
 
+export async function updatePostStats(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  { id }: { id: string },
+): Promise<void> {
+  const repliesCount = db
+    .select({ cnt: count() })
+    .from(posts)
+    .where(eq(posts.replyTargetId, id));
+  const sharesCount = db
+    .select({ cnt: count() })
+    .from(posts)
+    .where(eq(posts.sharingId, id));
+  const likesCount = db
+    .select({ cnt: count() })
+    .from(likes)
+    .where(eq(likes.postId, id));
+  await db
+    .update(posts)
+    .set({
+      repliesCount: sql`${repliesCount}`,
+      sharesCount: sql`${sharesCount}`,
+      likesCount: sql`${likesCount}`,
+    })
+    .where(
+      and(
+        eq(posts.id, id),
+        inArray(
+          posts.accountId,
+          db.select({ id: accountOwners.id }).from(accountOwners),
+        ),
+      ),
+    );
+}
+
 export function toObject(
   post: Post & {
     account: Account & { owner: AccountOwner | null };
@@ -349,44 +387,6 @@ export function toObject(
           : post.updated,
     ),
   });
-}
-
-export async function updatePostStats(
-  db: PgDatabase<
-    PostgresJsQueryResultHKT,
-    typeof schema,
-    ExtractTablesWithRelations<typeof schema>
-  >,
-  { id }: { id: string },
-): Promise<void> {
-  const repliesCount = db
-    .select({ cnt: count() })
-    .from(posts)
-    .where(eq(posts.replyTargetId, id));
-  const sharesCount = db
-    .select({ cnt: count() })
-    .from(posts)
-    .where(eq(posts.sharingId, id));
-  const likesCount = db
-    .select({ cnt: count() })
-    .from(likes)
-    .where(eq(likes.postId, id));
-  await db
-    .update(posts)
-    .set({
-      repliesCount: sql`${repliesCount}`,
-      sharesCount: sql`${sharesCount}`,
-      likesCount: sql`${likesCount}`,
-    })
-    .where(
-      and(
-        eq(posts.id, id),
-        inArray(
-          posts.accountId,
-          db.select({ id: accountOwners.id }).from(accountOwners),
-        ),
-      ),
-    );
 }
 
 export function toCreate(

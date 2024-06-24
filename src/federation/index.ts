@@ -94,6 +94,7 @@ federation
       followers: ctx.getFollowersUri(handle),
       following: ctx.getFollowingUri(handle),
       outbox: ctx.getOutboxUri(handle),
+      liked: ctx.getLikedUri(handle),
       inbox: ctx.getInboxUri(handle),
       endpoints: new Endpoints({
         sharedInbox: ctx.getInboxUri(),
@@ -258,6 +259,50 @@ federation
       .select({ cnt: count() })
       .from(posts)
       .where(eq(posts.accountId, owner.id));
+    if (result.length < 1) return 0;
+    return result[0].cnt;
+  });
+
+federation
+  .setLikedDispatcher("/@{handle}/liked", async (_ctx, handle, cursor) => {
+    if (cursor == null) return null;
+    const owner = await db.query.accountOwners.findFirst({
+      where: eq(accountOwners.handle, handle),
+      with: { account: true },
+    });
+    if (owner == null) return null;
+    const items = await db.query.likes.findMany({
+      where: eq(likes.accountId, owner.id),
+      orderBy: desc(likes.created),
+      offset: Number.parseInt(cursor),
+      limit: 41,
+      with: { post: true },
+    });
+    return {
+      items: items.slice(0, 40).map(
+        (like) =>
+          new Like({
+            id: new URL(
+              `#likes/${like.created.toISOString()}`,
+              owner.account.iri,
+            ),
+            actor: new URL(owner.account.iri),
+            object: new URL(like.post.iri),
+          }),
+      ),
+      nextCursor: items.length > 40 ? `${Number.parseInt(cursor) + 40}` : null,
+    };
+  })
+  .setFirstCursor(async (_ctx, _handle) => "0")
+  .setCounter(async (_ctx, handle) => {
+    const owner = await db.query.accountOwners.findFirst({
+      where: eq(accountOwners.handle, handle),
+    });
+    if (owner == null) return null;
+    const result = await db
+      .select({ cnt: count() })
+      .from(likes)
+      .where(eq(likes.accountId, owner.id));
     if (result.length < 1) return 0;
     return result[0].cnt;
   });
