@@ -46,7 +46,12 @@ import {
 import { search } from "../search";
 import { persistAccount } from "./account";
 import { toTemporalInstant } from "./date";
-import { persistPost, persistSharingPost, toObject } from "./post";
+import {
+  persistPost,
+  persistSharingPost,
+  toObject,
+  updatePostStats,
+} from "./post";
 
 export const federation = createFederation({
   kv: new RedisKvStore(redis),
@@ -405,7 +410,12 @@ federation
   .on(Create, async (ctx, create) => {
     const object = await create.getObject();
     if (object instanceof Article || object instanceof Note) {
-      await persistPost(db, search, object, ctx);
+      await db.transaction(async (tx) => {
+        const post = await persistPost(tx, search, object, ctx);
+        if (post?.replyTargetId != null) {
+          await updatePostStats(tx, { id: post.replyTargetId });
+        }
+      });
     } else {
       inboxLogger.debug("Unsupported object on Create: {object}", { object });
     }
@@ -423,11 +433,14 @@ federation
       if (actor == null) return;
       const account = await persistAccount(db, search, actor, ctx);
       if (account == null) return;
-      await db.insert(likes).values({
-        // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
-        postId: parsed.values["id"],
-        accountId: account.id,
-      } satisfies NewLike);
+      // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+      const postId = parsed.values["id"];
+      await db.transaction(async (tx) => {
+        await tx
+          .insert(likes)
+          .values({ postId, accountId: account.id } satisfies NewLike);
+        await updatePostStats(tx, { id: postId });
+      });
     } else {
       inboxLogger.debug("Unsupported object on Like: {objectId}", {
         objectId: like.objectId,
@@ -438,7 +451,16 @@ federation
     const object = await announce.getObject();
     if (object instanceof Article || object instanceof Note) {
       await db.transaction(async (tx) => {
-        await persistSharingPost(tx, search, announce, object, ctx);
+        const post = await persistSharingPost(
+          tx,
+          search,
+          announce,
+          object,
+          ctx,
+        );
+        if (post?.sharingId != null) {
+          await updatePostStats(tx, { id: post.sharingId });
+        }
       });
     } else {
       inboxLogger.debug("Unsupported object on Announce: {object}", { object });
@@ -461,7 +483,21 @@ federation
     if (objectId.href === actorId.href) {
       await db.delete(accounts).where(eq(accounts.iri, actorId.href));
     } else {
-      await db.delete(posts).where(eq(posts.iri, objectId.href));
+      await db.transaction(async (tx) => {
+        const deletedPosts = await tx
+          .delete(posts)
+          .where(eq(posts.iri, objectId.href))
+          .returning();
+        if (deletedPosts.length > 0) {
+          const deletedPost = deletedPosts[0];
+          if (deletedPost.replyTargetId != null) {
+            await updatePostStats(tx, { id: deletedPost.replyTargetId });
+          }
+          if (deletedPost.sharingId != null) {
+            await updatePostStats(tx, { id: deletedPost.sharingId });
+          }
+        }
+      });
     }
   })
   .on(Undo, async (ctx, undo) => {
@@ -516,13 +552,16 @@ federation
         if (actor == null) return;
         const account = await persistAccount(db, search, actor, ctx);
         if (account == null) return;
-        await db.delete(likes).where(
-          and(
-            // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
-            eq(likes.postId, parsed.values["id"]),
-            eq(likes.accountId, account.id),
-          ),
-        );
+        // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+        const postId = parsed.values["id"];
+        await db.transaction(async (tx) => {
+          await tx
+            .delete(likes)
+            .where(
+              and(eq(likes.postId, postId), eq(likes.accountId, account.id)),
+            );
+          await updatePostStats(tx, { id: postId });
+        });
       } else {
         inboxLogger.debug("Unsupported object on Undo<Like>: {objectId}", {
           objectId: like.objectId,
