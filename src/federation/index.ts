@@ -22,7 +22,16 @@ import {
 import { RedisKvStore, RedisMessageQueue } from "@fedify/redis";
 import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
-import { and, eq, ilike, inArray, isNotNull, like } from "drizzle-orm";
+import {
+  and,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNotNull,
+  like,
+} from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
 import redis, { createRedis } from "../redis";
@@ -40,6 +49,8 @@ import { toTemporalInstant } from "./date";
 import {
   persistPost,
   persistSharingPost,
+  toAnnounce,
+  toCreate,
   toObject,
   updatePostStats,
 } from "./post";
@@ -208,11 +219,48 @@ federation
     return owner == null ? 0 : owner.account.followingCount;
   });
 
-federation.setOutboxDispatcher("/@{handle}/outbox", async (_ctx, _) => {
-  return {
-    items: [], // TODO: Implement this
-  };
-});
+federation
+  .setOutboxDispatcher("/@{handle}/outbox", async (ctx, handle, cursor) => {
+    if (cursor == null) return null;
+    const owner = await db.query.accountOwners.findFirst({
+      where: eq(accountOwners.handle, handle),
+    });
+    if (owner == null) return null;
+    const items = await db.query.posts.findMany({
+      where: eq(posts.accountId, owner.id),
+      orderBy: desc(posts.published),
+      offset: Number.parseInt(cursor),
+      limit: 41,
+      with: {
+        account: { with: { owner: true } },
+        replyTarget: true,
+        media: true,
+        mentions: { with: { account: true } },
+        sharing: { with: { account: true } },
+      },
+    });
+    return {
+      items: items
+        .slice(0, 40)
+        .map((p) =>
+          p.sharing == null ? toCreate(p, ctx) : toAnnounce(p, ctx),
+        ),
+      nextCursor: items.length > 40 ? `${Number.parseInt(cursor) + 40}` : null,
+    };
+  })
+  .setFirstCursor(async (_ctx, _handle) => "0")
+  .setCounter(async (_ctx, handle) => {
+    const owner = await db.query.accountOwners.findFirst({
+      where: eq(accountOwners.handle, handle),
+    });
+    if (owner == null) return null;
+    const result = await db
+      .select({ cnt: count() })
+      .from(posts)
+      .where(eq(posts.accountId, owner.id));
+    if (result.length < 1) return 0;
+    return result[0].cnt;
+  });
 
 const inboxLogger = getLogger(["hollo", "inbox"]);
 
