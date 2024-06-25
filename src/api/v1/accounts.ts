@@ -34,6 +34,7 @@ import {
   accounts,
   follows,
   mentions,
+  pinnedPosts,
   posts,
 } from "../../schema";
 import { search } from "../../search";
@@ -469,7 +470,7 @@ app.get(
       );
     }
     const query = c.req.valid("query");
-    if (query.pinned || query.only_media) {
+    if (query.only_media) {
       return c.json([]); // FIXME
     }
     const following = await db
@@ -497,6 +498,15 @@ app.get(
             ),
           ),
         ),
+        query.pinned === "true"
+          ? inArray(
+              posts.id,
+              db
+                .select({ id: pinnedPosts.postId })
+                .from(pinnedPosts)
+                .where(eq(pinnedPosts.accountId, id)),
+            )
+          : undefined,
         query.exclude_replies === "true"
           ? isNull(posts.replyTargetId)
           : undefined,

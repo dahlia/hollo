@@ -1,6 +1,7 @@
 import {
   Accept,
   Activity,
+  Add,
   Announce,
   Article,
   Create,
@@ -12,6 +13,7 @@ import {
   Note,
   PropertyValue,
   Reject,
+  Remove,
   Undo,
   Update,
   createFederation,
@@ -37,10 +39,12 @@ import db from "../db";
 import redis, { createRedis } from "../redis";
 import {
   type NewLike,
+  type NewPinnedPost,
   accountOwners,
   accounts,
   follows,
   likes,
+  pinnedPosts,
   posts,
 } from "../schema";
 import { search } from "../search";
@@ -95,6 +99,7 @@ federation
       following: ctx.getFollowingUri(handle),
       outbox: ctx.getOutboxUri(handle),
       liked: ctx.getLikedUri(handle),
+      featured: ctx.getFeaturedUri(handle),
       inbox: ctx.getInboxUri(handle),
       endpoints: new Endpoints({
         sharedInbox: ctx.getInboxUri(),
@@ -306,6 +311,34 @@ federation
     if (result.length < 1) return 0;
     return result[0].cnt;
   });
+
+federation.setFeaturedDispatcher("/@{handle}/pinned", async (ctx, handle) => {
+  const owner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.handle, handle),
+    with: { account: true },
+  });
+  if (owner == null) return null;
+  const items = await db.query.pinnedPosts.findMany({
+    where: eq(pinnedPosts.accountId, owner.id),
+    orderBy: desc(pinnedPosts.index),
+    with: {
+      post: {
+        with: {
+          account: { with: { owner: true } },
+          replyTarget: true,
+          media: true,
+          mentions: { with: { account: true } },
+        },
+      },
+    },
+  });
+  return {
+    items: items
+      .map((p) => p.post)
+      .filter((p) => p.visibility === "public" || p.visibility === "unlisted")
+      .map((p) => toObject(p, ctx)),
+  };
+});
 
 const inboxLogger = getLogger(["hollo", "inbox"]);
 
@@ -539,6 +572,48 @@ federation
           if (deletedPost.sharingId != null) {
             await updatePostStats(tx, { id: deletedPost.sharingId });
           }
+        }
+      });
+    }
+  })
+  .on(Add, async (ctx, add) => {
+    if (add.targetId == null) return;
+    const accountList = await db.query.accounts.findMany({
+      where: eq(accounts.featuredUrl, add.targetId.href),
+    });
+    const object = await add.getObject();
+    if (object instanceof Note || object instanceof Article) {
+      await db.transaction(async (tx) => {
+        const post = await persistPost(tx, search, object, ctx);
+        if (post == null) return;
+        for (const account of accountList) {
+          await tx.insert(pinnedPosts).values({
+            postId: post.id,
+            accountId: account.id,
+          } satisfies NewPinnedPost);
+        }
+      });
+    }
+  })
+  .on(Remove, async (ctx, remove) => {
+    if (remove.targetId == null) return;
+    const accountList = await db.query.accounts.findMany({
+      where: eq(accounts.featuredUrl, remove.targetId.href),
+    });
+    const object = await remove.getObject();
+    if (object instanceof Note || object instanceof Article) {
+      await db.transaction(async (tx) => {
+        const post = await persistPost(tx, search, object, ctx);
+        if (post == null) return;
+        for (const account of accountList) {
+          await tx
+            .delete(pinnedPosts)
+            .where(
+              and(
+                eq(pinnedPosts.postId, post.id),
+                eq(pinnedPosts.accountId, account.id),
+              ),
+            );
         }
       });
     }

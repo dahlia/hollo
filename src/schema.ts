@@ -2,7 +2,9 @@ import { relations } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
+  bigserial,
   boolean,
+  foreignKey,
   integer,
   json,
   jsonb,
@@ -11,6 +13,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -49,6 +52,7 @@ export const accounts = pgTable("accounts", {
   inboxUrl: text("inbox_url").notNull(),
   followersUrl: text("followers_url"),
   sharedInboxUrl: text("shared_inbox_url"),
+  featuredUrl: text("featured_url"),
   followingCount: bigint("following_count", { mode: "number" }).default(0),
   followersCount: bigint("followers_count", { mode: "number" }).default(0),
   postsCount: bigint("posts_count", { mode: "number" }).default(0),
@@ -71,6 +75,7 @@ export const accountRelations = relations(accounts, ({ one, many }) => ({
   posts: many(posts),
   mentions: many(mentions),
   likes: many(likes),
+  pinnedPosts: many(pinnedPosts),
 }));
 
 export type Account = typeof accounts.$inferSelect;
@@ -251,39 +256,50 @@ export const postTypeEnum = pgEnum("post_type", ["Article", "Note"]);
 
 export type PostType = (typeof postTypeEnum.enumValues)[number];
 
-export const posts = pgTable("posts", {
-  id: uuid("id").primaryKey(),
-  iri: text("iri").notNull().unique(),
-  type: postTypeEnum("type").notNull(),
-  accountId: uuid("actor_id")
-    .notNull()
-    .references(() => accounts.id, { onDelete: "cascade" }),
-  applicationId: uuid("application_id").references(() => applications.id, {
-    onDelete: "set null",
+export const posts = pgTable(
+  "posts",
+  {
+    id: uuid("id").primaryKey(),
+    iri: text("iri").notNull().unique(),
+    type: postTypeEnum("type").notNull(),
+    accountId: uuid("actor_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    applicationId: uuid("application_id").references(() => applications.id, {
+      onDelete: "set null",
+    }),
+    replyTargetId: uuid("reply_target_id").references(
+      (): AnyPgColumn => posts.id,
+      { onDelete: "set null" },
+    ),
+    sharingId: uuid("sharing_id").references((): AnyPgColumn => posts.id, {
+      onDelete: "cascade",
+    }),
+    visibility: postVisibilityEnum("visibility").notNull(),
+    summaryHtml: text("summary_html"),
+    summary: text("summary"),
+    contentHtml: text("content_html"),
+    content: text("content"),
+    language: text("language"),
+    tags: jsonb("tags").notNull().default({}).$type<Record<string, string>>(),
+    sensitive: boolean("sensitive").notNull().default(false),
+    url: text("url"),
+    previewCard: jsonb("preview_card").$type<PreviewCard>(),
+    repliesCount: bigint("replies_count", { mode: "number" }).default(0),
+    sharesCount: bigint("shares_count", { mode: "number" }).default(0),
+    likesCount: bigint("likes_count", { mode: "number" }).default(0),
+    published: timestamp("published", { withTimezone: true }),
+    updated: timestamp("updated", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    uniqueIdAccountId: unique("posts_id_actor_id_unique").on(
+      table.id,
+      table.accountId,
+    ),
   }),
-  replyTargetId: uuid("reply_target_id").references(
-    (): AnyPgColumn => posts.id,
-    { onDelete: "set null" },
-  ),
-  sharingId: uuid("sharing_id").references((): AnyPgColumn => posts.id, {
-    onDelete: "cascade",
-  }),
-  visibility: postVisibilityEnum("visibility").notNull(),
-  summaryHtml: text("summary_html"),
-  summary: text("summary"),
-  contentHtml: text("content_html"),
-  content: text("content"),
-  language: text("language"),
-  tags: jsonb("tags").notNull().default({}).$type<Record<string, string>>(),
-  sensitive: boolean("sensitive").notNull().default(false),
-  url: text("url"),
-  previewCard: jsonb("preview_card").$type<PreviewCard>(),
-  repliesCount: bigint("replies_count", { mode: "number" }).default(0),
-  sharesCount: bigint("shares_count", { mode: "number" }).default(0),
-  likesCount: bigint("likes_count", { mode: "number" }).default(0),
-  published: timestamp("published", { withTimezone: true }),
-  updated: timestamp("updated", { withTimezone: true }).notNull().defaultNow(),
-});
+);
 
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
@@ -317,6 +333,10 @@ export const postRelations = relations(posts, ({ one, many }) => ({
   media: many(media),
   mentions: many(mentions),
   bookmarks: many(bookmarks),
+  pin: one(pinnedPosts, {
+    fields: [posts.id, posts.accountId],
+    references: [pinnedPosts.postId, pinnedPosts.accountId],
+  }),
 }));
 
 export const media = pgTable("media", {
@@ -372,6 +392,41 @@ export const mentionRelations = relations(mentions, ({ one }) => ({
     references: [accounts.id],
   }),
 }));
+
+export const pinnedPosts = pgTable(
+  "pinned_posts",
+  {
+    index: bigserial("index", { mode: "number" }).notNull().primaryKey(),
+    postId: uuid("post_id").notNull(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    created: timestamp("created", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    uniquePostIdAccountId: unique().on(table.postId, table.accountId),
+    postReference: foreignKey({
+      columns: [table.postId, table.accountId],
+      foreignColumns: [posts.id, posts.accountId],
+    }).onDelete("cascade"),
+  }),
+);
+
+export const pinnedPostRelations = relations(pinnedPosts, ({ one }) => ({
+  post: one(posts, {
+    fields: [pinnedPosts.postId, pinnedPosts.accountId],
+    references: [posts.id, posts.accountId],
+  }),
+  account: one(accounts, {
+    fields: [pinnedPosts.accountId],
+    references: [accounts.id],
+  }),
+}));
+
+export type PinnedPost = typeof pinnedPosts.$inferSelect;
+export type NewPinnedPost = typeof pinnedPosts.$inferInsert;
 
 export const likes = pgTable(
   "likes",

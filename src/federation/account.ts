@@ -1,7 +1,9 @@
 import {
   type Actor,
+  Article,
   type DocumentLoader,
   Link,
+  Note,
   PropertyValue,
   getActorHandle,
   getActorTypeName,
@@ -22,7 +24,10 @@ import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import type MeiliSearch from "meilisearch";
 import { uuidv7 } from "uuidv7-js";
 import * as schema from "../schema";
+import type { NewPinnedPost, Post } from "../schema";
+import { iterateCollection } from "./collection";
 import { toDate } from "./date";
+import { persistPost } from "./post";
 
 export async function persistAccount(
   db: PgDatabase<
@@ -65,6 +70,23 @@ export async function persistAccount(
       fieldHtmls[attachment.name.toString()] = attachment.value.toString();
     }
   }
+  const featuredCollection = await actor.getFeatured(opts);
+  if (featuredCollection != null) {
+    const posts: Post[] = [];
+    for await (const item of iterateCollection(featuredCollection, opts)) {
+      if (item instanceof Note || item instanceof Article) {
+        const post = await persistPost(db, search, item, options);
+        if (post == null) continue;
+        posts.unshift(post);
+      }
+    }
+    for (const post of posts) {
+      await db.insert(schema.pinnedPosts).values({
+        postId: post.id,
+        accountId: post.accountId,
+      } satisfies NewPinnedPost);
+    }
+  }
   const values: Omit<schema.NewAccount, "id" | "iri"> = {
     type: getActorTypeName(actor),
     name: actor?.name?.toString() ?? actor?.preferredUsername?.toString() ?? "",
@@ -79,6 +101,7 @@ export async function persistAccount(
     inboxUrl: actor.inboxId.href,
     followersUrl: followers?.id?.href,
     sharedInboxUrl: actor.endpoints?.sharedInbox?.href,
+    featuredUrl: actor.featuredId?.href,
     followingCount: (await actor.getFollowing(opts))?.totalItems ?? 0,
     followersCount: followers?.totalItems ?? 0,
     postsCount: (await actor.getOutbox(opts))?.totalItems ?? 0,

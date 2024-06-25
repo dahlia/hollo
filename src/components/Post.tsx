@@ -14,14 +14,15 @@ export interface PostProps {
       | null;
     replyTarget: (DbPost & { account: Account }) | null;
   };
+  pinned?: boolean;
 }
 
-export const Post: FC<PostProps> = ({ post }) => {
+export const Post: FC<PostProps> = ({ post, pinned }) => {
   if (post.sharing != null)
     return <Post post={{ ...post.sharing, sharing: null }} />;
   const account = post.account;
   return (
-    <article>
+    <article style={pinned ? "border: 1px solid gray;" : ""}>
       <header>
         <hgroup>
           {account.avatarUrl && (
@@ -74,6 +75,7 @@ export const Post: FC<PostProps> = ({ post }) => {
               </time>
             </small>
           </a>
+          {pinned ? <small> &middot; Pinned</small> : ""}
         </p>
       </footer>
     </article>

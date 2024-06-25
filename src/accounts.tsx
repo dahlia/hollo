@@ -111,6 +111,7 @@ app.post("/", async (c) => {
         inboxUrl: fedCtx.getInboxUri(username).href,
         followersUrl: fedCtx.getFollowersUri(username).href,
         sharedInboxUrl: fedCtx.getInboxUri().href,
+        featuredUrl: fedCtx.getFeaturedUri(username).href,
         published: new Date(),
       })
       .returning();

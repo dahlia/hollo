@@ -8,6 +8,7 @@ import {
   type Like,
   type Medium,
   type Mention,
+  type PinnedPost,
   type Post,
   bookmarks,
   likes,
@@ -32,6 +33,7 @@ export function getPostRelations(ownerId: string) {
         likes: { where: eq(likes.accountId, ownerId) },
         shares: { where: eq(posts.accountId, ownerId) },
         bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
+        pin: true,
       },
     },
     media: true,
@@ -39,6 +41,7 @@ export function getPostRelations(ownerId: string) {
     likes: { where: eq(likes.accountId, ownerId) },
     shares: { where: eq(posts.accountId, ownerId) },
     bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
+    pin: true,
   } as const;
 }
 
@@ -59,6 +62,7 @@ export function serializePost(
           likes: Like[];
           shares: Post[];
           bookmarks: Bookmark[];
+          pin: PinnedPost | null;
         })
       | null;
     media: Medium[];
@@ -68,6 +72,7 @@ export function serializePost(
     likes: Like[];
     shares: Post[];
     bookmarks: Bookmark[];
+    pin: PinnedPost | null;
   },
   currentAccountOwner: { id: string },
   baseUrl: URL | string,
@@ -97,6 +102,7 @@ export function serializePost(
     bookmarked: post.bookmarks.some(
       (bookmark) => bookmark.accountOwnerId === currentAccountOwner.id,
     ),
+    pinned: post.pin != null && post.pin.accountId === currentAccountOwner.id,
     content: post.contentHtml ?? "",
     reblog:
       post.sharing == null

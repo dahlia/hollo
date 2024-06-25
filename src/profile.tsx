@@ -11,6 +11,7 @@ import {
   type Medium,
   type Post,
   accountOwners,
+  pinnedPosts,
   posts,
 } from "./schema";
 
@@ -44,7 +45,37 @@ app.get("/", async (c) => {
       replyTarget: { with: { account: true } },
     },
   });
-  return c.html(<ProfilePage accountOwner={owner} posts={postList} />);
+  const pinnedPostList = await db.query.pinnedPosts.findMany({
+    where: and(eq(pinnedPosts.accountId, owner.id)),
+    orderBy: desc(pinnedPosts.index),
+    with: {
+      post: {
+        with: {
+          account: true,
+          media: true,
+          sharing: {
+            with: {
+              account: true,
+              media: true,
+              replyTarget: { with: { account: true } },
+            },
+          },
+          replyTarget: { with: { account: true } },
+        },
+      },
+    },
+  });
+  return c.html(
+    <ProfilePage
+      accountOwner={owner}
+      posts={postList}
+      pinnedPosts={pinnedPostList
+        .map((p) => p.post)
+        .filter(
+          (p) => p.visibility === "public" || p.visibility === "unlisted",
+        )}
+    />,
+  );
 });
 
 export interface ProfilePageProps {
@@ -61,9 +92,25 @@ export interface ProfilePageProps {
       | null;
     replyTarget: (Post & { account: Account }) | null;
   })[];
+  pinnedPosts: (Post & {
+    account: Account;
+    media: Medium[];
+    sharing:
+      | (Post & {
+          account: Account;
+          media: Medium[];
+          replyTarget: (Post & { account: Account }) | null;
+        })
+      | null;
+    replyTarget: (Post & { account: Account }) | null;
+  })[];
 }
 
-export const ProfilePage: FC<ProfilePageProps> = ({ accountOwner, posts }) => {
+export const ProfilePage: FC<ProfilePageProps> = ({
+  accountOwner,
+  posts,
+  pinnedPosts,
+}) => {
   return (
     <Layout
       title={accountOwner.account.name}
@@ -72,6 +119,9 @@ export const ProfilePage: FC<ProfilePageProps> = ({ accountOwner, posts }) => {
       imageUrl={accountOwner.account.avatarUrl}
     >
       <Profile accountOwner={accountOwner} />
+      {pinnedPosts.map((post) => (
+        <PostView post={post} pinned={true} />
+      ))}
       {posts.map((post) => (
         <PostView post={post} />
       ))}

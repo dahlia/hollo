@@ -1,4 +1,4 @@
-import { Note, Undo } from "@fedify/fedify";
+import { Add, Note, Remove, Undo } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, isNull, sql } from "drizzle-orm";
@@ -20,11 +20,13 @@ import {
   type Like,
   type NewBookmark,
   type NewLike,
+  type NewPinnedPost,
   type NewPost,
   bookmarks,
   likes,
   media,
   mentions,
+  pinnedPosts,
   posts,
 } from "../../schema";
 import search from "../../search";
@@ -732,6 +734,115 @@ app.post(
       where: eq(posts.id, postId),
       with: getPostRelations(owner.id),
     });
+    return c.json(serializePost(post!, owner, c.req.url));
+  },
+);
+
+app.post(
+  "/:id/pin",
+  tokenRequired,
+  scopeRequired(["write:accounts"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const postId = c.req.param("id");
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+    });
+    if (post == null) {
+      return c.json({ error: "Record not found" }, 404);
+    }
+    if (post.accountId !== owner.id) {
+      return c.json(
+        { error: "Validation failed: Someone else's post cannot be pinned" },
+        422,
+      );
+    }
+    const result = await db
+      .insert(pinnedPosts)
+      .values({
+        postId,
+        accountId: owner.id,
+      } satisfies NewPinnedPost)
+      .returning();
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    await fedCtx.sendActivity(
+      owner,
+      "followers",
+      new Add({
+        id: new URL(
+          `#add/${result[0].index}`,
+          fedCtx.getFeaturedUri(owner.handle),
+        ),
+        actor: new URL(owner.account.iri),
+        object: new URL(post.iri),
+        target: fedCtx.getFeaturedUri(owner.handle),
+      }),
+      {
+        preferSharedInbox: true,
+        excludeBaseUris: [new URL(c.req.url)],
+      },
+    );
+    const resultPost = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      with: getPostRelations(owner.id),
+    });
+    return c.json(serializePost(resultPost!, owner, c.req.url));
+  },
+);
+
+app.post(
+  "/:id/unpin",
+  tokenRequired,
+  scopeRequired(["write:accounts"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const postId = c.req.param("id");
+    const result = await db
+      .delete(pinnedPosts)
+      .where(
+        and(
+          eq(pinnedPosts.postId, postId),
+          eq(pinnedPosts.accountId, owner.id),
+        ),
+      )
+      .returning();
+    if (result.length < 1) {
+      return c.json({ error: "Record not found" }, 404);
+    }
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      with: getPostRelations(owner.id),
+    });
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    await fedCtx.sendActivity(
+      owner,
+      "followers",
+      new Remove({
+        id: new URL(
+          `#remove/${result[0].index}`,
+          fedCtx.getFeaturedUri(owner.handle),
+        ),
+        actor: new URL(owner.account.iri),
+        object: new URL(post!.iri),
+        target: fedCtx.getFeaturedUri(owner.handle),
+      }),
+      {
+        preferSharedInbox: true,
+        excludeBaseUris: [new URL(c.req.url)],
+      },
+    );
     return c.json(serializePost(post!, owner, c.req.url));
   },
 );

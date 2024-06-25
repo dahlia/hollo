@@ -123,7 +123,7 @@ Current features and roadmap
 - [x] View posts
 - [x] Post visibility
 - [x] Post language
-- [ ] Pinned posts
+- [x] Pinned posts
 - [x] Mentions
 - [x] Hashtags
 - [x] Media attachments
