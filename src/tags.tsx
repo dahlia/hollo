@@ -4,15 +4,34 @@ import type { FC } from "hono/jsx";
 import { Layout } from "./components/Layout";
 import { Post as PostView } from "./components/Post";
 import { db } from "./db";
-import { type Account, type Medium, type Post, posts } from "./schema";
+import {
+  type Account,
+  type Medium,
+  type Post,
+  accountOwners,
+  posts,
+} from "./schema";
 
 const app = new Hono();
 
 app.get("/:tag", async (c) => {
   const tag = c.req.param("tag");
+  const handle = c.req.query("handle");
   const hashtag = `#${tag.toLowerCase()}`;
   const postList = await db.query.posts.findMany({
-    where: and(sql`${posts.tags} ? ${hashtag}`, eq(posts.visibility, "public")),
+    where: and(
+      sql`${posts.tags} ? ${hashtag}`,
+      eq(posts.visibility, "public"),
+      handle == null
+        ? undefined
+        : eq(
+            posts.accountId,
+            db
+              .select({ id: accountOwners.id })
+              .from(accountOwners)
+              .where(eq(accountOwners.handle, handle)),
+          ),
+    ),
     orderBy: desc(posts.id),
     with: {
       account: true,

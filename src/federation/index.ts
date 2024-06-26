@@ -8,6 +8,7 @@ import {
   Delete,
   Endpoints,
   Follow,
+  Hashtag,
   Image,
   Like,
   Note,
@@ -100,6 +101,7 @@ federation
       outbox: ctx.getOutboxUri(handle),
       liked: ctx.getLikedUri(handle),
       featured: ctx.getFeaturedUri(handle),
+      featuredTags: ctx.getFeaturedTagsUri(handle),
       inbox: ctx.getInboxUri(handle),
       endpoints: new Endpoints({
         sharedInbox: ctx.getInboxUri(),
@@ -338,6 +340,22 @@ federation.setFeaturedDispatcher("/@{handle}/pinned", async (ctx, handle) => {
       .filter((p) => p.visibility === "public" || p.visibility === "unlisted")
       .map((p) => toObject(p, ctx)),
   };
+});
+
+federation.setFeaturedTagsDispatcher("/@{handle}/tags", async (ctx, handle) => {
+  const owner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.handle, handle),
+    with: { account: true, featuredTags: true },
+  });
+  if (owner == null) return null;
+  const items = owner.featuredTags.map(
+    (tag) =>
+      new Hashtag({
+        name: `#${tag.name}`,
+        href: new URL(`/tags/${tag.name}?handle=${owner.handle}`, ctx.url),
+      }),
+  );
+  return { items };
 });
 
 const inboxLogger = getLogger(["hollo", "inbox"]);

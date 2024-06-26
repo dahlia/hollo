@@ -183,6 +183,13 @@
       "when": 1719307716065,
       "tag": "0025_accounts.featured_url",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1719404348505,
+      "tag": "0026_featured_tags",
+      "breakpoints": true
     }
   ]
 }

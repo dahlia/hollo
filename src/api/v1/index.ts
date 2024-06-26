@@ -9,6 +9,7 @@ import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { bookmarks, likes } from "../../schema";
 import accounts from "./accounts";
 import apps from "./apps";
+import featured_tags from "./featured_tags";
 import follow_requests from "./follow_requests";
 import instance from "./instance";
 import markers from "./markers";
@@ -22,6 +23,7 @@ const app = new Hono<{ Variables: Variables }>();
 
 app.route("/apps", apps);
 app.route("/accounts", accounts);
+app.route("/featured_tags", featured_tags);
 app.route("/follow_requests", follow_requests);
 app.route("/instance", instance);
 app.route("/markers", markers);

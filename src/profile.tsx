@@ -8,9 +8,11 @@ import { db } from "./db";
 import {
   type Account,
   type AccountOwner,
+  type FeaturedTag,
   type Medium,
   type Post,
   accountOwners,
+  featuredTags,
   pinnedPosts,
   posts,
 } from "./schema";
@@ -65,6 +67,9 @@ app.get("/", async (c) => {
       },
     },
   });
+  const featuredTagList = await db.query.featuredTags.findMany({
+    where: eq(featuredTags.accountOwnerId, owner.id),
+  });
   return c.html(
     <ProfilePage
       accountOwner={owner}
@@ -74,6 +79,7 @@ app.get("/", async (c) => {
         .filter(
           (p) => p.visibility === "public" || p.visibility === "unlisted",
         )}
+      featuredTags={featuredTagList}
     />,
   );
 });
@@ -104,12 +110,14 @@ export interface ProfilePageProps {
       | null;
     replyTarget: (Post & { account: Account }) | null;
   })[];
+  featuredTags: FeaturedTag[];
 }
 
 export const ProfilePage: FC<ProfilePageProps> = ({
   accountOwner,
   posts,
   pinnedPosts,
+  featuredTags,
 }) => {
   return (
     <Layout
@@ -119,6 +127,22 @@ export const ProfilePage: FC<ProfilePageProps> = ({
       imageUrl={accountOwner.account.avatarUrl}
     >
       <Profile accountOwner={accountOwner} />
+      {featuredTags.length > 0 && (
+        <p>
+          Featured tags:{" "}
+          {featuredTags.map((tag) => (
+            <>
+              <a
+                href={`/tags/${encodeURIComponent(tag.name)}?handle=${
+                  accountOwner.handle
+                }`}
+              >
+                #{tag.name}
+              </a>{" "}
+            </>
+          ))}
+        </p>
+      )}
       {pinnedPosts.map((post) => (
         <PostView post={post} pinned={true} />
       ))}

@@ -145,7 +145,7 @@ Current features and roadmap
 - [x] Notifications
 - [x] Bookmarks
 - [x] Markers
-- [ ] Featured hashtags
+- [x] Featured hashtags
 - [ ] Featured accounts
 
 

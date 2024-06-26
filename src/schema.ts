@@ -123,6 +123,7 @@ export const accountOwnerRelations = relations(
     accessTokens: many(accessTokens),
     bookmarks: many(bookmarks),
     markers: many(markers),
+    featuredTags: many(featuredTags),
   }),
 );
 
@@ -520,6 +521,31 @@ export type NewMarker = typeof markers.$inferInsert;
 export const markerRelations = relations(markers, ({ one }) => ({
   accountOwner: one(accountOwners, {
     fields: [markers.accountOwnerId],
+    references: [accountOwners.id],
+  }),
+}));
+
+export const featuredTags = pgTable(
+  "featured_tags",
+  {
+    id: uuid("id").primaryKey(),
+    accountOwnerId: uuid("account_owner_id")
+      .notNull()
+      .references(() => accountOwners.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    created: timestamp("created", { withTimezone: true }),
+  },
+  (table) => ({
+    uniqueAccountOwnerIdName: unique().on(table.accountOwnerId, table.name),
+  }),
+);
+
+export type FeaturedTag = typeof featuredTags.$inferSelect;
+export type NewFeaturedTag = typeof featuredTags.$inferInsert;
+
+export const featuredTagRelations = relations(featuredTags, ({ one }) => ({
+  accountOwner: one(accountOwners, {
+    fields: [featuredTags.accountOwnerId],
     references: [accountOwners.id],
   }),
 }));
