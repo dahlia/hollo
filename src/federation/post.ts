@@ -27,7 +27,7 @@ import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import type MeiliSearch from "meilisearch";
 import sharp from "sharp";
 import { uuidv7 } from "uuidv7-js";
-import { uploadThumbnail } from "../media";
+import { type Thumbnail, uploadThumbnail } from "../media";
 import { fetchPreviewCard } from "../previewcard";
 import {
   type Account,
@@ -200,10 +200,25 @@ export async function persistPost(
     const mediaType =
       response.headers.get("Content-Type") ?? attachment.mediaType;
     if (mediaType == null) continue;
-    const image = sharp(await response.arrayBuffer());
-    const metadata = await image.metadata();
     const id = uuidv7();
-    const thumbnail = await uploadThumbnail(id, image);
+    let thumbnail: Thumbnail;
+    let metadata: { width?: number; height?: number };
+    try {
+      const image = sharp(await response.arrayBuffer());
+      metadata = await image.metadata();
+      thumbnail = await uploadThumbnail(id, image);
+    } catch (_) {
+      metadata = {
+        width: attachment.width ?? 512,
+        height: attachment.height ?? 512,
+      };
+      thumbnail = {
+        thumbnailUrl: url,
+        thumbnailType: mediaType,
+        thumbnailWidth: metadata.width!,
+        thumbnailHeight: metadata.height!,
+      };
+    }
     await db.insert(media).values({
       id,
       postId: post.id,
