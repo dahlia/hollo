@@ -15,7 +15,13 @@ export interface PreviewCard {
 export async function fetchPreviewCard(
   url: string | URL,
 ): Promise<PreviewCard | null> {
-  const { error, result } = await ogs({ url: url.toString() });
+  let response: Awaited<ReturnType<typeof ogs>>;
+  try {
+    response = await ogs({ url: url.toString() });
+  } catch (_) {
+    return null;
+  }
+  const { error, result } = response;
   if (error || !result.success || result.ogTitle == null) return null;
   return {
     url: result.ogUrl ?? url.toString(),
