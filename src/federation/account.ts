@@ -70,23 +70,6 @@ export async function persistAccount(
       fieldHtmls[attachment.name.toString()] = attachment.value.toString();
     }
   }
-  const featuredCollection = await actor.getFeatured(opts);
-  if (featuredCollection != null) {
-    const posts: Post[] = [];
-    for await (const item of iterateCollection(featuredCollection, opts)) {
-      if (item instanceof Note || item instanceof Article) {
-        const post = await persistPost(db, search, item, options);
-        if (post == null) continue;
-        posts.unshift(post);
-      }
-    }
-    for (const post of posts) {
-      await db.insert(schema.pinnedPosts).values({
-        postId: post.id,
-        accountId: post.accountId,
-      } satisfies NewPinnedPost);
-    }
-  }
   const values: Omit<schema.NewAccount, "id" | "iri"> = {
     type: getActorTypeName(actor),
     name: actor?.name?.toString() ?? actor?.preferredUsername?.toString() ?? "",
@@ -125,6 +108,26 @@ export async function persistAccount(
   });
   if (account == null) return null;
   await search.index("accounts").addDocuments([account], { primaryKey: "id" });
+  const featuredCollection = await actor.getFeatured(opts);
+  if (featuredCollection != null) {
+    const posts: Post[] = [];
+    for await (const item of iterateCollection(featuredCollection, opts)) {
+      if (item instanceof Note || item instanceof Article) {
+        const post = await persistPost(db, search, item, {
+          ...options,
+          account,
+        });
+        if (post == null) continue;
+        posts.unshift(post);
+      }
+    }
+    for (const post of posts) {
+      await db.insert(schema.pinnedPosts).values({
+        postId: post.id,
+        accountId: post.accountId,
+      } satisfies NewPinnedPost);
+    }
+  }
   return account;
 }
 

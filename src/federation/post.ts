@@ -61,13 +61,17 @@ export async function persistPost(
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
+    account?: Account;
   } = {},
 ): Promise<schema.Post | null> {
   if (object.id == null) return null;
   const actor = await object.getAttribution();
   logger.debug("Fetched actor: {actor}", { actor });
   if (!isActor(actor)) return null;
-  const account = await persistAccount(db, search, actor, options);
+  const account =
+    options?.account != null && options.account.iri === actor.id?.href
+      ? options.account
+      : await persistAccount(db, search, actor, options);
   logger.debug("Persisted account: {account}", { account });
   if (account == null) return null;
   let replyTargetId: string | null = null;
