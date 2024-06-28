@@ -122,10 +122,13 @@ export async function persistAccount(
       }
     }
     for (const post of posts) {
-      await db.insert(schema.pinnedPosts).values({
-        postId: post.id,
-        accountId: post.accountId,
-      } satisfies NewPinnedPost);
+      await db
+        .insert(schema.pinnedPosts)
+        .values({
+          postId: post.id,
+          accountId: post.accountId,
+        } satisfies NewPinnedPost)
+        .onConflictDoNothing();
     }
   }
   return account;
