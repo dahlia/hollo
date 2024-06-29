@@ -25,6 +25,16 @@ app.get("/", async (c) => {
     with: { account: true },
   });
   if (owners.length < 1) return c.redirect("/accounts");
+  if (
+    "HOME_URL" in process.env &&
+    // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+    process.env["HOME_URL"] != null &&
+    // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+    process.env["HOME_URL"].trim() !== ""
+  ) {
+    // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+    return c.redirect(process.env["HOME_URL"]);
+  }
   const host = new URL(c.req.url).host;
   return c.html(
     <Layout title={host}>

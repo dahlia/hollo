@@ -80,6 +80,7 @@ storage.  You can use the following environment variables to configure Hollo:
  -  `REDIS_URL`: The URL of the Redis server.
  -  `MEILI_URL`: The host URL of the Meilisearch server.
  -  `MEILI_MASTER_KEY`: The API key for the Meilisearch server.
+ -  `HOME_URL`: If present, the home page will redirect to this URL.
  -  `SECRET_KEY`: The secret key for securing the session.
  -  `LOG_LEVEL`: The log level for the application.  `debug`, `info`, `warning`,
     `error`, and `fatal` are available.
