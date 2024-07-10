@@ -49,7 +49,7 @@ for each service):
 
  -  `S3_BUCKET`: The bucket name of the S3-compatible object storage.
  -  `S3_URL_BASE`: The public URL base of the S3-compatible object storage.
- -  `S3_ENDPOINT_URL`: The endpoint URL for S3-compatible object storage. 
+ -  `S3_ENDPOINT_URL`: The endpoint URL for S3-compatible object storage.
  -  `AWS_ACCESS_KEY_ID`: The access key for S3-compatible object storage.
  -  `AWS_SECRET_ACCESS_KEY`: The secret key for S3-compatible object storage.
 
@@ -87,7 +87,7 @@ storage.  You can use the following environment variables to configure Hollo:
  -  `BEHIND_PROXY`: Set this to `true` if Hollo is behind a reverse proxy.
  -  `S3_BUCKET`: The bucket name of the S3-compatible object storage.
  -  `S3_URL_BASE`: The public URL base of the S3-compatible object storage.
- -  `S3_ENDPOINT_URL`: The endpoint URL for S3-compatible object storage. 
+ -  `S3_ENDPOINT_URL`: The endpoint URL for S3-compatible object storage.
  -  `AWS_ACCESS_KEY_ID`: The access key for S3-compatible object storage.
  -  `AWS_SECRET_ACCESS_KEY`: The secret key for S3-compatible object storage.
 
@@ -155,10 +155,12 @@ Tested clients
 
  -  [Elk]
  -  [Phanpy] (recommended)
+ -  [Tuba] (recommended)
  -  [Woolly]
 
 [Elk]: https://elk.zone/
 [Phanpy]: https://phanpy.social/
+[Tuba]: https://tuba.geopjr.dev/
 [Woolly]: https://apps.apple.com/us/app/woolly-for-mastodon/id6444360628
 
 
