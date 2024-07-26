@@ -23,6 +23,7 @@ import {
   serializeAccount,
   serializeAccountOwner,
 } from "../../entities/account";
+import { serializeList } from "../../entities/list";
 import { getPostRelations, serializePost } from "../../entities/status";
 import { federation } from "../../federation";
 import { persistAccount } from "../../federation/account";
@@ -33,6 +34,8 @@ import {
   accountOwners,
   accounts,
   follows,
+  listMembers,
+  lists,
   mentions,
   pinnedPosts,
   posts,
@@ -717,5 +720,33 @@ app.get("/:id/following", async (c) => {
     ),
   );
 });
+
+app.get(
+  "/:id/lists",
+  tokenRequired,
+  scopeRequired(["read:lists"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const listList = await db.query.lists.findMany({
+      where: and(
+        eq(lists.accountOwnerId, owner.id),
+        inArray(
+          lists.id,
+          db
+            .select({ id: listMembers.listId })
+            .from(listMembers)
+            .where(eq(listMembers.accountId, c.req.param("id"))),
+        ),
+      ),
+    });
+    return c.json(listList.map(serializeList));
+  },
+);
 
 export default app;

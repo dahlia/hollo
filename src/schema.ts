@@ -124,6 +124,7 @@ export const accountOwnerRelations = relations(
     bookmarks: many(bookmarks),
     markers: many(markers),
     featuredTags: many(featuredTags),
+    lists: many(lists),
   }),
 );
 
@@ -547,5 +548,70 @@ export const featuredTagRelations = relations(featuredTags, ({ one }) => ({
   accountOwner: one(accountOwners, {
     fields: [featuredTags.accountOwnerId],
     references: [accountOwners.id],
+  }),
+}));
+
+export const listRepliesPolicyEnum = pgEnum("list_replies_policy", [
+  "followed",
+  "list",
+  "none",
+]);
+
+export type ListRepliesPolicy =
+  (typeof listRepliesPolicyEnum.enumValues)[number];
+
+export const lists = pgTable("lists", {
+  id: uuid("id").primaryKey(),
+  accountOwnerId: uuid("account_owner_id")
+    .notNull()
+    .references(() => accountOwners.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  repliesPolicy: listRepliesPolicyEnum("replies_policy")
+    .notNull()
+    .default("list"),
+  exclusive: boolean("exclusive").notNull().default(false),
+  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type List = typeof lists.$inferSelect;
+export type NewList = typeof lists.$inferInsert;
+
+export const listRelations = relations(lists, ({ one, many }) => ({
+  accountOwner: one(accountOwners, {
+    fields: [lists.accountOwnerId],
+    references: [accountOwners.id],
+  }),
+  members: many(listMembers),
+}));
+
+export const listMembers = pgTable(
+  "list_members",
+  {
+    listId: uuid("list_id")
+      .notNull()
+      .references(() => lists.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    created: timestamp("created", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.listId, table.accountId] }),
+  }),
+);
+
+export type ListMember = typeof listMembers.$inferSelect;
+export type NewListMember = typeof listMembers.$inferInsert;
+
+export const listMemberRelations = relations(listMembers, ({ one }) => ({
+  list: one(lists, {
+    fields: [listMembers.listId],
+    references: [lists.id],
+  }),
+  account: one(accounts, {
+    fields: [listMembers.accountId],
+    references: [accounts.id],
   }),
 }));
