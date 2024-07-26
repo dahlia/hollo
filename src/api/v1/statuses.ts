@@ -16,6 +16,7 @@ import { updateAccountStats } from "../../federation/account";
 import { toAnnounce, toCreate, toUpdate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type PreviewCard, fetchPreviewCard } from "../../previewcard";
+import redis from "../../redis";
 import {
   type Like,
   type NewBookmark,
@@ -67,7 +68,6 @@ app.post(
     ),
   ),
   async (c) => {
-    // TODO idempotency-key
     const token = c.get("token");
     const owner = token.accountOwner;
     if (owner == null) {
@@ -75,6 +75,17 @@ app.post(
         { error: "This method requires an authenticated user" },
         422,
       );
+    }
+    const idempotencyKey = c.req.header("Idempotency-Key");
+    if (idempotencyKey) {
+      const prevPostId = await redis.get(`idempotency:${idempotencyKey}`);
+      if (prevPostId != null) {
+        const post = await db.query.posts.findFirst({
+          where: eq(posts.id, prevPostId),
+          with: getPostRelations(owner.id),
+        });
+        if (post != null) return c.json(serializePost(post, owner, c.req.url));
+      }
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const fmtOpts = {
@@ -163,6 +174,10 @@ app.post(
       where: eq(posts.id, id),
       with: getPostRelations(owner.id),
     }))!;
+    if (idempotencyKey != null) {
+      await redis.set(`idempotency:${idempotencyKey}`, id);
+      await redis.expire(`idempotency:${idempotencyKey}`, 60 * 60);
+    }
     const activity = toCreate(post, fedCtx);
     if (post.visibility === "direct") {
       await fedCtx.sendActivity(
@@ -848,3 +863,5 @@ app.post(
 );
 
 export default app;
+
+// cSpell:ignore setex
