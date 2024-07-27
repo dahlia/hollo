@@ -1,4 +1,14 @@
-import { and, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
 import { alias, union } from "drizzle-orm/pg-core";
 import { Hono } from "hono";
 import { db } from "../../db";
@@ -8,7 +18,15 @@ import {
 } from "../../entities/account";
 import { getPostRelations, serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { accounts, follows, likes, mentions, posts } from "../../schema";
+import {
+  accounts,
+  follows,
+  likes,
+  mentions,
+  pollVotes,
+  polls,
+  posts,
+} from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -116,6 +134,38 @@ app.get(
         .leftJoin(posts, eq(likes.postId, posts.id))
         .where(eq(posts.accountId, owner.id))
         .orderBy(desc(likes.created)),
+      poll: db
+        .select({
+          id: sql<string>`${polls.id}::text`,
+          type: sql<NotificationType>`'poll'`,
+          created: polls.expires,
+          accountId: posts.accountId,
+          postId: posts.id,
+        })
+        .from(polls)
+        .leftJoin(posts, eq(polls.id, posts.pollId))
+        .where(
+          and(
+            or(
+              inArray(
+                polls.id,
+                db
+                  .select({ id: posts.pollId })
+                  .from(posts)
+                  .where(eq(posts.accountId, owner.id)),
+              ),
+              inArray(
+                polls.id,
+                db
+                  .select({ id: pollVotes.pollId })
+                  .from(pollVotes)
+                  .where(eq(pollVotes.accountId, owner.id)),
+              ),
+            ),
+            lte(polls.expires, sql`current_timestamp`),
+          ),
+        )
+        .orderBy(desc(polls.expires)),
     };
     const qs = Object.entries(queries)
       .filter(([t]) => types.includes(t as NotificationType))

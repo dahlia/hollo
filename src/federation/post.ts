@@ -1,6 +1,7 @@
 import {
   type Announce,
   Article,
+  Collection,
   type Context,
   Create,
   type DocumentLoader,
@@ -9,6 +10,7 @@ import {
   Link,
   Note,
   PUBLIC_COLLECTION,
+  Question,
   Update,
   isActor,
 } from "@fedify/fedify";
@@ -19,7 +21,9 @@ import {
   and,
   count,
   eq,
+  gte,
   inArray,
+  isNotNull,
   sql,
 } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
@@ -38,11 +42,17 @@ import {
   type Mention,
   type NewMedium,
   type NewPost,
+  type Poll,
+  type PollOption,
+  type PollVote,
   type Post,
   accountOwners,
   likes,
   media,
   mentions,
+  pollOptions,
+  pollVotes,
+  polls,
   posts,
 } from "../schema";
 import type * as schema from "../schema";
@@ -59,7 +69,7 @@ export async function persistPost(
     ExtractTablesWithRelations<typeof schema>
   >,
   search: MeiliSearch,
-  object: Article | Note,
+  object: Article | Note | Question,
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
@@ -120,7 +130,12 @@ export async function persistPost(
   const previewCard =
     previewLink == null ? null : await fetchPreviewCard(previewLink);
   const values = {
-    type: object instanceof Article ? "Article" : "Note",
+    type:
+      object instanceof Question
+        ? "Question"
+        : object instanceof Article
+          ? "Article"
+          : "Note",
     accountId: account.id,
     applicationId: null,
     replyTargetId,
@@ -167,6 +182,81 @@ export async function persistPost(
     where: eq(posts.iri, object.id.href),
   });
   if (post == null) return null;
+  if (object instanceof Question) {
+    const options: [string, number][] = [];
+    let multiple = false;
+    for await (const option of object.getExclusiveOptions()) {
+      if (option instanceof Note && option.name != null) {
+        const replies = await option.getReplies();
+        options.push([option.name.toString(), replies?.totalItems ?? 0]);
+      }
+    }
+    if (options.length < 1) {
+      for await (const option of object.getInclusiveOptions()) {
+        if (option instanceof Note && option.name != null) {
+          const replies = await option.getReplies();
+          options.push([option.name.toString(), replies?.totalItems ?? 0]);
+        }
+        multiple = true;
+      }
+    }
+    if (options.length < 1 || object.endTime == null) return post;
+    if (post.pollId == null) {
+      const [poll] = await db
+        .insert(polls)
+        .values({
+          id: uuidv7(),
+          multiple,
+          votersCount: object.voters ?? 0,
+          expires: toDate(object.endTime),
+        })
+        .returning();
+      await db.insert(pollOptions).values(
+        options.map(([title, votesCount], index) => ({
+          pollId: poll.id,
+          index,
+          title,
+          votesCount,
+        })),
+      );
+      await db
+        .update(posts)
+        .set({ pollId: poll.id })
+        .where(eq(posts.id, post.id));
+    } else {
+      const [poll] = await db
+        .update(polls)
+        .set({
+          multiple,
+          votersCount: object.voters ?? 0,
+          expires: toDate(object.endTime),
+        })
+        .where(eq(polls.id, post.pollId))
+        .returning();
+      for (let index = 0; index < options.length; index++) {
+        const [title, votesCount] = options[index];
+        await db
+          .insert(pollOptions)
+          .values({ pollId: poll.id, index, title, votesCount })
+          .onConflictDoUpdate({
+            target: [pollOptions.pollId, pollOptions.index],
+            set: { title, votesCount },
+            setWhere: and(
+              eq(pollOptions.pollId, poll.id),
+              eq(pollOptions.index, index),
+            ),
+          });
+      }
+      await db
+        .delete(pollOptions)
+        .where(
+          and(
+            eq(pollOptions.pollId, post.pollId),
+            gte(pollOptions.index, options.length),
+          ),
+        );
+    }
+  }
   await db.delete(mentions).where(eq(mentions.postId, post.id));
   for await (const tag of object.getTags(options)) {
     if (tag instanceof vocab.Mention && tag.name != null && tag.href != null) {
@@ -292,6 +382,107 @@ export async function persistSharingPost(
   return result[0] ?? null;
 }
 
+export async function persistPollVote(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  search: MeiliSearch,
+  object: Note,
+  options: {
+    contextLoader?: DocumentLoader;
+    documentLoader?: DocumentLoader;
+    account?: Account;
+  } = {},
+): Promise<PollVote | null> {
+  if (
+    object.replyTargetId == null ||
+    object.attributionId == null ||
+    object.name == null
+  ) {
+    return null;
+  }
+  const post = await db.query.posts.findFirst({
+    with: {
+      poll: { with: { options: { orderBy: pollOptions.index } } },
+    },
+    where: and(
+      eq(posts.iri, object.replyTargetId.href),
+      eq(posts.type, "Question"),
+      isNotNull(posts.pollId),
+    ),
+  });
+  if (post == null) return null;
+  const poll = post.poll;
+  if (poll == null) return null;
+  const voter = await persistAccountByIri(
+    db,
+    search,
+    object.attributionId.href,
+    options,
+  );
+  if (voter == null) return null;
+  if (!poll.multiple) {
+    const deleted = await db
+      .delete(pollVotes)
+      .where(
+        and(eq(pollVotes.accountId, voter.id), eq(pollVotes.pollId, poll.id)),
+      )
+      .returning();
+    for (const vote of deleted) {
+      await db
+        .update(pollOptions)
+        .set({
+          votesCount: sql`${pollOptions.votesCount} - 1`,
+        })
+        .where(
+          and(
+            eq(pollOptions.pollId, poll.id),
+            eq(pollOptions.index, vote.optionIndex),
+          ),
+        );
+    }
+    if (deleted.length > 0) {
+      await db
+        .update(polls)
+        .set({
+          votersCount: sql`${polls.votersCount} - 1`,
+        })
+        .where(eq(polls.id, poll.id));
+    }
+  }
+  const optionTitle = object.name.toString();
+  const optionIndex = poll.options.findIndex((o) => o.title === optionTitle);
+  const votes = await db
+    .insert(pollVotes)
+    .values({
+      accountId: voter.id,
+      pollId: poll.id,
+      optionIndex,
+    })
+    .returning();
+  if (votes.length < 1) return null;
+  await db
+    .update(pollOptions)
+    .set({
+      votesCount: sql`${pollOptions.votesCount} + 1`,
+    })
+    .where(
+      and(
+        eq(pollOptions.pollId, poll.id),
+        eq(pollOptions.index, votes[0].optionIndex),
+      ),
+    );
+  await db
+    .update(polls)
+    .set({
+      votersCount: sql`${polls.votersCount} + 1`,
+    })
+    .where(eq(polls.id, poll.id));
+  return votes[0];
+}
+
 export async function updatePostStats(
   db: PgDatabase<
     PostgresJsQueryResultHKT,
@@ -335,11 +526,30 @@ export function toObject(
     account: Account & { owner: AccountOwner | null };
     replyTarget: Post | null;
     media: Medium[];
+    poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
   },
   ctx: Context<unknown>,
-): Note | Article {
-  return new Note({
+): Note | Article | Question {
+  const cls =
+    post.type === "Question"
+      ? Question
+      : post.type === "Article"
+        ? Article
+        : Note;
+  const options =
+    post.poll == null
+      ? []
+      : post.poll.options
+          .toSorted((a, b) => (a.index < b.index ? -1 : 1))
+          .map(
+            (o) =>
+              new Note({
+                name: o.title,
+                replies: new Collection({ totalItems: o.votesCount }),
+              }),
+          );
+  return new cls({
     id: new URL(post.iri),
     attribution: new URL(post.account.iri),
     tos:
@@ -407,6 +617,14 @@ export function toObject(
           ? null
           : post.updated,
     ),
+    exclusiveOptions: post.poll == null || post.poll.multiple ? [] : options,
+    inclusiveOptions: post.poll == null || !post.poll.multiple ? [] : options,
+    voters: post.poll == null ? null : post.poll.votersCount,
+    endTime: post.poll == null ? null : toTemporalInstant(post.poll.expires),
+    closed:
+      post.poll == null || post.poll.expires > new Date()
+        ? null
+        : toTemporalInstant(post.poll.expires),
   });
 }
 
@@ -415,6 +633,7 @@ export function toCreate(
     account: Account & { owner: AccountOwner | null };
     replyTarget: Post | null;
     media: Medium[];
+    poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
   },
   ctx: Context<unknown>,
@@ -435,13 +654,18 @@ export function toUpdate(
     account: Account & { owner: AccountOwner | null };
     replyTarget: Post | null;
     media: Medium[];
+    poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
   },
   ctx: Context<unknown>,
+  updated?: Date,
 ): Update {
   const object = toObject(post, ctx);
   return new Update({
-    id: new URL(`#update-${object.updated?.toString()}`, object.id!),
+    id: new URL(
+      `#update-${(updated ?? object.updated)?.toString()}`,
+      object.id!,
+    ),
     actor: object.attributionId,
     tos: object.toIds,
     ccs: object.ccIds,

@@ -22,12 +22,16 @@ import {
   type NewBookmark,
   type NewLike,
   type NewPinnedPost,
+  type NewPollOption,
   type NewPost,
+  type Poll,
   bookmarks,
   likes,
   media,
   mentions,
   pinnedPosts,
+  pollOptions,
+  polls,
   posts,
 } from "../../schema";
 import search from "../../search";
@@ -40,8 +44,14 @@ const statusSchema = z.object({
   media_ids: z.array(z.string().uuid()).optional(),
   poll: z
     .object({
-      options: z.array(z.string()).optional(),
-      expires_in: z.number().int().optional(),
+      options: z.array(z.string()),
+      expires_in: z.union([
+        z.number().int(),
+        z
+          .string()
+          .regex(/^\d+$/)
+          .transform((v) => Number.parseInt(v)),
+      ]),
       multiple: z.boolean().default(false),
       hide_totals: z.boolean().default(false),
     })
@@ -126,10 +136,34 @@ app.post(
       previewCard = await fetchPreviewCard(content.previewLink);
     }
     await db.transaction(async (tx) => {
+      let poll: Poll | null = null;
+      if (data.poll != null) {
+        const expires = new Date(
+          new Date().getTime() + data.poll.expires_in * 1000,
+        );
+        [poll] = await tx
+          .insert(polls)
+          .values({
+            id: uuidv7(),
+            multiple: data.poll.multiple,
+            expires,
+          })
+          .returning();
+        await tx.insert(pollOptions).values(
+          data.poll.options.map(
+            (title, index) =>
+              ({
+                pollId: poll!.id,
+                index,
+                title,
+              }) satisfies NewPollOption,
+          ),
+        );
+      }
       await tx.insert(posts).values({
         id,
         iri: url.href,
-        type: "Note",
+        type: poll == null ? "Note" : "Question",
         accountId: owner.id,
         applicationId: token.applicationId,
         replyTargetId: data.in_reply_to_id,
@@ -140,6 +174,7 @@ app.post(
         content: data.status,
         contentHtml: content?.html,
         language: data.language ?? owner.language,
+        pollId: poll == null ? null : poll.id,
         // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
         tags: sql`${tags}::jsonb`,
         sensitive: data.sensitive,

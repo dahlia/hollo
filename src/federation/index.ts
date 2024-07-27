@@ -13,6 +13,7 @@ import {
   Like,
   Note,
   PropertyValue,
+  Question,
   Reject,
   Remove,
   Undo,
@@ -46,17 +47,20 @@ import {
   follows,
   likes,
   pinnedPosts,
+  pollOptions,
   posts,
 } from "../schema";
 import { search } from "../search";
 import { persistAccount, updateAccountStats } from "./account";
 import { toTemporalInstant } from "./date";
 import {
+  persistPollVote,
   persistPost,
   persistSharingPost,
   toAnnounce,
   toCreate,
   toObject,
+  toUpdate,
   updatePostStats,
 } from "./post";
 
@@ -243,6 +247,7 @@ federation
         account: { with: { owner: true } },
         replyTarget: true,
         media: true,
+        poll: { with: { options: true } },
         mentions: { with: { account: true } },
         sharing: { with: { account: true } },
       },
@@ -329,6 +334,7 @@ federation.setFeaturedDispatcher("/@{handle}/pinned", async (ctx, handle) => {
           account: { with: { owner: true } },
           replyTarget: true,
           media: true,
+          poll: { with: { options: { orderBy: pollOptions.index } } },
           mentions: { with: { account: true } },
         },
       },
@@ -503,7 +509,51 @@ federation
   })
   .on(Create, async (ctx, create) => {
     const object = await create.getObject();
-    if (object instanceof Article || object instanceof Note) {
+    if (
+      object instanceof Note &&
+      object.replyTargetId != null &&
+      object.attributionId != null &&
+      object.name != null
+    ) {
+      const vote = await db.transaction((tx) =>
+        persistPollVote(tx, search, object, ctx),
+      );
+      if (vote == null) return;
+      const post = await db.query.posts.findFirst({
+        with: {
+          account: { with: { owner: true } },
+          replyTarget: true,
+          media: true,
+          poll: {
+            with: {
+              options: { orderBy: pollOptions.index },
+              votes: { with: { account: true } },
+            },
+          },
+          mentions: { with: { account: true } },
+        },
+        where: eq(posts.pollId, vote.pollId),
+      });
+      if (post?.account.owner == null || post.poll == null) return;
+      await ctx.sendActivity(
+        post.account.owner,
+        post.poll.votes.map((v) => ({
+          id: new URL(v.account.iri),
+          inboxId: new URL(v.account.inboxUrl),
+          endpoints:
+            v.account.sharedInboxUrl == null
+              ? null
+              : {
+                  sharedInbox: new URL(v.account.sharedInboxUrl),
+                },
+        })),
+        toUpdate(post, ctx),
+      );
+    } else if (
+      object instanceof Article ||
+      object instanceof Note ||
+      object instanceof Question
+    ) {
       await db.transaction(async (tx) => {
         const post = await persistPost(tx, search, object, ctx);
         if (post?.replyTargetId != null) {
@@ -741,6 +791,7 @@ federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
       account: { with: { owner: true } },
       replyTarget: true,
       media: true,
+      poll: { with: { options: { orderBy: pollOptions.index } } },
       mentions: { with: { account: true } },
     },
   });

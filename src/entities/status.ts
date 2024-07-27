@@ -9,14 +9,20 @@ import {
   type Medium,
   type Mention,
   type PinnedPost,
+  type Poll,
+  type PollOption,
+  type PollVote,
   type Post,
   bookmarks,
   likes,
+  pollOptions,
+  pollVotes,
   posts,
 } from "../schema";
 import { extractText } from "../text";
 import { serializeAccount } from "./account";
 import { serializeMedium } from "./medium";
+import { serializePoll } from "./poll";
 
 export function getPostRelations(ownerId: string) {
   return {
@@ -29,6 +35,12 @@ export function getPostRelations(ownerId: string) {
         application: true,
         replyTarget: true,
         media: true,
+        poll: {
+          with: {
+            options: { orderBy: pollOptions.index },
+            votes: { where: eq(pollVotes.accountId, ownerId) },
+          },
+        },
         mentions: { with: { account: { with: { owner: true } } } },
         likes: { where: eq(likes.accountId, ownerId) },
         shares: { where: eq(posts.accountId, ownerId) },
@@ -37,6 +49,12 @@ export function getPostRelations(ownerId: string) {
       },
     },
     media: true,
+    poll: {
+      with: {
+        options: { orderBy: pollOptions.index },
+        votes: { where: eq(pollVotes.accountId, ownerId) },
+      },
+    },
     mentions: { with: { account: { with: { owner: true } } } },
     likes: { where: eq(likes.accountId, ownerId) },
     shares: { where: eq(posts.accountId, ownerId) },
@@ -56,6 +74,7 @@ export function serializePost(
           application: Application | null;
           replyTarget: Post | null;
           media: Medium[];
+          poll: (Poll & { options: PollOption[]; votes: PollVote[] }) | null;
           mentions: (Mention & {
             account: Account & { owner: AccountOwner | null };
           })[];
@@ -66,6 +85,7 @@ export function serializePost(
         })
       | null;
     media: Medium[];
+    poll: (Poll & { options: PollOption[]; votes: PollVote[] }) | null;
     mentions: (Mention & {
       account: Account & { owner: AccountOwner | null };
     })[];
@@ -137,7 +157,8 @@ export function serializePost(
     card:
       post.previewCard == null ? null : serializePreviewCard(post.previewCard),
     emojis: [], // TODO
-    poll: null, // TODO
+    poll:
+      post.poll == null ? null : serializePoll(post.poll, currentAccountOwner),
   };
 }
 

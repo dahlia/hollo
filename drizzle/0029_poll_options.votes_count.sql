@@ -1,0 +1,1 @@
+ALTER TABLE "poll_options" ADD COLUMN "votes_count" bigint DEFAULT 0 NOT NULL;

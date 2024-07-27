@@ -128,7 +128,7 @@ Current features and roadmap
 - [x] Mentions
 - [x] Hashtags
 - [x] Media attachments
-- [ ] Polls
+- [x] Polls
 - [x] Likes (favorites)
 - [x] Shares (reblogs)
 - [x] Editing profile

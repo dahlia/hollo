@@ -69,11 +69,10 @@ app.get("/", async (c) => {
         video_matrix_limit: 0,
       },
       polls: {
-        // TODO
-        max_options: 0,
-        max_characters_per_option: 0,
-        min_expiration: 0,
-        max_expiration: 0,
+        max_options: 10,
+        max_characters_per_option: 100,
+        min_expiration: 60 * 5,
+        max_expiration: 60 * 60 * 24 * 14,
       },
       translation: {
         enabled: false,
