@@ -7,6 +7,8 @@ import { db } from "./db";
 import {
   type Account,
   type Medium,
+  type Poll,
+  type PollOption,
   type Post,
   accountOwners,
   posts,
@@ -36,10 +38,12 @@ app.get("/:tag", async (c) => {
     with: {
       account: true,
       media: true,
+      poll: { with: { options: true } },
       sharing: {
         with: {
           account: true,
           media: true,
+          poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
         },
       },
@@ -54,10 +58,12 @@ export interface TagPageProps {
   posts: (Post & {
     account: Account;
     media: Medium[];
+    poll: (Poll & { options: PollOption[] }) | null;
     sharing:
       | (Post & {
           account: Account;
           media: Medium[];
+          poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
         })
       | null;

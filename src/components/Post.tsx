@@ -1,14 +1,22 @@
 import type { FC } from "hono/jsx";
-import type { Account, Medium as DbMedium, Post as DbPost } from "../schema";
+import type {
+  Account,
+  Medium as DbMedium,
+  Poll as DbPoll,
+  Post as DbPost,
+  PollOption,
+} from "../schema";
 
 export interface PostProps {
   post: DbPost & {
     account: Account;
     media: DbMedium[];
+    poll: (DbPoll & { options: PollOption[] }) | null;
     sharing:
       | (DbPost & {
           account: Account;
           media: DbMedium[];
+          poll: (DbPoll & { options: PollOption[] }) | null;
           replyTarget: (DbPost & { account: Account }) | null;
         })
       | null;
@@ -83,7 +91,10 @@ export const Post: FC<PostProps> = ({ post, pinned }) => {
 };
 
 interface PostContentProps {
-  readonly post: DbPost & { media: DbMedium[] };
+  readonly post: DbPost & {
+    media: DbMedium[];
+    poll: (DbPoll & { options: PollOption[] }) | null;
+  };
 }
 
 const PostContent: FC<PostContentProps> = ({ post }: PostContentProps) => {
@@ -96,6 +107,7 @@ const PostContent: FC<PostContentProps> = ({ post }: PostContentProps) => {
           lang={post.language ?? undefined}
         />
       )}
+      {post.poll != null && <Poll poll={post.poll} />}
       {post.media.length > 0 && (
         <div>
           {post.media.map((medium) =>
@@ -111,6 +123,49 @@ const PostContent: FC<PostContentProps> = ({ post }: PostContentProps) => {
         </div>
       )}
     </>
+  );
+};
+
+interface PollProps {
+  poll: DbPoll & { options: PollOption[] };
+}
+
+const Poll: FC<PollProps> = ({ poll }) => {
+  const options = poll.options;
+  options.sort((a, b) => (a.index < b.index ? -1 : 1));
+  const totalVotes = options.reduce(
+    (acc, option) => acc + option.votesCount,
+    0,
+  );
+  return (
+    <table>
+      <thead>
+        <tr>
+          <th>Option</th>
+          <th>Voters</th>
+        </tr>
+      </thead>
+      <tbody>
+        {options.map((option) => {
+          const percent =
+            option.votesCount <= 0
+              ? 0
+              : Math.round((option.votesCount / totalVotes) * 100);
+          return (
+            <tr key={option.index}>
+              <td>{option.title}</td>
+              <td>
+                <span
+                  style={`display: block; width: ${percent}%; white-space: nowrap; border: 1px solid white; border-radius: 5px; padding: 3px 5px; background-color: black; color: white; text-shadow: 0 0 2px black;`}
+                >
+                  {option.votesCount} ({percent}%)
+                </span>
+              </td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
   );
 };
 

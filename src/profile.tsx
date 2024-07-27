@@ -10,6 +10,8 @@ import {
   type AccountOwner,
   type FeaturedTag,
   type Medium,
+  type Poll,
+  type PollOption,
   type Post,
   accountOwners,
   featuredTags,
@@ -37,10 +39,12 @@ app.get("/", async (c) => {
     with: {
       account: true,
       media: true,
+      poll: { with: { options: true } },
       sharing: {
         with: {
           account: true,
           media: true,
+          poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
         },
       },
@@ -55,10 +59,12 @@ app.get("/", async (c) => {
         with: {
           account: true,
           media: true,
+          poll: { with: { options: true } },
           sharing: {
             with: {
               account: true,
               media: true,
+              poll: { with: { options: true } },
               replyTarget: { with: { account: true } },
             },
           },
@@ -89,10 +95,12 @@ export interface ProfilePageProps {
   posts: (Post & {
     account: Account;
     media: Medium[];
+    poll: (Poll & { options: PollOption[] }) | null;
     sharing:
       | (Post & {
           account: Account;
           media: Medium[];
+          poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
         })
       | null;
@@ -101,10 +109,12 @@ export interface ProfilePageProps {
   pinnedPosts: (Post & {
     account: Account;
     media: Medium[];
+    poll: (Poll & { options: PollOption[] }) | null;
     sharing:
       | (Post & {
           account: Account;
           media: Medium[];
+          poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
         })
       | null;
@@ -173,10 +183,12 @@ app.get("/:id", async (c) => {
     with: {
       account: true,
       media: true,
+      poll: { with: { options: true } },
       sharing: {
         with: {
           account: true,
           media: true,
+          poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
         },
       },
@@ -185,10 +197,12 @@ app.get("/:id", async (c) => {
         with: {
           account: true,
           media: true,
+          poll: { with: { options: true } },
           sharing: {
             with: {
               account: true,
               media: true,
+              poll: { with: { options: true } },
               replyTarget: { with: { account: true } },
             },
           },
@@ -205,10 +219,12 @@ export interface PostPageProps {
   post: Post & {
     account: Account;
     media: Medium[];
+    poll: (Poll & { options: PollOption[] }) | null;
     sharing:
       | (Post & {
           account: Account;
           media: Medium[];
+          poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
         })
       | null;
@@ -216,10 +232,12 @@ export interface PostPageProps {
     replies: (Post & {
       account: Account;
       media: Medium[];
+      poll: (Poll & { options: PollOption[] }) | null;
       sharing:
         | (Post & {
             account: Account;
             media: Medium[];
+            poll: (Poll & { options: PollOption[] }) | null;
             replyTarget: (Post & { account: Account }) | null;
           })
         | null;
