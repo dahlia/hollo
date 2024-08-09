@@ -13,6 +13,7 @@ app.get("/", async (c) => {
   if (credential == null) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
     with: { account: true },
+    orderBy: accountOwners.id,
   });
   if (accountOwner == null) return c.notFound();
   const languages = await db
