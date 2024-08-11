@@ -10,6 +10,7 @@ import {
   isActor,
   lookupObject,
 } from "@fedify/fedify";
+import { getLogger } from "@logtape/logtape";
 import {
   type ExtractTablesWithRelations,
   and,
@@ -29,6 +30,8 @@ import type { NewPinnedPost, Post } from "../schema";
 import { iterateCollection } from "./collection";
 import { toDate } from "./date";
 import { persistPost } from "./post";
+
+const logger = getLogger(["hollo", "federation", "account"]);
 
 export async function persistAccount(
   db: PgDatabase<
@@ -112,8 +115,9 @@ export async function persistAccount(
     await search
       .index("accounts")
       .addDocuments([account], { primaryKey: "id" });
-  } catch (e) {
-    if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+  } catch (error) {
+    if (!(error instanceof MeiliSearchCommunicationError)) throw error;
+    logger.warn("Failed to index account: {error}", { error });
   }
   const featuredCollection = await actor.getFeatured(opts);
   if (featuredCollection != null) {

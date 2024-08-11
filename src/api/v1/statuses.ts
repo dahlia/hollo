@@ -1,6 +1,7 @@
 import { Add, Note, Remove, Undo } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
+import { getLogger } from "@logtape/logtape";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { MeiliSearchCommunicationError } from "meilisearch";
@@ -37,6 +38,8 @@ import {
 } from "../../schema";
 import search from "../../search";
 import { formatText } from "../../text";
+
+const logger = getLogger(["hollo", "api", "v1", "statuses"]);
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -239,8 +242,9 @@ app.post(
     }
     try {
       await search.index("posts").addDocuments([post], { primaryKey: "id" });
-    } catch (e) {
-      if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+    } catch (error) {
+      if (!(error instanceof MeiliSearchCommunicationError)) throw error;
+      logger.warn("Failed to index post: {error}", { error });
     }
     return c.json(serializePost(post, owner, c.req.url));
   },
@@ -333,8 +337,9 @@ app.put(
     });
     try {
       await search.index("posts").addDocuments([post!], { primaryKey: "id" });
-    } catch (e) {
-      if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+    } catch (error) {
+      if (!(error instanceof MeiliSearchCommunicationError)) throw error;
+      logger.warn("Failed to index post: {error}", { error });
     }
     return c.json(serializePost(post!, owner, c.req.url));
   },
@@ -394,8 +399,11 @@ app.delete(
     );
     try {
       await search.index("posts").deleteDocument(post.id);
-    } catch (e) {
-      if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+    } catch (error) {
+      if (!(error instanceof MeiliSearchCommunicationError)) throw error;
+      logger.warn("Failed to delete post from search index: {error}", {
+        error,
+      });
     }
     return c.json({
       ...serializePost(post, owner, c.req.url),

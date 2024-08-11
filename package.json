@@ -19,7 +19,7 @@
     "@fedify/redis": "^0.1.1",
     "@hono/zod-validator": "^0.2.1",
     "@js-temporal/polyfill": "^0.4.4",
-    "@logtape/logtape": "^0.4.1",
+    "@logtape/logtape": "^0.4.2",
     "@std/encoding": "npm:@jsr/std__encoding",
     "@std/semver": "npm:@jsr/std__semver",
     "@stdext/crypto": "npm:@jsr/stdext__crypto",

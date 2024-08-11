@@ -329,8 +329,9 @@ export async function persistPost(
   });
   try {
     await search.index("posts").addDocuments([post!], { primaryKey: "id" });
-  } catch (e) {
-    if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+  } catch (error) {
+    if (!(error instanceof MeiliSearchCommunicationError)) throw error;
+    logger.warn("Failed to index post: {error}", { error });
   }
   return post!;
 }

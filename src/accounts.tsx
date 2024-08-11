@@ -5,6 +5,7 @@ import {
   exportJwk,
   generateCryptoKeyPair,
 } from "@fedify/fedify";
+import { getLogger } from "@logtape/logtape";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { FC } from "hono/jsx";
@@ -24,6 +25,8 @@ import {
 } from "./schema";
 import { search } from "./search";
 import { formatText } from "./text";
+
+const logger = getLogger(["hollo", "accounts"]);
 
 const app = new Hono();
 
@@ -131,8 +134,9 @@ app.post("/", async (c) => {
     });
     try {
       search.index("accounts").addDocuments(account, { primaryKey: "id" });
-    } catch (e) {
-      if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+    } catch (error) {
+      if (!(error instanceof MeiliSearchCommunicationError)) throw error;
+      logger.warn("Failed to index account: {error}", { error });
     }
   });
   const owners = await db.query.accountOwners.findMany({
@@ -279,8 +283,9 @@ app.post("/:id", async (c) => {
     await search
       .index("accounts")
       .addDocuments([account!], { primaryKey: "id" });
-  } catch (e) {
-    if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+  } catch (error) {
+    if (!(error instanceof MeiliSearchCommunicationError)) throw error;
+    logger.warn("Failed to index account: {error}", { error });
   }
   await fedCtx.sendActivity(
     { handle: accountOwner.handle },
