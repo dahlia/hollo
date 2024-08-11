@@ -8,6 +8,7 @@ import {
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { FC } from "hono/jsx";
+import { MeiliSearchCommunicationError } from "meilisearch";
 import { AccountForm } from "./components/AccountForm";
 import { AccountList } from "./components/AccountList";
 import Layout from "./components/Layout";
@@ -128,7 +129,11 @@ app.post("/", async (c) => {
       language: language ?? "en",
       visibility: visibility ?? "public",
     });
-    search.index("accounts").addDocuments(account, { primaryKey: "id" });
+    try {
+      search.index("accounts").addDocuments(account, { primaryKey: "id" });
+    } catch (e) {
+      if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+    }
   });
   const owners = await db.query.accountOwners.findMany({
     with: { account: true },
@@ -270,7 +275,13 @@ app.post("/:id", async (c) => {
   const account = await db.query.accounts.findFirst({
     where: eq(accounts.id, accountId),
   });
-  await search.index("accounts").addDocuments([account!], { primaryKey: "id" });
+  try {
+    await search
+      .index("accounts")
+      .addDocuments([account!], { primaryKey: "id" });
+  } catch (e) {
+    if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+  }
   await fedCtx.sendActivity(
     { handle: accountOwner.handle },
     "followers",

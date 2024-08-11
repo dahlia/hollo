@@ -3,6 +3,7 @@ import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
+import { MeiliSearchCommunicationError } from "meilisearch";
 import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
 import { db } from "../../db";
@@ -236,7 +237,11 @@ app.post(
         excludeBaseUris: [new URL(c.req.url)],
       });
     }
-    await search.index("posts").addDocuments([post], { primaryKey: "id" });
+    try {
+      await search.index("posts").addDocuments([post], { primaryKey: "id" });
+    } catch (e) {
+      if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+    }
     return c.json(serializePost(post, owner, c.req.url));
   },
 );
@@ -326,7 +331,11 @@ app.put(
       preferSharedInbox: true,
       excludeBaseUris: [new URL(c.req.url)],
     });
-    await search.index("posts").addDocuments([post!], { primaryKey: "id" });
+    try {
+      await search.index("posts").addDocuments([post!], { primaryKey: "id" });
+    } catch (e) {
+      if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+    }
     return c.json(serializePost(post!, owner, c.req.url));
   },
 );
@@ -383,7 +392,11 @@ app.delete(
         excludeBaseUris: [new URL(c.req.url)],
       },
     );
-    await search.index("posts").deleteDocument(post.id);
+    try {
+      await search.index("posts").deleteDocument(post.id);
+    } catch (e) {
+      if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+    }
     return c.json({
       ...serializePost(post, owner, c.req.url),
       text: post.content ?? "",

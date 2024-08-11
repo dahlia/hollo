@@ -21,6 +21,7 @@ import {
 } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+import { MeiliSearchCommunicationError } from "meilisearch";
 import type MeiliSearch from "meilisearch";
 import { uuidv7 } from "uuidv7-js";
 import * as schema from "../schema";
@@ -107,7 +108,13 @@ export async function persistAccount(
     where: eq(schema.accounts.iri, actor.id.href),
   });
   if (account == null) return null;
-  await search.index("accounts").addDocuments([account], { primaryKey: "id" });
+  try {
+    await search
+      .index("accounts")
+      .addDocuments([account], { primaryKey: "id" });
+  } catch (e) {
+    if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+  }
   const featuredCollection = await actor.getFeatured(opts);
   if (featuredCollection != null) {
     const posts: Post[] = [];

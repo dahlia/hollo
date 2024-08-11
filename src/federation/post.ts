@@ -29,6 +29,7 @@ import {
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import type MeiliSearch from "meilisearch";
+import { MeiliSearchCommunicationError } from "meilisearch";
 import sharp from "sharp";
 // @ts-ignore: No type definitions available
 import { isSSRFSafeURL } from "ssrfcheck";
@@ -326,7 +327,11 @@ export async function persistPost(
     where: eq(posts.iri, object.id.href),
     with: { account: true, media: true },
   });
-  await search.index("posts").addDocuments([post!], { primaryKey: "id" });
+  try {
+    await search.index("posts").addDocuments([post!], { primaryKey: "id" });
+  } catch (e) {
+    if (!(e instanceof MeiliSearchCommunicationError)) throw e;
+  }
   return post!;
 }
 
