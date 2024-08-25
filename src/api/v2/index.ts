@@ -7,8 +7,10 @@ import {
   lookupObject,
 } from "@fedify/fedify";
 import { zValidator } from "@hono/zod-validator";
+import { getLogger } from "@logtape/logtape";
 import { desc, eq, inArray, or } from "drizzle-orm";
 import { Hono } from "hono";
+import { type Hits, MeiliSearchCommunicationError } from "meilisearch";
 import { z } from "zod";
 import { db } from "../../db";
 import { serializeAccount } from "../../entities/account";
@@ -53,6 +55,7 @@ app.get(
     }),
   ),
   async (c) => {
+    const logger = getLogger(["hollo", "api", "v2", "search"]);
     const owner = c.get("token").accountOwner;
     if (owner == null) return c.json({ error: "invalid_token" }, 401);
     const query = c.req.valid("query");
@@ -114,18 +117,32 @@ app.get(
       }
     }
     if (query.type == null || query.type === "statuses") {
-      const { hits } = await search.index("posts").search(q, {
-        limit: query.limit,
-        offset: query.offset,
-        filter:
-          query.account_id == null ? [] : [`accountId = "${query.account_id}"`],
-      });
-      if (resolved instanceof Note || resolved instanceof Article) {
+      // biome-ignore lint/suspicious/noExplicitAny: MeiliSearch uses any
+      let hits: Hits<Record<string, any>> | undefined;
+      try {
+        const result = await search.index("posts").search(q, {
+          limit: query.limit,
+          offset: query.offset,
+          filter:
+            query.account_id == null
+              ? []
+              : [`accountId = "${query.account_id}"`],
+        });
+        hits = result.hits;
+      } catch (error) {
+        if (!(error instanceof MeiliSearchCommunicationError)) throw error;
+        logger.warn("Failed to search posts: {error}", { error });
+        hits = undefined;
+      }
+      if (
+        hits != null &&
+        (resolved instanceof Note || resolved instanceof Article)
+      ) {
         const resolvedPost = await persistPost(db, search, resolved, options);
         if (resolvedPost != null) hits.push(resolvedPost);
       }
       const result =
-        hits.length < 1
+        hits == null || hits.length < 1
           ? []
           : await db.query.posts.findMany({
               where: inArray(
