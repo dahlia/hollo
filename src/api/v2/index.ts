@@ -92,8 +92,9 @@ app.get(
     ) {
       try {
         resolved = await lookupObject(q, options);
-      } catch (e) {
-        if (!(e instanceof TypeError)) throw e;
+      } catch (error) {
+        if (!(error instanceof TypeError)) throw error;
+        logger.warn("Failed to resolve object: {error}", { error });
       }
     }
     if (query.type == null || query.type === "accounts") {
@@ -132,7 +133,7 @@ app.get(
       } catch (error) {
         if (!(error instanceof MeiliSearchCommunicationError)) throw error;
         logger.warn("Failed to search posts: {error}", { error });
-        hits = undefined;
+        hits = [];
       }
       if (
         hits != null &&
