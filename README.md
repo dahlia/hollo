@@ -47,6 +47,7 @@ Storage.  Once you have your object storage ready, you'll need to configure
 the environment variables below appropriately (see how to use the S3 client API
 for each service):
 
+ -  `S3_REGION`: The region of the S3-compatible object storage.
  -  `S3_BUCKET`: The bucket name of the S3-compatible object storage.
  -  `S3_URL_BASE`: The public URL base of the S3-compatible object storage.
  -  `S3_ENDPOINT_URL`: The endpoint URL for S3-compatible object storage.

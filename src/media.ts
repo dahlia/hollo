@@ -29,6 +29,7 @@ export async function uploadThumbnail(
       Key: `media/${id}/thumbnail`,
       Body: thumbnail.subarray(),
       ContentType: "image/webp",
+      ACL: "public-read",
     }),
   );
   return {

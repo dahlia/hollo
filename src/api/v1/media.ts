@@ -33,6 +33,7 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
       Key: `media/${id}/original`,
       Body: new Uint8Array(fileBuffer),
       ContentType: file.type,
+      ACL: "public-read",
     }),
   );
   const url = new URL(`media/${id}/original`, S3_URL_BASE).href;
