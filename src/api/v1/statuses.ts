@@ -15,7 +15,13 @@ import {
 import { getPostRelations, serializePost } from "../../entities/status";
 import federation from "../../federation";
 import { updateAccountStats } from "../../federation/account";
-import { toAnnounce, toCreate, toUpdate } from "../../federation/post";
+import {
+  getRecipients,
+  toAnnounce,
+  toCreate,
+  toDelete,
+  toUpdate,
+} from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type PreviewCard, fetchPreviewCard } from "../../previewcard";
 import redis from "../../redis";
@@ -218,23 +224,10 @@ app.post(
       await redis.expire(`idempotency:${idempotencyKey}`, 60 * 60);
     }
     const activity = toCreate(post, fedCtx);
-    if (post.visibility === "direct") {
-      await fedCtx.sendActivity(
-        { handle },
-        post.mentions.map((m) => ({
-          id: new URL(m.account.iri),
-          inboxId: new URL(m.account.inboxUrl),
-          endpoints:
-            m.account.sharedInboxUrl == null
-              ? null
-              : { sharedInbox: new URL(m.account.sharedInboxUrl) },
-        })),
-        activity,
-        {
-          excludeBaseUris: [new URL(c.req.url)],
-        },
-      );
-    } else {
+    await fedCtx.sendActivity({ handle }, getRecipients(post), activity, {
+      excludeBaseUris: [new URL(c.req.url)],
+    });
+    if (post.visibility !== "direct") {
       await fedCtx.sendActivity({ handle }, "followers", activity, {
         preferSharedInbox: true,
         excludeBaseUris: [new URL(c.req.url)],
@@ -331,7 +324,11 @@ app.put(
       where: eq(posts.id, id),
       with: getPostRelations(owner.id),
     });
-    await fedCtx.sendActivity(owner, "followers", toUpdate(post!, fedCtx), {
+    const activity = toUpdate(post!, fedCtx);
+    await fedCtx.sendActivity(owner, getRecipients(post!), activity, {
+      excludeBaseUris: [new URL(c.req.url)],
+    });
+    await fedCtx.sendActivity(owner, "followers", activity, {
       preferSharedInbox: true,
       excludeBaseUris: [new URL(c.req.url)],
     });
@@ -382,21 +379,26 @@ app.delete(
       await updateAccountStats(tx, owner);
     });
     const fedCtx = federation.createContext(c.req.raw, undefined);
+    const activity = toDelete(post, fedCtx);
     await fedCtx.sendActivity(
       { handle: owner.handle },
-      "followers",
-      new vocab.Delete({
-        actor: new URL(owner.account.iri),
-        to: vocab.PUBLIC_COLLECTION,
-        object: new vocab.Tombstone({
-          id: new URL(post.iri),
-        }),
-      }),
+      getRecipients(post),
+      activity,
       {
-        preferSharedInbox: true,
         excludeBaseUris: [new URL(c.req.url)],
       },
     );
+    if (post.visibility !== "direct") {
+      await fedCtx.sendActivity(
+        { handle: owner.handle },
+        "followers",
+        activity,
+        {
+          preferSharedInbox: true,
+          excludeBaseUris: [new URL(c.req.url)],
+        },
+      );
+    }
     try {
       await search.index("posts").deleteDocument(post.id);
     } catch (error) {

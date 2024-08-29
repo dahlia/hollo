@@ -11,6 +11,8 @@ import {
   Note,
   PUBLIC_COLLECTION,
   Question,
+  type Recipient,
+  Tombstone,
   Update,
   isActor,
 } from "@fedify/fedify";
@@ -680,6 +682,28 @@ export function toUpdate(
   });
 }
 
+export function toDelete(
+  post: Post & {
+    account: Account & { owner: AccountOwner | null };
+    replyTarget: Post | null;
+    media: Medium[];
+    poll: (Poll & { options: PollOption[] }) | null;
+    mentions: (Mention & { account: Account })[];
+  },
+  ctx: Context<unknown>,
+  deleted: Date = new Date(),
+) {
+  const object = toObject(post, ctx);
+  return new Update({
+    id: new URL(`#delete-${deleted.toString()}`, object.id!),
+    actor: object.attributionId,
+    tos: object.toIds,
+    ccs: object.ccIds,
+    object: new Tombstone({ id: object.id }),
+    published: object.updated,
+  });
+}
+
 export function toAnnounce(
   post: Post & {
     account: Account;
@@ -710,4 +734,17 @@ export function toAnnounce(
           ]),
     ],
   });
+}
+
+export function getRecipients(
+  post: Post & { mentions: (Mention & { account: Account })[] },
+): Recipient[] {
+  return post.mentions.map((m) => ({
+    id: new URL(m.account.iri),
+    inboxId: new URL(m.account.inboxUrl),
+    endpoints:
+      m.account.sharedInboxUrl == null
+        ? null
+        : { sharedInbox: new URL(m.account.sharedInboxUrl) },
+  }));
 }
