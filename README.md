@@ -1,6 +1,6 @@
 <picture>
   <source srcset="logo-white.svg" media="(prefers-color-scheme: dark)">
-  <img src="logo.svg" width="50" height="50">
+  <img src="logo-black.svg" width="50" height="50">
 </picture>
 
 
