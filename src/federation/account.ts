@@ -113,7 +113,7 @@ export async function persistAccount(
     const posts: Post[] = [];
     for await (const item of iterateCollection(featuredCollection, opts)) {
       if (item instanceof Note || item instanceof Article) {
-        const post = await persistPost(db, search, item, {
+        const post = await persistPost(db, item, {
           ...options,
           account,
         });
@@ -152,7 +152,7 @@ export async function persistAccountByIri(
   if (account != null) return account;
   const actor = await lookupObject(iri, options);
   if (!isActor(actor) || actor.id == null) return null;
-  return await persistAccount(db, search, actor, options);
+  return await persistAccount(db, actor, options);
 }
 
 export async function updateAccountStats(
