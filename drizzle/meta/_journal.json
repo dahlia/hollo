@@ -244,7 +244,13 @@
       "when": 1725077575858,
       "tag": "0034_heavy_landau",
       "breakpoints": true
+    {
+      "idx": 35,
+      "version": "6",
+      "when": 1725085982774,
+      "tag": "0035_freezing_boomer",
       "tag": "0033_steep_santa_claus",
+    },
       "breakpoints": true
     }
   ]

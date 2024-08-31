@@ -733,6 +733,7 @@ export const mutes = pgTable(
     mutedAccountId: uuid("muted_account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
+    notifications: boolean("notifications").notNull().default(true),
     duration: integer("duration").notNull().default(0),
     created: timestamp("created", { withTimezone: true })
       .notNull()
