@@ -30,8 +30,6 @@ import {
 } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
-import type MeiliSearch from "meilisearch";
-import { MeiliSearchCommunicationError } from "meilisearch";
 import sharp from "sharp";
 // @ts-ignore: No type definitions available
 import { isSSRFSafeURL } from "ssrfcheck";
@@ -71,7 +69,6 @@ export async function persistPost(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
-  search: MeiliSearch,
   object: Article | Note | Question,
   options: {
     contextLoader?: DocumentLoader;
@@ -86,7 +83,7 @@ export async function persistPost(
   const account =
     options?.account != null && options.account.iri === actor.id?.href
       ? options.account
-      : await persistAccount(db, search, actor, options);
+      : await persistAccount(db, actor, options);
   logger.debug("Persisted account: {account}", { account });
   if (account == null) return null;
   let replyTargetId: string | null = null;
@@ -107,7 +104,6 @@ export async function persistPost(
       if (replyTarget instanceof Note || replyTarget instanceof Article) {
         const replyTargetObj = await persistPost(
           db,
-          search,
           replyTarget,
           options,
         );
@@ -265,7 +261,6 @@ export async function persistPost(
     if (tag instanceof vocab.Mention && tag.name != null && tag.href != null) {
       const account = await persistAccountByIri(
         db,
-        search,
         tag.href.href,
         options,
       );
@@ -329,12 +324,6 @@ export async function persistPost(
     where: eq(posts.iri, object.id.href),
     with: { account: true, media: true },
   });
-  try {
-    await search.index("posts").addDocuments([post!], { primaryKey: "id" });
-  } catch (error) {
-    if (!(error instanceof MeiliSearchCommunicationError)) throw error;
-    logger.warn("Failed to index post: {error}", { error });
-  }
   return post!;
 }
 
@@ -344,7 +333,6 @@ export async function persistSharingPost(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
-  search: MeiliSearch,
   announce: Announce,
   object: Article | Note,
   options: {
@@ -355,9 +343,9 @@ export async function persistSharingPost(
   if (announce.id == null) return null;
   const actor = await announce.getActor(options);
   if (actor == null) return null;
-  const account = await persistAccount(db, search, actor, options);
+  const account = await persistAccount(db, actor, options);
   if (account == null) return null;
-  const originalPost = await persistPost(db, search, object, options);
+  const originalPost = await persistPost(db, object, options);
   if (originalPost == null) return null;
   const id = uuidv7();
   const updated = new Date();
@@ -396,7 +384,6 @@ export async function persistPollVote(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
-  search: MeiliSearch,
   object: Note,
   options: {
     contextLoader?: DocumentLoader;
@@ -426,7 +413,6 @@ export async function persistPollVote(
   if (poll == null) return null;
   const voter = await persistAccountByIri(
     db,
-    search,
     object.attributionId.href,
     options,
   );

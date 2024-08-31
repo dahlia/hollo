@@ -9,7 +9,6 @@ import { getLogger } from "@logtape/logtape";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { FC } from "hono/jsx";
-import { MeiliSearchCommunicationError } from "meilisearch";
 import { AccountForm } from "./components/AccountForm";
 import { AccountList } from "./components/AccountList";
 import Layout from "./components/Layout";
@@ -23,7 +22,6 @@ import {
   accountOwners,
   accounts,
 } from "./schema";
-import { search } from "./search";
 import { formatText } from "./text";
 
 const logger = getLogger(["hollo", "accounts"]);
@@ -109,7 +107,7 @@ app.post("/", async (c) => {
         type: "Person",
         name,
         handle: `@${username}@${fedCtx.url.host}`,
-        bioHtml: (await formatText(tx, search, bio ?? "", fedCtx)).html,
+        bioHtml: (await formatText(tx, bio ?? "", fedCtx)).html,
         url: fedCtx.getActorUri(username).href,
         protected: protected_,
         inboxUrl: fedCtx.getInboxUri(username).href,
@@ -132,12 +130,6 @@ app.post("/", async (c) => {
       language: language ?? "en",
       visibility: visibility ?? "public",
     });
-    try {
-      search.index("accounts").addDocuments(account, { primaryKey: "id" });
-    } catch (error) {
-      if (!(error instanceof MeiliSearchCommunicationError)) throw error;
-      logger.warn("Failed to index account: {error}", { error });
-    }
   });
   const owners = await db.query.accountOwners.findMany({
     with: { account: true },
@@ -267,7 +259,7 @@ app.post("/:id", async (c) => {
       .update(accounts)
       .set({
         name,
-        bioHtml: (await formatText(tx, search, bio ?? "", fmtOpts)).html,
+        bioHtml: (await formatText(tx, bio ?? "", fmtOpts)).html,
         protected: protected_,
       })
       .where(eq(accounts.id, accountId));
@@ -276,17 +268,6 @@ app.post("/:id", async (c) => {
       .set({ bio, language, visibility })
       .where(eq(accountOwners.id, accountId));
   });
-  const account = await db.query.accounts.findFirst({
-    where: eq(accounts.id, accountId),
-  });
-  try {
-    await search
-      .index("accounts")
-      .addDocuments([account!], { primaryKey: "id" });
-  } catch (error) {
-    if (!(error instanceof MeiliSearchCommunicationError)) throw error;
-    logger.warn("Failed to index account: {error}", { error });
-  }
   await fedCtx.sendActivity(
     { handle: accountOwner.handle },
     "followers",

@@ -8,9 +8,8 @@ import {
 } from "@fedify/fedify";
 import { zValidator } from "@hono/zod-validator";
 import { getLogger } from "@logtape/logtape";
-import { desc, eq, inArray, or } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { Hono } from "hono";
-import { type Hits, MeiliSearchCommunicationError } from "meilisearch";
 import { z } from "zod";
 import { db } from "../../db";
 import { serializeAccount } from "../../entities/account";
@@ -20,7 +19,6 @@ import { persistAccount } from "../../federation/account";
 import { persistPost } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type Account, accounts, posts } from "../../schema";
-import search from "../../search";
 import { postMedia } from "../v1/media";
 import instance from "./instance";
 
@@ -98,14 +96,14 @@ app.get(
       }
     }
     if (query.type == null || query.type === "accounts") {
-      const { hits } = await search.index("accounts").search(q, {
+      const hits = await db.query.accounts.findMany({
+        where: ilike(accounts.handle, `%${q}%`),
         limit: query.limit,
         offset: query.offset,
       });
       if (isActor(resolved)) {
         const resolvedAccount = await persistAccount(
           db,
-          search,
           resolved,
           options,
         );
@@ -118,28 +116,21 @@ app.get(
       }
     }
     if (query.type == null || query.type === "statuses") {
-      // biome-ignore lint/suspicious/noExplicitAny: MeiliSearch uses any
-      let hits: Hits<Record<string, any>> | undefined;
-      try {
-        const result = await search.index("posts").search(q, {
-          limit: query.limit,
-          offset: query.offset,
-          filter:
-            query.account_id == null
-              ? []
-              : [`accountId = "${query.account_id}"`],
-        });
-        hits = result.hits;
-      } catch (error) {
-        if (!(error instanceof MeiliSearchCommunicationError)) throw error;
-        logger.warn("Failed to search posts: {error}", { error });
-        hits = [];
+      let filter = ilike(posts.content, `%${q}%`);
+      if (query.account_id != null)
+      {
+        filter = and(filter, eq(posts.accountId, query.account_id))!;
       }
+      const hits = await db.query.posts.findMany({
+        where: filter,
+        limit: query.limit,
+        offset: query.offset,
+      });
       if (
         hits != null &&
         (resolved instanceof Note || resolved instanceof Article)
       ) {
-        const resolvedPost = await persistPost(db, search, resolved, options);
+        const resolvedPost = await persistPost(db, resolved, options);
         if (resolvedPost != null) hits.push(resolvedPost);
       }
       const result =

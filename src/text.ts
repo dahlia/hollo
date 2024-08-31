@@ -8,7 +8,6 @@ import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import MarkdownIt from "markdown-it";
 import replaceLink from "markdown-it-replace-link";
-import type MeiliSearch from "meilisearch";
 import { persistAccount } from "./federation/account";
 import * as schema from "./schema";
 
@@ -30,7 +29,6 @@ export async function formatText(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
-  search: MeiliSearch,
   text: string,
   options: {
     url: URL | string;
@@ -68,7 +66,7 @@ export async function formatText(
     if (mention in handles) continue;
     const actor = await lookupObject(mention, options);
     if (!isActor(actor) || actor.id == null) continue;
-    const account = await persistAccount(db, search, actor, options);
+    const account = await persistAccount(db, actor, options);
     if (account == null) continue;
     handles[account.handle] = {
       href: account.url ?? account.iri,
