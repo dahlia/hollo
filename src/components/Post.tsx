@@ -83,6 +83,22 @@ export const Post: FC<PostProps> = ({ post, pinned }) => {
               </time>
             </small>
           </a>
+          <small>
+            {" "}
+            &middot; 👍{" "}
+            {`${post.likesCount} ${
+              post.likesCount === null || post.likesCount < 2 ? "like" : "likes"
+            }`}
+          </small>
+          <small>
+            {" "}
+            &middot; 🔁{" "}
+            {`${post.sharesCount} ${
+              post.sharesCount === null || post.sharesCount < 2
+                ? "share"
+                : "shares"
+            }`}
+          </small>
           {pinned ? <small> &middot; Pinned</small> : ""}
         </p>
       </footer>
