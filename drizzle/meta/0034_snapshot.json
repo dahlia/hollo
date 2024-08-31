@@ -1,6 +1,6 @@
 {
-  "id": "23089527-12c1-4795-932b-c26d728d86d9",
-  "prevId": "6844793e-7b7f-42e7-9611-286a54803988",
+  "id": "ceafab98-e367-4f2e-9940-3b6f682351b9",
+  "prevId": "974af603-cc01-42e4-95f4-6cdf9d73e999",
   "version": "6",
   "dialect": "postgresql",
   "tables": {
@@ -1096,6 +1096,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "duration": {
+          "name": "duration",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created": {
           "name": "created",
           "type": "timestamp with time zone",
@@ -1460,12 +1467,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "quote_target_id": {
-          "name": "quote_target_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
         "visibility": {
           "name": "visibility",
           "type": "post_visibility",
@@ -1622,19 +1623,6 @@
             "id"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "posts_quote_target_id_posts_id_fk": {
-          "name": "posts_quote_target_id_posts_id_fk",
-          "tableFrom": "posts",
-          "tableTo": "posts",
-          "columnsFrom": [
-            "quote_target_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
           "onUpdate": "no action"
         },
         "posts_poll_id_polls_id_fk": {
