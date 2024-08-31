@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { Temporal } from "@js-temporal/polyfill";
-import { toTemporalInstant, toDate } from "../../src/federation/date";
+import { toTemporalInstant, toDate } from "./date";
 
 const date = new Date("2024-08-31T10:00:00");
 const temporalInstant = Temporal.Instant.from(date.toISOString());
