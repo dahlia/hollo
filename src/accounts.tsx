@@ -24,8 +24,6 @@ import {
 } from "./schema";
 import { formatText } from "./text";
 
-const logger = getLogger(["hollo", "accounts"]);
-
 const app = new Hono();
 
 app.use(loginRequired);

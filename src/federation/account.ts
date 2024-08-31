@@ -29,8 +29,6 @@ import { iterateCollection } from "./collection";
 import { toDate } from "./date";
 import { persistPost } from "./post";
 
-const logger = getLogger(["hollo", "federation", "account"]);
-
 export async function persistAccount(
   db: PgDatabase<
     PostgresJsQueryResultHKT,
