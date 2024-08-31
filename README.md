@@ -29,6 +29,19 @@ the [existing Mastodon clients](#tested-clients).
 [ActivityPub]: https://www.w3.org/TR/activitypub/
 
 
+How to run
+----------
+
+### Docker Compose
+
+> [!NOTE]
+> `DATABASE_URL`, `REDIS_URL`, and `MEILI_URL` in `.env` will be ignored.
+
+~~~~ sh
+docker compose up -d
+~~~~
+
+
 How to deploy
 -------------
 
