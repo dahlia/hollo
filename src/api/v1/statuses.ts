@@ -4,7 +4,6 @@ import { zValidator } from "@hono/zod-validator";
 import { getLogger } from "@logtape/logtape";
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
-import { MeiliSearchCommunicationError } from "meilisearch";
 import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
 import { db } from "../../db";
@@ -42,7 +41,6 @@ import {
   polls,
   posts,
 } from "../../schema";
-import search from "../../search";
 import { formatText } from "../../text";
 
 const logger = getLogger(["hollo", "api", "v1", "statuses"]);
@@ -121,11 +119,11 @@ app.post(
     const content =
       data.status == null
         ? null
-        : await formatText(db, search, data.status, fmtOpts);
+        : await formatText(db, data.status, fmtOpts);
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
-        : await formatText(db, search, data.spoiler_text, fmtOpts);
+        : await formatText(db, data.spoiler_text, fmtOpts);
     const mentionedIds = [
       ...(content?.mentions ?? []),
       ...(summary?.mentions ?? []),
@@ -233,12 +231,6 @@ app.post(
         excludeBaseUris: [new URL(c.req.url)],
       });
     }
-    try {
-      await search.index("posts").addDocuments([post], { primaryKey: "id" });
-    } catch (error) {
-      if (!(error instanceof MeiliSearchCommunicationError)) throw error;
-      logger.warn("Failed to index post: {error}", { error });
-    }
     return c.json(serializePost(post, owner, c.req.url));
   },
 );
@@ -268,11 +260,11 @@ app.put(
     const content =
       data.status == null
         ? null
-        : await formatText(db, search, data.status, fmtOpts);
+        : await formatText(db, data.status, fmtOpts);
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
-        : await formatText(db, search, data.spoiler_text, fmtOpts);
+        : await formatText(db, data.spoiler_text, fmtOpts);
     const hashtags = [
       ...(content?.hashtags ?? []),
       ...(summary?.hashtags ?? []),
@@ -332,12 +324,6 @@ app.put(
       preferSharedInbox: true,
       excludeBaseUris: [new URL(c.req.url)],
     });
-    try {
-      await search.index("posts").addDocuments([post!], { primaryKey: "id" });
-    } catch (error) {
-      if (!(error instanceof MeiliSearchCommunicationError)) throw error;
-      logger.warn("Failed to index post: {error}", { error });
-    }
     return c.json(serializePost(post!, owner, c.req.url));
   },
 );
@@ -398,14 +384,6 @@ app.delete(
           excludeBaseUris: [new URL(c.req.url)],
         },
       );
-    }
-    try {
-      await search.index("posts").deleteDocument(post.id);
-    } catch (error) {
-      if (!(error instanceof MeiliSearchCommunicationError)) throw error;
-      logger.warn("Failed to delete post from search index: {error}", {
-        error,
-      });
     }
     return c.json({
       ...serializePost(post, owner, c.req.url),

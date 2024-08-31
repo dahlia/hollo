@@ -35,7 +35,7 @@ How to run
 ### Docker Compose
 
 > [!NOTE]
-> `DATABASE_URL`, `REDIS_URL`, and `MEILI_URL` in `.env` will be ignored.
+> `DATABASE_URL` and `REDIS_URL` in `.env` will be ignored.
 
 ~~~~ sh
 docker compose up -d
@@ -87,13 +87,11 @@ so you'll need to use a client app like [Phanpy] for now.
 
 The official Docker images are available on [GitHub Packages]:
 `ghcr.io/dahlia/hollo`.  Besides this image, you need to set up a PostgreSQL
-database, Redis, Meilisearch, and an S3-compatible object storage for media
-storage.  You can use the following environment variables to configure Hollo:
+database, Redis, and an S3-compatible object storage for media storage.
+You can use the following environment variables to configure Hollo:
 
  -  `DATABASE_URL`: The URL of the PostgreSQL database.
  -  `REDIS_URL`: The URL of the Redis server.
- -  `MEILI_URL`: The host URL of the Meilisearch server.
- -  `MEILI_MASTER_KEY`: The API key for the Meilisearch server.
  -  `HOME_URL`: If present, the home page will redirect to this URL.
  -  `SECRET_KEY`: The secret key for securing the session.
  -  `LOG_LEVEL`: The log level for the application.  `debug`, `info`, `warning`,
@@ -111,8 +109,6 @@ The image exposes the port 3000, so you can run it like this:
 docker run -d -p 3000:3000 \
   -e DATABASE_URL=postgres://user:password@host:port/database \
   -e REDIS_URL=redis://host:port/0 \
-  -e MEILI_URL=http://host:7700 \
-  -e MEILI_MASTER_KEY=your-master-key \
   -e SECRET_KEY=your-secret-key \
   -e LOG_LEVEL=info \
   -e BEHIND_PROXY=true \
