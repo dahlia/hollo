@@ -6,22 +6,22 @@ const date = new Date("2024-08-31T10:00:00");
 const temporalInstant = Temporal.Instant.from(date.toISOString());
 
 test("toTemporalInstant call with null", ()=>{
-  expect(toTemporalInstant(null)).toBe(null)
+  expect(toTemporalInstant(null)).toEqual(null)
 });
 
 test("toTemporalInstant call with Date", ()=>{
-  expect(toTemporalInstant(date)).not.toBe(null);
+  expect(toTemporalInstant(date)).not.toEqual(null);
 });
 
 test("toDate call with null", ()=>{
-  expect(toDate(null)).toBe(null);
+  expect(toDate(null)).toEqual(null);
 });
 
 test("toDate call with Temporal.Instant", ()=>{
-  expect(toDate(temporalInstant)).not.toBe(null);
+  expect(toDate(temporalInstant)).not.toEqual(null);
 });
 
 test("idempotency test", ()=>{
-  expect(toDate(toTemporalInstant(date))).not.toBe(null);
-  expect(toTemporalInstant(toDate(temporalInstant))).not.toBe(null);
+  expect(toDate(toTemporalInstant(date))).not.toEqual(null);
+  expect(toTemporalInstant(toDate(temporalInstant))).not.toEqual(null);
 });
