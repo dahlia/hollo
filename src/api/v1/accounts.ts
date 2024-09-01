@@ -107,6 +107,7 @@ app.patch(
           Bucket: S3_BUCKET,
           Key: `avatars/${account.id}`,
           Body: new Uint8Array(await form.avatar.arrayBuffer()),
+          ACL: "public-read",
         }),
       );
       avatarUrl = new URL(`avatars/${account.id}`, S3_URL_BASE).href;
@@ -118,6 +119,7 @@ app.patch(
           Bucket: S3_BUCKET,
           Key: `covers/${account.id}`,
           Body: new Uint8Array(await form.header.arrayBuffer()),
+          ACL: "public-read",
         }),
       );
       coverUrl = new URL(`covers/${account.id}`, S3_URL_BASE).href;
@@ -142,8 +144,7 @@ app.patch(
         continue;
       }
       fields[i] = [name, value];
-      const contentHtml = (await formatText(db, fields[i][1], fmtOpts))
-        .html;
+      const contentHtml = (await formatText(db, fields[i][1], fmtOpts)).html;
       fieldHtmls.push([fields[i][0], contentHtml]);
     }
     const updatedAccounts = await db

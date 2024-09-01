@@ -102,11 +102,7 @@ export async function persistPost(
       logger.debug("Persisting the reply target...");
       const replyTarget = await object.getReplyTarget();
       if (replyTarget instanceof Note || replyTarget instanceof Article) {
-        const replyTargetObj = await persistPost(
-          db,
-          replyTarget,
-          options,
-        );
+        const replyTargetObj = await persistPost(db, replyTarget, options);
         logger.debug("Persisted the reply target: {replyTarget}", {
           replyTarget: replyTargetObj,
         });
@@ -259,11 +255,7 @@ export async function persistPost(
   await db.delete(mentions).where(eq(mentions.postId, post.id));
   for await (const tag of object.getTags(options)) {
     if (tag instanceof vocab.Mention && tag.name != null && tag.href != null) {
-      const account = await persistAccountByIri(
-        db,
-        tag.href.href,
-        options,
-      );
+      const account = await persistAccountByIri(db, tag.href.href, options);
       if (account == null) continue;
       await db.insert(mentions).values({
         accountId: account.id,

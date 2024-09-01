@@ -594,12 +594,7 @@ federation
     const object = await announce.getObject();
     if (object instanceof Article || object instanceof Note) {
       await db.transaction(async (tx) => {
-        const post = await persistSharingPost(
-          tx,
-          announce,
-          object,
-          ctx,
-        );
+        const post = await persistSharingPost(tx, announce, object, ctx);
         if (post?.sharingId != null) {
           await updatePostStats(tx, { id: post.sharingId });
         }

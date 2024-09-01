@@ -102,11 +102,7 @@ app.get(
         offset: query.offset,
       });
       if (isActor(resolved)) {
-        const resolvedAccount = await persistAccount(
-          db,
-          resolved,
-          options,
-        );
+        const resolvedAccount = await persistAccount(db, resolved, options);
         if (resolvedAccount != null) hits.unshift(resolvedAccount);
       }
       for (const hit of hits) {
@@ -117,8 +113,7 @@ app.get(
     }
     if (query.type == null || query.type === "statuses") {
       let filter = ilike(posts.content, `%${q}%`);
-      if (query.account_id != null)
-      {
+      if (query.account_id != null) {
         filter = and(filter, eq(posts.accountId, query.account_id))!;
       }
       const hits = await db.query.posts.findMany({

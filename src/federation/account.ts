@@ -10,7 +10,6 @@ import {
   isActor,
   lookupObject,
 } from "@fedify/fedify";
-import { getLogger } from "@logtape/logtape";
 import {
   type ExtractTablesWithRelations,
   and,

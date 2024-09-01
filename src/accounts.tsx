@@ -5,7 +5,6 @@ import {
   exportJwk,
   generateCryptoKeyPair,
 } from "@fedify/fedify";
-import { getLogger } from "@logtape/logtape";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import type { FC } from "hono/jsx";
