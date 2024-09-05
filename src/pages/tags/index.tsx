@@ -1,9 +1,9 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import type { FC } from "hono/jsx";
-import { Layout } from "./components/Layout";
-import { Post as PostView } from "./components/Post";
-import { db } from "./db";
+import { Layout } from "../../components/Layout.tsx";
+import { Post as PostView } from "../../components/Post.tsx";
+import { db } from "../../db.ts";
 import {
   type Account,
   type Medium,
@@ -12,11 +12,11 @@ import {
   type Post,
   accountOwners,
   posts,
-} from "./schema";
+} from "../../schema.ts";
 
-const app = new Hono();
+const tags = new Hono().basePath("/:tag");
 
-app.get("/:tag", async (c) => {
+tags.get(async (c) => {
   const tag = c.req.param("tag");
   const handle = c.req.query("handle");
   const hashtag = `#${tag.toLowerCase()}`;
@@ -53,7 +53,7 @@ app.get("/:tag", async (c) => {
   return c.html(<TagPage tag={tag} posts={postList} />);
 });
 
-export interface TagPageProps {
+interface TagPageProps {
   tag: string;
   posts: (Post & {
     account: Account;
@@ -71,7 +71,7 @@ export interface TagPageProps {
   })[];
 }
 
-export const TagPage: FC<TagPageProps> = ({ tag, posts }) => (
+const TagPage: FC<TagPageProps> = ({ tag, posts }) => (
   <Layout title={`#${tag}`}>
     <h1>#{tag}</h1>
     {posts.map((post) => (
@@ -80,4 +80,4 @@ export const TagPage: FC<TagPageProps> = ({ tag, posts }) => (
   </Layout>
 );
 
-export default app;
+export default tags;
