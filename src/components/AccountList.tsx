@@ -1,4 +1,3 @@
-import type { FC } from "hono/jsx";
 import xss from "xss";
 import type { Account, AccountOwner } from "../schema";
 
@@ -6,7 +5,7 @@ export interface AccountListProps {
   accountOwners: (AccountOwner & { account: Account })[];
 }
 
-export const AccountList: FC<AccountListProps> = ({ accountOwners }) => {
+export function AccountList({ accountOwners }: AccountListProps) {
   return (
     <>
       {accountOwners.map((account) => (
@@ -14,15 +13,13 @@ export const AccountList: FC<AccountListProps> = ({ accountOwners }) => {
       ))}
     </>
   );
-};
+}
 
-export interface AccountItemProps {
+interface AccountItemProps {
   accountOwner: AccountOwner & { account: Account };
 }
 
-export const AccountItem: FC<AccountItemProps> = ({
-  accountOwner: { account },
-}) => {
+function AccountItem({ accountOwner: { account } }: AccountItemProps) {
   return (
     <article>
       <header>
@@ -76,4 +73,4 @@ export const AccountItem: FC<AccountItemProps> = ({
       </footer>
     </article>
   );
-};
+}

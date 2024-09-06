@@ -1,7 +1,6 @@
 import { and, desc, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
-import type { FC } from "hono/jsx";
-import Layout from "../../components/Layout.tsx";
+import { Layout } from "../../components/Layout.tsx";
 import { Post as PostView } from "../../components/Post.tsx";
 import { Profile } from "../../components/Profile.tsx";
 import { db } from "../../db.ts";
@@ -122,12 +121,12 @@ interface ProfilePageProps {
   featuredTags: FeaturedTag[];
 }
 
-const ProfilePage: FC<ProfilePageProps> = ({
+function ProfilePage({
   accountOwner,
   posts,
   pinnedPosts,
   featuredTags,
-}) => {
+}: ProfilePageProps) {
   return (
     <Layout
       title={accountOwner.account.name}
@@ -160,6 +159,6 @@ const ProfilePage: FC<ProfilePageProps> = ({
       ))}
     </Layout>
   );
-};
+}
 
 export default profile;

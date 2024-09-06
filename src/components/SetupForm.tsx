@@ -1,5 +1,3 @@
-import type { FC } from "hono/jsx";
-
 export interface SetupFormProps {
   method?: string;
   action: string;
@@ -13,7 +11,7 @@ export interface SetupFormProps {
   };
 }
 
-export const SetupForm: FC<SetupFormProps> = (props) => {
+export function SetupForm(props: SetupFormProps) {
   return (
     <form method={props.method ?? "post"} action={props.action}>
       <fieldset>
@@ -71,4 +69,4 @@ export const SetupForm: FC<SetupFormProps> = (props) => {
       <button type="submit">Start using Hollo</button>
     </form>
   );
-};
+}

@@ -4,9 +4,8 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
-import type { FC } from "hono/jsx";
 import { z } from "zod";
-import Layout from "./components/Layout";
+import { Layout } from "./components/Layout";
 import { db } from "./db";
 import { loginRequired } from "./login";
 import {
@@ -165,7 +164,7 @@ interface AuthorizationPageProps {
   scopes: Scope[];
 }
 
-const AuthorizationPage: FC<AuthorizationPageProps> = (props) => {
+function AuthorizationPage(props: AuthorizationPageProps) {
   return (
     <Layout title={`Hollo: Authorize ${props.application.name}`}>
       <hgroup>
@@ -221,7 +220,7 @@ const AuthorizationPage: FC<AuthorizationPageProps> = (props) => {
       </form>
     </Layout>
   );
-};
+}
 
 app.post(
   "/authorize",
@@ -279,7 +278,7 @@ interface AuthorizationCodePageProps {
   code: string;
 }
 
-const AuthorizationCodePage: FC<AuthorizationCodePageProps> = (props) => {
+function AuthorizationCodePage(props: AuthorizationCodePageProps) {
   return (
     <Layout title={"Hollo: Authorization Code"}>
       <hgroup>
@@ -292,7 +291,7 @@ const AuthorizationCodePage: FC<AuthorizationCodePageProps> = (props) => {
       </p>
     </Layout>
   );
-};
+}
 
 const tokenRequestSchema = z.object({
   grant_type: z.enum(["authorization_code", "client_credentials"]),

@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import Layout from "../../components/Layout.tsx";
+import { Layout } from "../../components/Layout.tsx";
 import db from "../../db.ts";
 
 const homePage = new Hono().basePath("/");

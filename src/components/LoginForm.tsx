@@ -1,5 +1,3 @@
-import type { FC } from "hono/jsx";
-
 export interface LoginFormProps {
   method?: string;
   action: string;
@@ -13,7 +11,7 @@ export interface LoginFormProps {
   };
 }
 
-export const LoginForm: FC<LoginFormProps> = (props) => {
+export function LoginForm(props: LoginFormProps) {
   return (
     <form method={props.method ?? "post"} action={props.action}>
       <label>
@@ -43,4 +41,4 @@ export const LoginForm: FC<LoginFormProps> = (props) => {
       <button type="submit">Sign in</button>
     </form>
   );
-};
+}

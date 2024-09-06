@@ -1,11 +1,10 @@
-import type { FC } from "hono/jsx";
 import type { Account, AccountOwner } from "../schema";
 
 export interface ProfileProps {
   accountOwner: AccountOwner & { account: Account };
 }
 
-export const Profile: FC<ProfileProps> = ({ accountOwner }) => {
+export function Profile({ accountOwner }: ProfileProps) {
   const account = accountOwner.account;
   return (
     <>
@@ -62,6 +61,4 @@ export const Profile: FC<ProfileProps> = ({ accountOwner }) => {
       )}
     </>
   );
-};
-
-export default Profile;
+}

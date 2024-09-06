@@ -1,10 +1,9 @@
 import { Delete, PUBLIC_COLLECTION, Update } from "@fedify/fedify";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
-import type { FC } from "hono/jsx";
 import { AccountForm } from "../../components/AccountForm.tsx";
 import type { NewAccountPageProps } from "../../components/AccountNewPage.tsx";
-import Layout from "../../components/Layout.tsx";
+import { Layout } from "../../components/Layout.tsx";
 import db from "../../db.ts";
 import federation from "../../federation";
 import {
@@ -31,7 +30,7 @@ interface AccountPageProps extends NewAccountPageProps {
   accountOwner: AccountOwner & { account: Account };
 }
 
-const AccountPage: FC<AccountPageProps> = (props) => {
+function AccountPage(props: AccountPageProps) {
   const username = props.accountOwner.account.handle.replace(/@[^@]+$/, "");
   return (
     <Layout title="Hollo: New account">
@@ -56,7 +55,7 @@ const AccountPage: FC<AccountPageProps> = (props) => {
       />
     </Layout>
   );
-};
+}
 
 accountsId.post<"/:id">(async (c) => {
   const accountOwner = await db.query.accountOwners.findFirst({

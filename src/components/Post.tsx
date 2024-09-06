@@ -1,4 +1,3 @@
-import type { FC } from "hono/jsx";
 import type {
   Account,
   Medium as DbMedium,
@@ -25,7 +24,7 @@ export interface PostProps {
   pinned?: boolean;
 }
 
-export const Post: FC<PostProps> = ({ post, pinned }) => {
+export function Post({ post, pinned }: PostProps) {
   if (post.sharing != null)
     return <Post post={{ ...post.sharing, sharing: null }} />;
   const account = post.account;
@@ -104,7 +103,7 @@ export const Post: FC<PostProps> = ({ post, pinned }) => {
       </footer>
     </article>
   );
-};
+}
 
 interface PostContentProps {
   readonly post: DbPost & {
@@ -113,7 +112,7 @@ interface PostContentProps {
   };
 }
 
-const PostContent: FC<PostContentProps> = ({ post }: PostContentProps) => {
+function PostContent({ post }: PostContentProps) {
   return (
     <>
       {post.contentHtml && (
@@ -140,13 +139,13 @@ const PostContent: FC<PostContentProps> = ({ post }: PostContentProps) => {
       )}
     </>
   );
-};
+}
 
 interface PollProps {
   poll: DbPoll & { options: PollOption[] };
 }
 
-const Poll: FC<PollProps> = ({ poll }) => {
+function Poll({ poll }: PollProps) {
   const options = poll.options;
   options.sort((a, b) => (a.index < b.index ? -1 : 1));
   const totalVotes = options.reduce(
@@ -183,13 +182,13 @@ const Poll: FC<PollProps> = ({ poll }) => {
       </tbody>
     </table>
   );
-};
+}
 
 interface MediumProps {
   medium: DbMedium;
 }
 
-const Medium: FC<MediumProps> = ({ medium }) => {
+function Medium({ medium }: MediumProps) {
   return (
     <a href={medium.url}>
       <img
@@ -201,6 +200,4 @@ const Medium: FC<MediumProps> = ({ medium }) => {
       />
     </a>
   );
-};
-
-export default Post;
+}

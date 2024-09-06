@@ -1,4 +1,4 @@
-import type { FC, PropsWithChildren } from "hono/jsx";
+import type { PropsWithChildren } from "hono/jsx";
 
 export interface LayoutProps {
   title: string;
@@ -8,7 +8,7 @@ export interface LayoutProps {
   imageUrl?: string | null;
 }
 
-export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
+export function Layout(props: PropsWithChildren<LayoutProps>) {
   return (
     <html lang="en">
       <head>
@@ -41,6 +41,4 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = (props) => {
       </body>
     </html>
   );
-};
-
-export default Layout;
+}

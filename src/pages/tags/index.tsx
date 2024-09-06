@@ -1,6 +1,5 @@
 import { and, desc, eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
-import type { FC } from "hono/jsx";
 import { Layout } from "../../components/Layout.tsx";
 import { Post as PostView } from "../../components/Post.tsx";
 import { db } from "../../db.ts";
@@ -71,13 +70,15 @@ interface TagPageProps {
   })[];
 }
 
-const TagPage: FC<TagPageProps> = ({ tag, posts }) => (
-  <Layout title={`#${tag}`}>
-    <h1>#{tag}</h1>
-    {posts.map((post) => (
-      <PostView post={post} />
-    ))}
-  </Layout>
-);
+function TagPage({ tag, posts }: TagPageProps) {
+  return (
+    <Layout title={`#${tag}`}>
+      <h1>#{tag}</h1>
+      {posts.map((post) => (
+        <PostView post={post} />
+      ))}
+    </Layout>
+  );
+}
 
 export default tags;
