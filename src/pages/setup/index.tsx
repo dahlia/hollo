@@ -64,7 +64,7 @@ interface SetupPageProps {
   };
 }
 
-const SetupPage = (props: SetupPageProps) => {
+function SetupPage(props: SetupPageProps) {
   return (
     <Layout title="Welcome to Hollo!">
       <hgroup>
@@ -77,6 +77,6 @@ const SetupPage = (props: SetupPageProps) => {
       <SetupForm action="/setup" values={props.values} errors={props.errors} />
     </Layout>
   );
-};
+}
 
 export default setup;

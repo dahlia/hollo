@@ -2,7 +2,7 @@ import { exportJwk, generateCryptoKeyPair } from "@fedify/fedify";
 import { Hono } from "hono";
 import { AccountList } from "../../components/AccountList.tsx";
 import { NewAccountPage } from "../../components/AccountNewPage.tsx";
-import Layout from "../../components/Layout.tsx";
+import { Layout } from "../../components/Layout.tsx";
 import db from "../../db.ts";
 import federation from "../../federation";
 import { loginRequired } from "../../login.ts";
@@ -104,7 +104,7 @@ interface AccountListPageProps {
   accountOwners: (AccountOwner & { account: Account })[];
 }
 
-const AccountListPage = ({ accountOwners }: AccountListPageProps) => {
+function AccountListPage({ accountOwners }: AccountListPageProps) {
   return (
     <Layout title="Hollo: Accounts">
       <hgroup>
@@ -120,6 +120,6 @@ const AccountListPage = ({ accountOwners }: AccountListPageProps) => {
       </a>
     </Layout>
   );
-};
+}
 
 export default accountsPage;

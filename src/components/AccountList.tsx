@@ -5,7 +5,7 @@ export interface AccountListProps {
   accountOwners: (AccountOwner & { account: Account })[];
 }
 
-export const AccountList = ({ accountOwners }: AccountListProps) => {
+export function AccountList({ accountOwners }: AccountListProps) {
   return (
     <>
       {accountOwners.map((account) => (
@@ -13,13 +13,13 @@ export const AccountList = ({ accountOwners }: AccountListProps) => {
       ))}
     </>
   );
-};
+}
 
-export interface AccountItemProps {
+interface AccountItemProps {
   accountOwner: AccountOwner & { account: Account };
 }
 
-const AccountItem = ({ accountOwner: { account } }: AccountItemProps) => {
+function AccountItem({ accountOwner: { account } }: AccountItemProps) {
   return (
     <article>
       <header>
@@ -73,4 +73,4 @@ const AccountItem = ({ accountOwner: { account } }: AccountItemProps) => {
       </footer>
     </article>
   );
-};
+}

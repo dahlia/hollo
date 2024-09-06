@@ -23,7 +23,7 @@ export interface AccountFormProps {
   submitLabel: string;
 }
 
-export const AccountForm = (props: AccountFormProps) => {
+export function AccountForm(props: AccountFormProps) {
   return (
     <form method={props.method ?? "post"} action={props.action}>
       <fieldset>
@@ -135,4 +135,4 @@ export const AccountForm = (props: AccountFormProps) => {
       <button type="submit">{props.submitLabel}</button>
     </form>
   );
-};
+}

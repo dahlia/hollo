@@ -4,7 +4,7 @@ export interface ProfileProps {
   accountOwner: AccountOwner & { account: Account };
 }
 
-export const Profile = ({ accountOwner }: ProfileProps) => {
+export function Profile({ accountOwner }: ProfileProps) {
   const account = accountOwner.account;
   return (
     <>
@@ -61,4 +61,4 @@ export const Profile = ({ accountOwner }: ProfileProps) => {
       )}
     </>
   );
-};
+}

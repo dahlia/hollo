@@ -1,6 +1,6 @@
 import { and, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
-import Layout from "../../components/Layout.tsx";
+import { Layout } from "../../components/Layout.tsx";
 import { Post as PostView } from "../../components/Post.tsx";
 import db from "../../db.ts";
 import {
@@ -96,7 +96,7 @@ interface PostPageProps {
   };
 }
 
-const PostPage = ({ post }: PostPageProps) => {
+function PostPage({ post }: PostPageProps) {
   const summary =
     post.summary ??
     ((post.content ?? "").length > 30
@@ -116,6 +116,6 @@ const PostPage = ({ post }: PostPageProps) => {
       ))}
     </Layout>
   );
-};
+}
 
 export default profilePost;

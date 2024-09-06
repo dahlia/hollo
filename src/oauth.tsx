@@ -5,7 +5,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
-import Layout from "./components/Layout";
+import { Layout } from "./components/Layout";
 import { db } from "./db";
 import { loginRequired } from "./login";
 import {
@@ -164,7 +164,7 @@ interface AuthorizationPageProps {
   scopes: Scope[];
 }
 
-const AuthorizationPage = (props: AuthorizationPageProps) => {
+function AuthorizationPage(props: AuthorizationPageProps) {
   return (
     <Layout title={`Hollo: Authorize ${props.application.name}`}>
       <hgroup>
@@ -220,7 +220,7 @@ const AuthorizationPage = (props: AuthorizationPageProps) => {
       </form>
     </Layout>
   );
-};
+}
 
 app.post(
   "/authorize",
@@ -278,7 +278,7 @@ interface AuthorizationCodePageProps {
   code: string;
 }
 
-const AuthorizationCodePage = (props: AuthorizationCodePageProps) => {
+function AuthorizationCodePage(props: AuthorizationCodePageProps) {
   return (
     <Layout title={"Hollo: Authorization Code"}>
       <hgroup>
@@ -291,7 +291,7 @@ const AuthorizationCodePage = (props: AuthorizationCodePageProps) => {
       </p>
     </Layout>
   );
-};
+}
 
 const tokenRequestSchema = z.object({
   grant_type: z.enum(["authorization_code", "client_credentials"]),

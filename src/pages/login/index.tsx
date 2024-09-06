@@ -2,7 +2,7 @@ import { verify } from "@stdext/crypto/hash";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { setSignedCookie } from "hono/cookie";
-import Layout from "../../components/Layout.tsx";
+import { Layout } from "../../components/Layout.tsx";
 import { LoginForm } from "../../components/LoginForm.tsx";
 import { db } from "../../db.ts";
 import { credentials } from "../../schema.ts";
@@ -70,7 +70,7 @@ interface LoginPageProps {
   };
 }
 
-const LoginPage = (props: LoginPageProps) => {
+function LoginPage(props: LoginPageProps) {
   return (
     <Layout title="Sign in to Hollo">
       <hgroup>
@@ -85,6 +85,6 @@ const LoginPage = (props: LoginPageProps) => {
       />
     </Layout>
   );
-};
+}
 
 export default login;

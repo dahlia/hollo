@@ -70,13 +70,15 @@ interface TagPageProps {
   })[];
 }
 
-const TagPage = ({ tag, posts }: TagPageProps) => (
-  <Layout title={`#${tag}`}>
-    <h1>#{tag}</h1>
-    {posts.map((post) => (
-      <PostView post={post} />
-    ))}
-  </Layout>
-);
+function TagPage({ tag, posts }: TagPageProps) {
+  return (
+    <Layout title={`#${tag}`}>
+      <h1>#{tag}</h1>
+      {posts.map((post) => (
+        <PostView post={post} />
+      ))}
+    </Layout>
+  );
+}
 
 export default tags;

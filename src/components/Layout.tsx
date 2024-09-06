@@ -8,7 +8,7 @@ export interface LayoutProps {
   imageUrl?: string | null;
 }
 
-export const Layout = (props: PropsWithChildren<LayoutProps>) => {
+export function Layout(props: PropsWithChildren<LayoutProps>) {
   return (
     <html lang="en">
       <head>
@@ -41,6 +41,4 @@ export const Layout = (props: PropsWithChildren<LayoutProps>) => {
       </body>
     </html>
   );
-};
-
-export default Layout;
+}

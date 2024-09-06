@@ -11,7 +11,7 @@ export interface LoginFormProps {
   };
 }
 
-export const LoginForm = (props: LoginFormProps) => {
+export function LoginForm(props: LoginFormProps) {
   return (
     <form method={props.method ?? "post"} action={props.action}>
       <label>
@@ -41,4 +41,4 @@ export const LoginForm = (props: LoginFormProps) => {
       <button type="submit">Sign in</button>
     </form>
   );
-};
+}

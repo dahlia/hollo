@@ -24,7 +24,7 @@ export interface PostProps {
   pinned?: boolean;
 }
 
-export const Post = ({ post, pinned }: PostProps) => {
+export function Post({ post, pinned }: PostProps) {
   if (post.sharing != null)
     return <Post post={{ ...post.sharing, sharing: null }} />;
   const account = post.account;
@@ -103,7 +103,7 @@ export const Post = ({ post, pinned }: PostProps) => {
       </footer>
     </article>
   );
-};
+}
 
 interface PostContentProps {
   readonly post: DbPost & {
@@ -112,7 +112,7 @@ interface PostContentProps {
   };
 }
 
-const PostContent = ({ post }: PostContentProps) => {
+function PostContent({ post }: PostContentProps) {
   return (
     <>
       {post.contentHtml && (
@@ -139,13 +139,13 @@ const PostContent = ({ post }: PostContentProps) => {
       )}
     </>
   );
-};
+}
 
 interface PollProps {
   poll: DbPoll & { options: PollOption[] };
 }
 
-const Poll = ({ poll }: PollProps) => {
+function Poll({ poll }: PollProps) {
   const options = poll.options;
   options.sort((a, b) => (a.index < b.index ? -1 : 1));
   const totalVotes = options.reduce(
@@ -182,13 +182,13 @@ const Poll = ({ poll }: PollProps) => {
       </tbody>
     </table>
   );
-};
+}
 
 interface MediumProps {
   medium: DbMedium;
 }
 
-const Medium = ({ medium }: MediumProps) => {
+function Medium({ medium }: MediumProps) {
   return (
     <a href={medium.url}>
       <img
@@ -200,4 +200,4 @@ const Medium = ({ medium }: MediumProps) => {
       />
     </a>
   );
-};
+}

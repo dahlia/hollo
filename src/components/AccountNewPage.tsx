@@ -1,6 +1,6 @@
 import type { PostVisibility } from "../schema.ts";
 import { AccountForm } from "./AccountForm.tsx";
-import Layout from "./Layout.tsx";
+import { Layout } from "./Layout.tsx";
 
 export interface NewAccountPageProps {
   values?: {
@@ -18,7 +18,7 @@ export interface NewAccountPageProps {
   };
 }
 
-export const NewAccountPage = (props: NewAccountPageProps) => {
+export function NewAccountPage(props: NewAccountPageProps) {
   return (
     <Layout title="Hollo: New account">
       <hgroup>
@@ -33,4 +33,4 @@ export const NewAccountPage = (props: NewAccountPageProps) => {
       />
     </Layout>
   );
-};
+}

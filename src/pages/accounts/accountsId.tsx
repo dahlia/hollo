@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { AccountForm } from "../../components/AccountForm.tsx";
 import type { NewAccountPageProps } from "../../components/AccountNewPage.tsx";
-import Layout from "../../components/Layout.tsx";
+import { Layout } from "../../components/Layout.tsx";
 import db from "../../db.ts";
 import federation from "../../federation";
 import {
@@ -30,7 +30,7 @@ interface AccountPageProps extends NewAccountPageProps {
   accountOwner: AccountOwner & { account: Account };
 }
 
-const AccountPage = (props: AccountPageProps) => {
+function AccountPage(props: AccountPageProps) {
   const username = props.accountOwner.account.handle.replace(/@[^@]+$/, "");
   return (
     <Layout title="Hollo: New account">
@@ -55,7 +55,7 @@ const AccountPage = (props: AccountPageProps) => {
       />
     </Layout>
   );
-};
+}
 
 accountsId.post<"/:id">(async (c) => {
   const accountOwner = await db.query.accountOwners.findFirst({

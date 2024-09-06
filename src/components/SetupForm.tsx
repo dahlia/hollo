@@ -11,7 +11,7 @@ export interface SetupFormProps {
   };
 }
 
-export const SetupForm = (props: SetupFormProps) => {
+export function SetupForm(props: SetupFormProps) {
   return (
     <form method={props.method ?? "post"} action={props.action}>
       <fieldset>
@@ -69,4 +69,4 @@ export const SetupForm = (props: SetupFormProps) => {
       <button type="submit">Start using Hollo</button>
     </form>
   );
-};
+}
