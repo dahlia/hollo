@@ -1,6 +1,5 @@
 import { and, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
-import type { FC } from "hono/jsx";
 import Layout from "../../components/Layout.tsx";
 import { Post as PostView } from "../../components/Post.tsx";
 import db from "../../db.ts";
@@ -97,7 +96,7 @@ interface PostPageProps {
   };
 }
 
-const PostPage: FC<PostPageProps> = ({ post }) => {
+const PostPage = ({ post }: PostPageProps) => {
   const summary =
     post.summary ??
     ((post.content ?? "").length > 30

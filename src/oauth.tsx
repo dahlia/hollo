@@ -4,7 +4,6 @@ import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
-import type { FC } from "hono/jsx";
 import { z } from "zod";
 import Layout from "./components/Layout";
 import { db } from "./db";
@@ -165,7 +164,7 @@ interface AuthorizationPageProps {
   scopes: Scope[];
 }
 
-const AuthorizationPage: FC<AuthorizationPageProps> = (props) => {
+const AuthorizationPage = (props: AuthorizationPageProps) => {
   return (
     <Layout title={`Hollo: Authorize ${props.application.name}`}>
       <hgroup>
@@ -279,7 +278,7 @@ interface AuthorizationCodePageProps {
   code: string;
 }
 
-const AuthorizationCodePage: FC<AuthorizationCodePageProps> = (props) => {
+const AuthorizationCodePage = (props: AuthorizationCodePageProps) => {
   return (
     <Layout title={"Hollo: Authorization Code"}>
       <hgroup>

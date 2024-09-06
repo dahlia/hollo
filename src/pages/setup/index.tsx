@@ -1,7 +1,6 @@
 import { hash } from "@stdext/crypto/hash";
 import { count } from "drizzle-orm";
 import { Hono } from "hono";
-import type { FC } from "hono/jsx";
 import { Layout } from "../../components/Layout.tsx";
 import { SetupForm } from "../../components/SetupForm.tsx";
 import db from "../../db.ts";
@@ -65,7 +64,7 @@ interface SetupPageProps {
   };
 }
 
-const SetupPage: FC<SetupPageProps> = (props: SetupPageProps) => {
+const SetupPage = (props: SetupPageProps) => {
   return (
     <Layout title="Welcome to Hollo!">
       <hgroup>

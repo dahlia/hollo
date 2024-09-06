@@ -1,4 +1,3 @@
-import type { FC } from "hono/jsx";
 import iso6391 from "iso-639-1";
 import type { PostVisibility } from "../schema";
 
@@ -24,7 +23,7 @@ export interface AccountFormProps {
   submitLabel: string;
 }
 
-export const AccountForm: FC<AccountFormProps> = (props) => {
+export const AccountForm = (props: AccountFormProps) => {
   return (
     <form method={props.method ?? "post"} action={props.action}>
       <fieldset>

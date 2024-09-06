@@ -1,4 +1,3 @@
-import type { FC } from "hono/jsx";
 import type {
   Account,
   Medium as DbMedium,
@@ -25,7 +24,7 @@ export interface PostProps {
   pinned?: boolean;
 }
 
-export const Post: FC<PostProps> = ({ post, pinned }) => {
+export const Post = ({ post, pinned }: PostProps) => {
   if (post.sharing != null)
     return <Post post={{ ...post.sharing, sharing: null }} />;
   const account = post.account;
@@ -113,7 +112,7 @@ interface PostContentProps {
   };
 }
 
-const PostContent: FC<PostContentProps> = ({ post }: PostContentProps) => {
+const PostContent = ({ post }: PostContentProps) => {
   return (
     <>
       {post.contentHtml && (
@@ -146,7 +145,7 @@ interface PollProps {
   poll: DbPoll & { options: PollOption[] };
 }
 
-const Poll: FC<PollProps> = ({ poll }) => {
+const Poll = ({ poll }: PollProps) => {
   const options = poll.options;
   options.sort((a, b) => (a.index < b.index ? -1 : 1));
   const totalVotes = options.reduce(
@@ -189,7 +188,7 @@ interface MediumProps {
   medium: DbMedium;
 }
 
-const Medium: FC<MediumProps> = ({ medium }) => {
+const Medium = ({ medium }: MediumProps) => {
   return (
     <a href={medium.url}>
       <img
@@ -202,5 +201,3 @@ const Medium: FC<MediumProps> = ({ medium }) => {
     </a>
   );
 };
-
-export default Post;

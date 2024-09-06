@@ -2,7 +2,6 @@ import { verify } from "@stdext/crypto/hash";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { setSignedCookie } from "hono/cookie";
-import type { FC } from "hono/jsx";
 import Layout from "../../components/Layout.tsx";
 import { LoginForm } from "../../components/LoginForm.tsx";
 import { db } from "../../db.ts";
@@ -71,7 +70,7 @@ interface LoginPageProps {
   };
 }
 
-const LoginPage: FC<LoginPageProps> = (props) => {
+const LoginPage = (props: LoginPageProps) => {
   return (
     <Layout title="Sign in to Hollo">
       <hgroup>
