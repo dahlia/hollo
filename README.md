@@ -141,6 +141,7 @@ Current features and roadmap
 - [x] Polls
 - [x] Likes (favorites)
 - [x] Shares (reblogs)
+- [x] Quotes
 - [x] Editing profile
 - [x] Deleting account
 - [x] Public timeline

@@ -61,6 +61,7 @@ app.post(
           with: {
             account: { with: { owner: true } },
             replyTarget: true,
+            quoteTarget: true,
             media: true,
             mentions: { with: { account: true } },
           },
@@ -130,6 +131,7 @@ app.post(
           with: {
             account: { with: { owner: true } },
             replyTarget: true,
+            quoteTarget: true,
             media: true,
             mentions: { with: { account: true } },
           },

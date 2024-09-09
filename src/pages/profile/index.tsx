@@ -43,9 +43,25 @@ profile.get("/", async (c) => {
           media: true,
           poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
+          quoteTarget: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+            },
+          },
         },
       },
       replyTarget: { with: { account: true } },
+      quoteTarget: {
+        with: {
+          account: true,
+          media: true,
+          poll: { with: { options: true } },
+          replyTarget: { with: { account: true } },
+        },
+      },
     },
   });
   const pinnedPostList = await db.query.pinnedPosts.findMany({
@@ -63,9 +79,25 @@ profile.get("/", async (c) => {
               media: true,
               poll: { with: { options: true } },
               replyTarget: { with: { account: true } },
+              quoteTarget: {
+                with: {
+                  account: true,
+                  media: true,
+                  poll: { with: { options: true } },
+                  replyTarget: { with: { account: true } },
+                },
+              },
             },
           },
           replyTarget: { with: { account: true } },
+          quoteTarget: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+            },
+          },
         },
       },
     },
@@ -89,8 +121,8 @@ profile.get("/", async (c) => {
 });
 
 interface ProfilePageProps {
-  accountOwner: AccountOwner & { account: Account };
-  posts: (Post & {
+  readonly accountOwner: AccountOwner & { account: Account };
+  readonly posts: (Post & {
     account: Account;
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
@@ -100,11 +132,27 @@ interface ProfilePageProps {
           media: Medium[];
           poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
+          quoteTarget:
+            | (Post & {
+                account: Account;
+                media: Medium[];
+                poll: (Poll & { options: PollOption[] }) | null;
+                replyTarget: (Post & { account: Account }) | null;
+              })
+            | null;
         })
       | null;
     replyTarget: (Post & { account: Account }) | null;
+    quoteTarget:
+      | (Post & {
+          account: Account;
+          media: Medium[];
+          poll: (Poll & { options: PollOption[] }) | null;
+          replyTarget: (Post & { account: Account }) | null;
+        })
+      | null;
   })[];
-  pinnedPosts: (Post & {
+  readonly pinnedPosts: (Post & {
     account: Account;
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
@@ -114,11 +162,27 @@ interface ProfilePageProps {
           media: Medium[];
           poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
+          quoteTarget:
+            | (Post & {
+                account: Account;
+                media: Medium[];
+                poll: (Poll & { options: PollOption[] }) | null;
+                replyTarget: (Post & { account: Account }) | null;
+              })
+            | null;
         })
       | null;
     replyTarget: (Post & { account: Account }) | null;
+    quoteTarget:
+      | (Post & {
+          account: Account;
+          media: Medium[];
+          poll: (Poll & { options: PollOption[] }) | null;
+          replyTarget: (Post & { account: Account }) | null;
+        })
+      | null;
   })[];
-  featuredTags: FeaturedTag[];
+  readonly featuredTags: FeaturedTag[];
 }
 
 function ProfilePage({

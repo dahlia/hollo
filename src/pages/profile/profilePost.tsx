@@ -40,9 +40,25 @@ profilePost.get<"/:handle{@[^/]+}/:id">(async (c) => {
           media: true,
           poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
+          quoteTarget: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+            },
+          },
         },
       },
       replyTarget: { with: { account: true } },
+      quoteTarget: {
+        with: {
+          account: true,
+          media: true,
+          poll: { with: { options: true } },
+          replyTarget: { with: { account: true } },
+        },
+      },
       replies: {
         with: {
           account: true,
@@ -54,9 +70,25 @@ profilePost.get<"/:handle{@[^/]+}/:id">(async (c) => {
               media: true,
               poll: { with: { options: true } },
               replyTarget: { with: { account: true } },
+              quoteTarget: {
+                with: {
+                  account: true,
+                  media: true,
+                  poll: { with: { options: true } },
+                  replyTarget: { with: { account: true } },
+                },
+              },
             },
           },
           replyTarget: { with: { account: true } },
+          quoteTarget: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+            },
+          },
         },
       },
     },
@@ -66,7 +98,7 @@ profilePost.get<"/:handle{@[^/]+}/:id">(async (c) => {
 });
 
 interface PostPageProps {
-  post: Post & {
+  readonly post: Post & {
     account: Account;
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
@@ -76,9 +108,25 @@ interface PostPageProps {
           media: Medium[];
           poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
+          quoteTarget:
+            | (Post & {
+                account: Account;
+                media: Medium[];
+                poll: (Poll & { options: PollOption[] }) | null;
+                replyTarget: (Post & { account: Account }) | null;
+              })
+            | null;
         })
       | null;
     replyTarget: (Post & { account: Account }) | null;
+    quoteTarget:
+      | (Post & {
+          account: Account;
+          media: Medium[];
+          poll: (Poll & { options: PollOption[] }) | null;
+          replyTarget: (Post & { account: Account }) | null;
+        })
+      | null;
     replies: (Post & {
       account: Account;
       media: Medium[];
@@ -89,9 +137,25 @@ interface PostPageProps {
             media: Medium[];
             poll: (Poll & { options: PollOption[] }) | null;
             replyTarget: (Post & { account: Account }) | null;
+            quoteTarget:
+              | (Post & {
+                  account: Account;
+                  media: Medium[];
+                  poll: (Poll & { options: PollOption[] }) | null;
+                  replyTarget: (Post & { account: Account }) | null;
+                })
+              | null;
           })
         | null;
       replyTarget: (Post & { account: Account }) | null;
+      quoteTarget:
+        | (Post & {
+            account: Account;
+            media: Medium[];
+            poll: (Poll & { options: PollOption[] }) | null;
+            replyTarget: (Post & { account: Account }) | null;
+          })
+        | null;
     })[];
   };
 }

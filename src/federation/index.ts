@@ -245,6 +245,7 @@ federation
       with: {
         account: { with: { owner: true } },
         replyTarget: true,
+        quoteTarget: true,
         media: true,
         poll: { with: { options: true } },
         mentions: { with: { account: true } },
@@ -332,6 +333,7 @@ federation.setFeaturedDispatcher("/@{handle}/pinned", async (ctx, handle) => {
         with: {
           account: { with: { owner: true } },
           replyTarget: true,
+          quoteTarget: true,
           media: true,
           poll: { with: { options: { orderBy: pollOptions.index } } },
           mentions: { with: { account: true } },
@@ -522,6 +524,7 @@ federation
         with: {
           account: { with: { owner: true } },
           replyTarget: true,
+          quoteTarget: true,
           media: true,
           poll: {
             with: {
@@ -783,6 +786,7 @@ federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
     with: {
       account: { with: { owner: true } },
       replyTarget: true,
+      quoteTarget: true,
       media: true,
       poll: { with: { options: { orderBy: pollOptions.index } } },
       mentions: { with: { account: true } },

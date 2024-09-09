@@ -44,17 +44,33 @@ tags.get(async (c) => {
           media: true,
           poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
+          quoteTarget: {
+            with: {
+              account: true,
+              media: true,
+              poll: { with: { options: true } },
+              replyTarget: { with: { account: true } },
+            },
+          },
         },
       },
       replyTarget: { with: { account: true } },
+      quoteTarget: {
+        with: {
+          account: true,
+          media: true,
+          poll: { with: { options: true } },
+          replyTarget: { with: { account: true } },
+        },
+      },
     },
   });
   return c.html(<TagPage tag={tag} posts={postList} />);
 });
 
 interface TagPageProps {
-  tag: string;
-  posts: (Post & {
+  readonly tag: string;
+  readonly posts: (Post & {
     account: Account;
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
@@ -64,9 +80,25 @@ interface TagPageProps {
           media: Medium[];
           poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
+          quoteTarget:
+            | (Post & {
+                account: Account;
+                media: Medium[];
+                poll: (Poll & { options: PollOption[] }) | null;
+                replyTarget: (Post & { account: Account }) | null;
+              })
+            | null;
         })
       | null;
     replyTarget: (Post & { account: Account }) | null;
+    quoteTarget:
+      | (Post & {
+          account: Account;
+          media: Medium[];
+          poll: (Poll & { options: PollOption[] }) | null;
+          replyTarget: (Post & { account: Account }) | null;
+        })
+      | null;
   })[];
 }
 

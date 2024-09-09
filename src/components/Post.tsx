@@ -7,7 +7,7 @@ import type {
 } from "../schema";
 
 export interface PostProps {
-  post: DbPost & {
+  readonly post: DbPost & {
     account: Account;
     media: DbMedium[];
     poll: (DbPoll & { options: PollOption[] }) | null;
@@ -17,33 +17,61 @@ export interface PostProps {
           media: DbMedium[];
           poll: (DbPoll & { options: PollOption[] }) | null;
           replyTarget: (DbPost & { account: Account }) | null;
+          quoteTarget:
+            | (DbPost & {
+                account: Account;
+                media: DbMedium[];
+                poll: (DbPoll & { options: PollOption[] }) | null;
+                replyTarget: (DbPost & { account: Account }) | null;
+              })
+            | null;
         })
       | null;
     replyTarget: (DbPost & { account: Account }) | null;
+    quoteTarget:
+      | (DbPost & {
+          account: Account;
+          media: DbMedium[];
+          poll: (DbPoll & { options: PollOption[] }) | null;
+          replyTarget: (DbPost & { account: Account }) | null;
+        })
+      | null;
   };
-  pinned?: boolean;
+  readonly pinned?: boolean;
+  readonly quoted?: boolean;
 }
 
-export function Post({ post, pinned }: PostProps) {
+export function Post({ post, pinned, quoted }: PostProps) {
   if (post.sharing != null)
     return <Post post={{ ...post.sharing, sharing: null }} />;
   const account = post.account;
+  const authorName = <a href={account.url ?? account.iri}>{account.name}</a>;
   return (
-    <article style={pinned ? "border: 1px solid gray;" : ""}>
+    <article
+      style={
+        pinned
+          ? "border: 1px solid silver;"
+          : quoted
+            ? "border: calc(var(--pico-border-width)*4) solid var(--pico-background-color);"
+            : ""
+      }
+    >
       <header>
         <hgroup>
           {account.avatarUrl && (
             <img
               src={account.avatarUrl}
               alt={`${account.name}'s avatar`}
-              width={48}
-              height={48}
+              width={quoted ? 40 : 48}
+              height={quoted ? 40 : 48}
               style="float: left; margin-right: .5em;"
             />
           )}
-          <h5>
-            <a href={account.url ?? account.iri}>{account.name}</a>
-          </h5>
+          {quoted ? (
+            <h6 style="font-size: smaller;">{authorName}</h6>
+          ) : (
+            <h5>{authorName}</h5>
+          )}
           <p>
             <small style="user-select: all;">{account.handle}</small>
             {post.replyTarget != null && (
@@ -109,6 +137,14 @@ interface PostContentProps {
   readonly post: DbPost & {
     media: DbMedium[];
     poll: (DbPoll & { options: PollOption[] }) | null;
+    quoteTarget:
+      | (DbPost & {
+          account: Account;
+          media: DbMedium[];
+          poll: (DbPoll & { options: PollOption[] }) | null;
+          replyTarget: (DbPost & { account: Account }) | null;
+        })
+      | null;
   };
 }
 
@@ -137,12 +173,18 @@ function PostContent({ post }: PostContentProps) {
           )}
         </div>
       )}
+      {post.quoteTarget != null && (
+        <Post
+          post={{ ...post.quoteTarget, sharing: null, quoteTarget: null }}
+          quoted={true}
+        />
+      )}
     </>
   );
 }
 
 interface PollProps {
-  poll: DbPoll & { options: PollOption[] };
+  readonly poll: DbPoll & { options: PollOption[] };
 }
 
 function Poll({ poll }: PollProps) {
@@ -185,7 +227,7 @@ function Poll({ poll }: PollProps) {
 }
 
 interface MediumProps {
-  medium: DbMedium;
+  readonly medium: DbMedium;
 }
 
 function Medium({ medium }: MediumProps) {

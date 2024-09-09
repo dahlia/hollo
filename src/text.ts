@@ -1,4 +1,11 @@
-import { type DocumentLoader, isActor, lookupObject } from "@fedify/fedify";
+import {
+  Article,
+  type DocumentLoader,
+  Note,
+  Question,
+  isActor,
+  lookupObject,
+} from "@fedify/fedify";
 import { hashtag } from "@fedify/markdown-it-hashtag";
 import { mention } from "@fedify/markdown-it-mention";
 import { getLogger } from "@logtape/logtape";
@@ -16,11 +23,13 @@ export interface FormatResult {
   mentions: string[];
   hashtags: string[];
   previewLink: string | null;
+  quoteTarget: Article | Note | Question | null;
 }
 
 interface Env {
   hashtags: string[];
   previewLink: string | null;
+  links: string[];
 }
 
 export async function formatText(
@@ -117,6 +126,7 @@ export async function formatText(
       processHTML: false,
       replaceLink(link: string, env: Env) {
         if (link.startsWith("http://") || link.startsWith("https://")) {
+          env.links.push(link);
           env.previewLink = link;
           return link;
         }
@@ -126,14 +136,28 @@ export async function formatText(
   const env: Env = {
     hashtags: [],
     previewLink: null,
+    links: [],
   };
   const html = md.render(text, env);
   getLogger(["hollo", "text"]).debug("Markdown-It environment: {env}", { env });
+  let quoteTarget: Article | Note | Question | null = null;
+  for (const link of env.links) {
+    const object = await lookupObject(link, options);
+    if (
+      object instanceof Note ||
+      object instanceof Article ||
+      object instanceof Question
+    ) {
+      quoteTarget = object;
+      break;
+    }
+  }
   return {
     html: html,
     mentions: Object.values(handles).map((v) => v.id),
     hashtags: env.hashtags,
     previewLink: env.previewLink,
+    quoteTarget,
   };
 }
 

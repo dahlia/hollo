@@ -15,6 +15,7 @@ import federation from "../../federation";
 import { updateAccountStats } from "../../federation/account";
 import {
   getRecipients,
+  persistPost,
   toAnnounce,
   toCreate,
   toDelete,
@@ -75,6 +76,7 @@ app.post(
     statusSchema.merge(
       z.object({
         in_reply_to_id: z.string().uuid().optional(),
+        quote_id: z.string().uuid().optional(),
         visibility: z
           .enum(["public", "unlisted", "private", "direct"])
           .optional(),
@@ -138,6 +140,12 @@ app.post(
     if (content?.previewLink != null) {
       previewCard = await fetchPreviewCard(content.previewLink);
     }
+    let quoteTargetId: string | null = null;
+    if (data.quote_id != null) quoteTargetId = data.quote_id;
+    else if (content?.quoteTarget != null) {
+      const quoted = await persistPost(db, content.quoteTarget, fmtOpts);
+      if (quoted != null) quoteTargetId = quoted.id;
+    }
     await db.transaction(async (tx) => {
       let poll: Poll | null = null;
       if (data.poll != null) {
@@ -170,6 +178,7 @@ app.post(
         accountId: owner.id,
         applicationId: token.applicationId,
         replyTargetId: data.in_reply_to_id,
+        quoteTargetId,
         sharingId: null,
         visibility: data.visibility ?? owner.visibility,
         summary: data.spoiler_text,

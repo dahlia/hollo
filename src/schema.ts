@@ -281,6 +281,10 @@ export const posts = pgTable(
     sharingId: uuid("sharing_id").references((): AnyPgColumn => posts.id, {
       onDelete: "cascade",
     }),
+    quoteTargetId: uuid("quote_target_id").references(
+      (): AnyPgColumn => posts.id,
+      { onDelete: "set null" },
+    ),
     visibility: postVisibilityEnum("visibility").notNull(),
     summaryHtml: text("summary_html"),
     summary: text("summary"),
@@ -328,18 +332,20 @@ export const postRelations = relations(posts, ({ one, many }) => ({
     references: [posts.id],
     relationName: "reply",
   }),
-  replies: many(posts, {
-    relationName: "reply",
-  }),
+  replies: many(posts, { relationName: "reply" }),
   likes: many(likes),
   sharing: one(posts, {
     fields: [posts.sharingId],
     references: [posts.id],
     relationName: "share",
   }),
-  shares: many(posts, {
-    relationName: "share",
+  shares: many(posts, { relationName: "share" }),
+  quoteTarget: one(posts, {
+    fields: [posts.quoteTargetId],
+    references: [posts.id],
+    relationName: "quote",
   }),
+  quotes: many(posts, { relationName: "quote" }),
   media: many(media),
   poll: one(polls, {
     fields: [posts.pollId],

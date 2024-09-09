@@ -34,6 +34,44 @@ export function getPostRelations(ownerId: string) {
         account: true,
         application: true,
         replyTarget: true,
+        quoteTarget: {
+          with: {
+            account: true,
+            application: true,
+            replyTarget: true,
+            media: true,
+            poll: {
+              with: {
+                options: { orderBy: pollOptions.index },
+                votes: { where: eq(pollVotes.accountId, ownerId) },
+              },
+            },
+            mentions: { with: { account: { with: { owner: true } } } },
+            likes: { where: eq(likes.accountId, ownerId) },
+            shares: { where: eq(posts.accountId, ownerId) },
+            bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
+            pin: true,
+          },
+        },
+        media: true,
+        poll: {
+          with: {
+            options: { orderBy: pollOptions.index },
+            votes: { where: eq(pollVotes.accountId, ownerId) },
+          },
+        },
+        mentions: { with: { account: { with: { owner: true } } } },
+        likes: { where: eq(likes.accountId, ownerId) },
+        shares: { where: eq(posts.accountId, ownerId) },
+        bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
+        pin: true,
+      },
+    },
+    quoteTarget: {
+      with: {
+        account: true,
+        application: true,
+        replyTarget: true,
         media: true,
         poll: {
           with: {
@@ -69,6 +107,40 @@ export function serializePost(
     application: Application | null;
     replyTarget: Post | null;
     sharing:
+      | (Post & {
+          account: Account;
+          application: Application | null;
+          replyTarget: Post | null;
+          quoteTarget:
+            | (Post & {
+                account: Account;
+                application: Application | null;
+                replyTarget: Post | null;
+                media: Medium[];
+                poll:
+                  | (Poll & { options: PollOption[]; votes: PollVote[] })
+                  | null;
+                mentions: (Mention & {
+                  account: Account & { owner: AccountOwner | null };
+                })[];
+                likes: Like[];
+                shares: Post[];
+                bookmarks: Bookmark[];
+                pin: PinnedPost | null;
+              })
+            | null;
+          media: Medium[];
+          poll: (Poll & { options: PollOption[]; votes: PollVote[] }) | null;
+          mentions: (Mention & {
+            account: Account & { owner: AccountOwner | null };
+          })[];
+          likes: Like[];
+          shares: Post[];
+          bookmarks: Bookmark[];
+          pin: PinnedPost | null;
+        })
+      | null;
+    quoteTarget:
       | (Post & {
           account: Account;
           application: Application | null;
@@ -129,6 +201,15 @@ export function serializePost(
         ? null
         : serializePost(
             { ...post.sharing, sharing: null },
+            currentAccountOwner,
+            baseUrl,
+          ),
+    quote_id: post.quoteTargetId,
+    quote:
+      post.quoteTarget == null
+        ? null
+        : serializePost(
+            { ...post.quoteTarget, quoteTarget: null, sharing: null },
             currentAccountOwner,
             baseUrl,
           ),
