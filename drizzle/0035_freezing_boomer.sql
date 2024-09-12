@@ -1,1 +1,0 @@
-ALTER TABLE "mutes" ADD COLUMN "notifications" boolean DEFAULT true NOT NULL;
