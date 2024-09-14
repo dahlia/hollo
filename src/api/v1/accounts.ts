@@ -776,7 +776,7 @@ app.get(
 );
 
 app.get(
-  "/mutes",
+  "/:id/mutes",
   tokenRequired,
   scopeRequired(["read:mutes"]),
   zValidator(
@@ -828,15 +828,24 @@ app.get(
 
 app.post(
   "/:id/mute",
+  tokenRequired,
+  scopeRequired(["write:mutes"]),
   zValidator(
     "form",
     z.object({
-      notifications: z.boolean().default(true),
-      duration: z.number().int().nonnegative().default(0),
+      notifications: z
+        .enum(["true", "false"])
+        .default("true")
+        .transform((v) => v === "true"),
+      duration: z
+        .string()
+        .default("0")
+        .transform((v) => Number.parseInt(v, 10)),
     }),
   ),
   async (c) => {
     const owner = c.get("token").accountOwner;
+
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
@@ -911,7 +920,8 @@ app.post(
       where: eq(accounts.id, id),
       with: {
         owner: true,
-        following: { where: eq(mutes.accountId, owner.id) },
+        mutes: { where: eq(mutes.accountId, owner.id) },
+        following: { where: eq(follows.followingId, owner.id) },
       },
     });
     if (account == null) return c.json({ error: "Record not found" }, 404);

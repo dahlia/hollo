@@ -76,7 +76,8 @@ export const accountRelations = relations(accounts, ({ one, many }) => ({
   mentions: many(mentions),
   likes: many(likes),
   pinnedPosts: many(pinnedPosts),
-  mutes: many(mutes, { relationName: "mutes" }),
+  mutes: many(mutes, { relationName: "muter" }),
+  mutedBy: many(mutes, { relationName: "muted" }),
 }));
 
 export type Account = typeof accounts.$inferSelect;
@@ -753,9 +754,11 @@ export const muteRelations = relations(mutes, ({ one }) => ({
   account: one(accounts, {
     fields: [mutes.accountId],
     references: [accounts.id],
+    relationName: "muter",
   }),
   targetAccount: one(accounts, {
     fields: [mutes.mutedAccountId],
     references: [accounts.id],
+    relationName: "muted",
   }),
 }));
