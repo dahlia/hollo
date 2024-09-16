@@ -1,0 +1,67 @@
+---
+title: Deploy to Railway
+description: How to deploy Hollo on Railway.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+[![Deploy on Railway][]][Railway template]
+
+The easiest way to deploy Hollo is to use [Railway].  Railway is a platform that
+allows you to deploy your apps with ease. It supports a variety of languages and
+frameworks, including Node.js, Python, Ruby, and more.
+
+Click the button above to deploy Hollo on Railway.  With this template, you can
+get started with your own Hollo in just a few clicks.
+
+To deploy Hollo, you need S3 or S3-compatible object storage for storing media
+such as images.  There are many S3-compatible object storage services,
+including AWS S3, Cloudflare R2, MinIO, DigitalOcean Spaces, and Linode Object
+Storage.  Once you have your object storage ready, you'll need to configure
+the environment variables appropriately (see how to use the S3 client API
+for each service).  For more information, see the
+[*Environmnet variables*](./env) chapter.
+
+Once you've set up your environment variables and Hollo is deployed on Railway,
+go to https://yourdomain/setup to set up your login credentials and add your
+profile.
+
+<Aside type="caution" title="Watch out!">
+  You need to decide on a domain name *before* you start setting up Hollo for
+  the first time. This is because *you can't change your domain name once
+  Hollo is set up.*
+</Aside>
+
+Once you've created your profile, you're ready to start enjoying Hollo.
+It's worth noting that Hollo doesn't have much of a web interface of its own,
+so you'll need to use a client app like [Phanpy] for now.
+
+[Railway]: https://railway.app/
+[Deploy on Railway]: https://railway.app/button.svg
+[Railway template]: https://railway.app/template/eopPyH?referralCode=qeEK5G
+[Phanpy]: https://phanpy.social/
+
+
+Upgrading
+---------
+
+import { Steps } from "@astrojs/starlight/components";
+
+To upgrade Hollo, just redeploy the service on Railway:
+
+<Steps>
+ 1. Go to the Railway dashboard.
+
+ 2. Choose your Hollo project.
+
+ 3. Choose your Hollo service.
+
+    ![Choose your Hollo service](./railway/project.png)
+
+ 4. In the deployments, click the button in the right corner which looks
+    like three vertical dots.
+
+ 5. In the dropdown, click *Redeploy* to redeploy the service.
+
+    ![Redeploy the service](./railway/deployments.png)
+</Steps>

@@ -79,4 +79,25 @@ jobs:
         cache-to:
           type=registry,ref=ghcr.io/${{ github.repository }}:build-cache,mode=max
 
+  publish-docs:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      pages: write
+      deployments: write
+    steps:
+    - uses: actions/checkout@v4
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: latest
+    - run: |
+        bun install
+        bun run build
+      working-directory: ${{ github.workspace }}/docs/
+    - uses: actions/upload-pages-artifact@v3
+      with:
+        path: docs/dist
+    - uses: actions/deploy-pages@v4
+
 # cSpell: ignore buildx sergeysova

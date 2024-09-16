@@ -1,24 +1,23 @@
 services:
   hollo:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/dahlia/hollo:latest
     ports:
-      - "3000:3000"
+    - "3000:3000"
     environment:
       DATABASE_URL: "postgres://user:password@postgres:5432/database"
       REDIS_URL: "redis://redis:6379/0"
       SECRET_KEY: "${SECRET_KEY}"
       LOG_LEVEL: "${LOG_LEVEL}"
       BEHIND_PROXY: "${BEHIND_PROXY}"
+      S3_REGION: "${S3_REGION}"
       S3_BUCKET: "${S3_BUCKET}"
       S3_URL_BASE: "${S3_URL_BASE}"
       S3_ENDPOINT_URL: "${S3_ENDPOINT_URL}"
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
     depends_on:
-      - postgres
-      - redis
+    - postgres
+    - redis
     restart: unless-stopped
 
   postgres:
@@ -28,7 +27,7 @@ services:
       POSTGRES_PASSWORD: password
       POSTGRES_DB: database
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+    - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
 
   redis:

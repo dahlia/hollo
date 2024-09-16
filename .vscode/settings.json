@@ -5,6 +5,24 @@
   "files.eol": "\n",
   "files.insertFinalNewline": true,
   "files.trimFinalNewlines": true,
+  "[css]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSave": true
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": "always"
+    }
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.organizeImports.biome": "always"
+    }
+  },
   "[json]": {
     "editor.defaultFormatter": "biomejs.biome",
     "editor.formatOnSave": true
@@ -29,6 +47,9 @@
   },
   "cSpell.words": [
     "activitypub",
+    "Akkoma",
+    "astro",
+    "astrojs",
     "bigserial",
     "biomejs",
     "blurhash",
@@ -48,8 +69,10 @@
     "logtape",
     "microblog",
     "microblogging",
+    "Misskey",
     "multikey",
     "nodeinfo",
+    "opencontainers",
     "Phanpy",
     "pico",
     "previewcard",

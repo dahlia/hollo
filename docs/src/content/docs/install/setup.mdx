@@ -1,0 +1,72 @@
+---
+title: Setting up
+description: How to set up Hollo.
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+<Aside type="caution" title="Watch out!">
+  Before you start setting up Hollo, you need to decide on a domain name, and
+  the domain name must be set up and pointing to your server.  This is because
+  you can't change your domain name once Hollo is set up.
+</Aside>
+
+After you've installed Hollo, you need to set it up.  This guide will walk you
+through the process of setting up Hollo on your server.
+
+<Steps>
+ 1. Go to **https://<var>yourdomain</var>/setup** where <var>yourdomain</var> is
+    your domain name.
+
+ 2. Set up your login credentials.
+
+    ![Set up your login credentials](./setup/setup.png)
+
+ 3. You'll see the empty *Accounts* page.  Click the *Create a new account*
+    button.
+
+    ![Empty accounts page](./setup/accounts-empty.png)
+
+ 4. Fill out the form to create your account.  All fields except for the
+    *Username* field can be changed later.
+
+    ![Create a new account](./setup/create-account.png)
+
+ 5. After you've created your account, you'll see the *Accounts* page with your
+    account listed.
+
+    ![Accounts page](./setup/accounts.png)
+
+ 6. Since Hollo is headless, you'll need to use a Mastodon-compatible client app
+    like [Phanpy] to interact with it.  Here we use Phanpy as an example.
+
+    Go to **https://phanpy.social/** and click *Log in with Mastodon* button
+    to start logging in.
+
+ 7. Enter your Hollo domain name and click *Continue*.
+
+    ![Phanpy](./setup/phanpy-login.png)
+
+ 8. At this point, you may be asked to sign in to your Hollo account.  Enter
+    your username and password and click *Sign in*.
+
+    If you're not asked to sign in, skip to the next step.
+
+ 9. You'll see the *Authorize Phanpy* page.  Click *Allow* to authorize Phanpy
+    to access your Hollo account.
+
+    ![Authorize Phanpy](./setup/authorize.png)
+
+10. That's it!  You're now logged in to your Hollo account using Phanpy.
+
+    The timeline will be empty at first, but you can start posting and
+    following other users.  If you want to follow the official Hollo account,
+    search for `@hollo@hollo.social` and click the *Follow* button in the
+    profile page.
+
+    Enojoy!
+
+    ![Phanpy](./setup/phanpy.png)
+
+[Phanpy]: https://phanpy.social/
+</Steps>

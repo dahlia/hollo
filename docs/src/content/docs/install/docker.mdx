@@ -1,0 +1,52 @@
+---
+title: Deploy using Docker
+description: How to deploy Hollo using Docker.
+---
+
+Hollo provides the official Docker images on [GitHub Packages].  You can use
+them to deploy Hollo on your server or your local machine:
+
+~~~~ sh frame="none"
+docker pull ghcr.io/dahlia/hollo:latest
+~~~~
+
+To run Hollo, you need to set up a PostgreSQL database, Redis, and
+an S3-compatible object storage for media storage.  You can use the
+official Docker images for [PostgreSQL] and [Redis], and you can use
+[MinIO] for the S3-compatible object storage.  Or you can use other
+managed services like AWS [RDS], [ElastiCache], and [S3].
+
+To connect Hollo to these services, you need to set the environment
+variables through `docker run` command's [`-e`/`--env` option or
+`--env-file` option][1].  To list the environment variables that Hollo
+supports, see the [*Environment variables*](./env) chapter.
+
+[GitHub Packages]: https://github.com/dahlia/hollo/pkgs/container/hollo
+[PostgreSQL]: https://hub.docker.com/_/postgres
+[Redis]: https://hub.docker.com/_/redis
+[MinIO]: https://hub.docker.com/r/minio/minio
+[RDS]: https://aws.amazon.com/rds/
+[ElastiCache]: https://aws.amazon.com/elasticache/
+[S3]: https://aws.amazon.com/s3/
+[1]: https://docs.docker.com/reference/cli/docker/container/run/#env
+
+
+Docker Compose
+--------------
+
+import { Code } from "@astrojs/starlight/components";
+import composeYaml from "./docker/compose-yaml?raw";
+
+To wire up these services, you can use [Docker Compose].  Here's an example
+*compose.yaml* file:
+
+<Code code={composeYaml} lang="yaml" title="compose.yaml" />
+
+Save this file as *compose.yaml* in your working directory, and then run
+the following command:
+
+~~~~ sh frame="none"
+docker compose up -d
+~~~~
+
+[Docker Compose]: https://docs.docker.com/compose/

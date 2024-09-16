@@ -1,0 +1,128 @@
+---
+title: Manual installation
+description: How to install Hollo manually.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Hollo can be installed manually on your server.  This guide will walk you
+through the process of setting up Hollo on your server.  It assumes you have
+some experience with running web applications and are comfortable with the
+command line.
+
+<Aside type="tip">
+  If you are not comfortable with Unix-like systems or prefer a more automated
+  way to deploy Hollo, you can use [Railway] to deploy Hollo with just a few
+  clicks.
+
+  [Railway]: ./railway
+</Aside>
+
+
+Prerequisites
+-------------
+
+Before you start, make sure you have the following software installed on your
+server:
+
+ -  [Git]
+ -  [Bun]
+ -  [PostgreSQL]
+ -  [Redis]
+ -  L7 load balancer (e.g., [nginx], [Caddy])
+ -  A domain name pointing to your server
+
+[Git]: https://git-scm.com/
+[Bun]: https://bun.sh/
+[PostgreSQL]: https://www.postgresql.org/
+[Redis]: https://redis.io/
+[nginx]: https://nginx.org/
+[Caddy]: https://caddyserver.com/
+
+
+Installation
+------------
+
+import { Steps } from "@astrojs/starlight/components";
+
+<Aside>
+  Hollo currently doesn't have a stable release.  You can check out the latest
+  code from the `main` branch on GitHub.
+</Aside>
+
+<Steps>
+ 1. Check out Hollo's latest code from [GitHub]:
+
+    ~~~~ sh frame="none"
+    git clone https://github.com/dahlia/hollo.git
+    cd hollo/
+    ~~~~
+
+ 2. Install the dependencies using Bun:
+
+    ~~~~ sh frame="none"
+    bun install
+    ~~~~
+
+ 3. Create a PostgreSQL user and database for Hollo:
+
+    ~~~~ sh frame="none"
+    createuser --createdb --pwprompt hollo
+    createdb --username=hollo --encoding=utf8 --template=postgres hollo
+    ~~~~
+
+ 4. Create a configuration file for Hollo:
+
+    ~~~~ sh frame="none"
+    cp .env.sample .env
+    ~~~~
+
+[GitHub]: https://github.com/dahlia/hollo
+</Steps>
+
+
+Configuration
+-------------
+
+Once you've installed Hollo, you need to configure it.  Open the *.env* file
+you created earlier and adjust the environment variables.
+
+See the [*Environment variables*](./env) chapter for details on how to configure
+Hollo.
+
+
+Starting the server
+-------------------
+
+To start the server, run the following command:
+
+~~~~ sh frame="none"
+bun prod
+~~~~
+
+
+Upgrading Hollo
+---------------
+
+To upgrade Hollo, just pull the latest code from GitHub and reinstall the
+dependencies:
+
+<Steps>
+ 1. Pull the latest code from GitHub:
+
+    ~~~~ sh frame="none"
+    git pull
+    ~~~~
+
+ 2. Reinstall the dependencies:
+
+    ~~~~ sh frame="none"
+    bun install
+    ~~~~
+
+ 3. Restart the server:
+
+    ~~~~ sh frame="none"
+    bun prod
+    ~~~~
+</Steps>

@@ -1,0 +1,75 @@
+---
+title: Welcome to Hollo
+description: >-
+  Hollo is a federated microblogging software for single-users.
+template: splash
+hero:
+  tagline: >-
+    A federated microblogging software for single-users.
+    ActivityPub-enabled, Mastodon-compatible API, supports CommonMark and
+    Misskey-style quotes.
+  image:
+    light: ../../assets/logo-black.svg
+    dark: ../../assets/logo-white.svg
+  actions:
+  - text: What is Hollo?
+    link: intro
+    icon: right-arrow
+    variant: secondary
+  - text: Install
+    link: install/railway
+    icon: rocket
+    variant: primary
+  - text: Official instance
+    link: https://hollo.social/@hollo
+    icon: external
+    variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid>
+  <Card title="For single-users" icon="seti:lock">
+    Hollo is designed for single-users, so you can own your instance
+    and have full control over your data. It's perfect for personal microblogs,
+    notes, and journals.
+  </Card>
+  <Card title="Multiple accounts" icon="seti:folder">
+    Although Hollo is designed for single-users, you can have multiple accounts
+    on the same instance. You can switch between accounts easily, and each
+    account has its own profile, posts, and settings.
+  </Card>
+  <Card title="Mastodon-compatible API" icon="puzzle">
+    Hollo is headless; instead, it complies with the [Mastodon API],
+    so that you can use any Mastodon-compatible client to interact with it.
+
+    [Mastodon API]: https://docs.joinmastodon.org/methods/
+  </Card>
+  <Card title="CommonMark" icon="seti:markdown">
+    You can compose your posts in [CommonMark] (so-called Markdown),
+    and Hollo will render them for you&mdash;of course, other fediverse software
+    will render them as well.  Moreover, you're allowed up to 4,096 characters
+    per post.
+
+    [CommonMark]: https://commonmark.org/
+  </Card>
+  <Card title="Misskey-style quotes" icon="comment">
+    Hollo supports [Misskey]-style quotes, so you can quote other posts
+    in your own posts. It's compatible with other fediverse software that
+    supports Misskey-style quotes, e.g., Misskey, [Akkoma], [Fedibird],
+    [Threads].
+
+    [Misskey]: https://misskey-hub.net/
+    [Akkoma]: https://akkoma.social/
+    [Fedibird]: https://github.com/fedibird/mastodon
+    [Threads]: https://www.threads.net/
+  </Card>
+  <Card title="Powered by Fedify &amp; Bun" icon="bun">
+    Hollo is powered by [Fedify], an ActivityPub server framework for TypeScript.
+    It's built on top of [Bun], an alternative super-fast JavaScript runtime
+    to Node.js.
+
+    [Fedify]: https://fedify.dev/
+    [Bun]: https://bun.sh/
+  </Card>
+</CardGrid>
