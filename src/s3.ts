@@ -9,6 +9,7 @@ export const s3 = new S3Client({
   region: region == null || region === "" ? "auto" : region,
   // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
   endpoint: process.env["S3_ENDPOINT_URL"],
+  // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
   forcePathStyle: process.env["S3_FORCE_PATH_STYLE"] === "true",
 });
 
