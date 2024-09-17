@@ -117,12 +117,32 @@ export async function persistPost(
       }
     }
   }
+  const tags: Record<string, string> = {};
+  let objectLink: URL | null = null; // FEP-e232
+  for await (const tag of object.getTags()) {
+    if (tag instanceof Hashtag && tag.name != null && tag.href != null) {
+      tags[tag.name.toString()] = tag.href.href;
+    } else if (
+      objectLink == null &&
+      tag instanceof Link &&
+      (tag.mediaType === "application/activity+json" ||
+        tag.mediaType?.match(
+          /^application\/ld\+json\s*;\s*profile="https:\/\/www\.w3\.org\/ns\/activitystreams"/,
+        )) &&
+      tag.href != null
+    ) {
+      objectLink = tag.href;
+    }
+  }
   let quoteTargetId: string | null = null;
-  if (object.quoteUrl != null) {
+  if (objectLink == null && object.quoteUrl != null) {
+    objectLink = object.quoteUrl;
+  }
+  if (objectLink != null) {
     const result = await db
       .select({ id: posts.id })
       .from(posts)
-      .where(eq(posts.iri, object.quoteUrl.href))
+      .where(eq(posts.iri, objectLink.href))
       .limit(1);
     if (result != null && result.length > 0) {
       quoteTargetId = result[0].id;
@@ -131,7 +151,7 @@ export async function persistPost(
       });
     } else {
       logger.debug("Persisting the quote target...");
-      const quoteTarget = await lookupObject(object.quoteUrl, options);
+      const quoteTarget = await lookupObject(objectLink, options);
       if (
         quoteTarget instanceof Note ||
         quoteTarget instanceof Article ||
@@ -147,12 +167,6 @@ export async function persistPost(
   }
   const to = new Set(object.toIds.map((url) => url.href));
   const cc = new Set(object.ccIds.map((url) => url.href));
-  const tags: Record<string, string> = {};
-  for await (const tag of object.getTags()) {
-    if (tag instanceof Hashtag && tag.name != null && tag.href != null) {
-      tags[tag.name.toString()] = tag.href.href;
-    }
-  }
   const replies = await object.getReplies();
   const previewLink =
     object.content == null
@@ -639,6 +653,20 @@ export function toObject(
             href: new URL(url),
           }),
       ),
+      ...(post.quoteTarget == null
+        ? []
+        : [
+            new Link({
+              mediaType:
+                'application/ld+json; profile="https://www.w3.org/ns/activitystreams"',
+              href: new URL(post.quoteTarget.iri),
+              name:
+                post.quoteTarget.url != null &&
+                post.content?.includes(post.quoteTarget.url)
+                  ? post.quoteTarget.url
+                  : post.quoteTarget.iri,
+            }),
+          ]),
     ],
     replyTarget:
       post.replyTarget == null ? null : new URL(post.replyTarget.iri),
