@@ -35,7 +35,7 @@ How to run
 ### Docker Compose
 
 > [!NOTE]
-> `DATABASE_URL` and `REDIS_URL` in `.env` will be ignored.
+> `DATABASE_URL`, `REDIS_URL`, `S3_*`, and `AWS_*` in `.env` will be ignored.
 
 ~~~~ sh
 docker compose up -d
