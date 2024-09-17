@@ -33,6 +33,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         push: true
+        platforms: linux/amd64, linux/arm64
         build-args:
           VERSION=${{ steps.version.outputs.value }}-dev.${{ github.run_number }}
         tags: |
@@ -57,7 +58,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         push: true
-        platforms: linux/amd64,linux/arm64
+        platforms: linux/amd64, linux/arm64
         build-args:
           VERSION=${{ steps.version.outputs.value }}
         tags: |
