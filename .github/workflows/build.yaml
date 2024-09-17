@@ -95,6 +95,8 @@ jobs:
     - run: |
         bun install
         bun run build
+      env:
+        PLAUSIBLE_DOMAIN: ${{ vars.PLAUSIBLE_DOMAIN }}
       working-directory: ${{ github.workspace }}/docs/
     - uses: actions/upload-pages-artifact@v3
       with:

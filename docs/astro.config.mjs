@@ -44,6 +44,19 @@ export default defineConfig({
           ],
         },
       ],
+      head:
+        process.env.PLAUSIBLE_DOMAIN == null
+          ? []
+          : [
+              {
+                tag: "script",
+                attrs: {
+                  defer: true,
+                  "data-domain": process.env.PLAUSIBLE_DOMAIN,
+                  src: "https://plausible.io/js/script.outbound-links.js",
+                },
+              },
+            ],
     }),
   ],
 });
