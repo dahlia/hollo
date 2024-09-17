@@ -152,6 +152,7 @@ export async function persistPost(
       tags[tag.name.toString()] = tag.href.href;
     }
   }
+  const replies = await object.getReplies();
   const previewLink =
     object.content == null
       ? null
@@ -190,7 +191,7 @@ export async function persistPost(
     tags: sql`${tags}::jsonb`,
     sensitive: object.sensitive ?? false,
     url: object.url instanceof Link ? object.url.href?.href : object.url?.href,
-    repliesCount: 0, // TODO
+    repliesCount: replies?.totalItems ?? 0,
     sharesCount: 0, // TODO
     likesCount: 0, // TODO
     published: toDate(object.published),
@@ -346,6 +347,17 @@ export async function persistPost(
       height: attachment.height ?? metadata.height!,
       ...thumbnail,
     } satisfies NewMedium);
+  }
+  if (replies != null) {
+    for await (const item of replies.getItems()) {
+      if (
+        item instanceof Article ||
+        item instanceof Note ||
+        item instanceof Question
+      ) {
+        await persistPost(db, item, options);
+      }
+    }
   }
   post = await db.query.posts.findFirst({
     where: eq(posts.iri, object.id.href),
@@ -773,3 +785,5 @@ export function getRecipients(
         : { sharedInbox: new URL(m.account.sharedInboxUrl) },
   }));
 }
+
+// cSpell: ignore ssrfcheck
