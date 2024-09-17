@@ -38,6 +38,7 @@ export async function persistAccount(
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
+    skipUpdate?: boolean;
   } = {},
 ): Promise<schema.Account | null> {
   const opts = { ...options, suppressError: true };
@@ -47,6 +48,12 @@ export async function persistAccount(
     (actor.name == null && actor.preferredUsername == null)
   ) {
     return null;
+  }
+  if (options.skipUpdate) {
+    const account = await db.query.accounts.findFirst({
+      where: eq(schema.accounts.iri, actor.id.href),
+    });
+    if (account != null) return account;
   }
   let handle: string;
   try {
@@ -113,6 +120,7 @@ export async function persistAccount(
         const post = await persistPost(db, item, {
           ...options,
           account,
+          skipUpdate: true,
         });
         if (post == null) continue;
         posts.unshift(post);

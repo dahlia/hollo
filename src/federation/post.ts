@@ -77,16 +77,23 @@ export async function persistPost(
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
     account?: Account;
+    skipUpdate?: boolean;
   } = {},
 ): Promise<schema.Post | null> {
   if (object.id == null) return null;
+  if (options.skipUpdate) {
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.iri, object.id.href),
+    });
+    if (post != null) return post;
+  }
   const actor = await object.getAttribution();
   logger.debug("Fetched actor: {actor}", { actor });
   if (!isActor(actor)) return null;
   const account =
     options?.account != null && options.account.iri === actor.id?.href
       ? options.account
-      : await persistAccount(db, actor, options);
+      : await persistAccount(db, actor, { ...options, skipUpdate: true });
   logger.debug("Persisted account: {account}", { account });
   if (account == null) return null;
   let replyTargetId: string | null = null;
@@ -109,7 +116,10 @@ export async function persistPost(
         replyTarget instanceof Article ||
         replyTarget instanceof Question
       ) {
-        const replyTargetObj = await persistPost(db, replyTarget, options);
+        const replyTargetObj = await persistPost(db, replyTarget, {
+          ...options,
+          skipUpdate: true,
+        });
         logger.debug("Persisted the reply target: {replyTarget}", {
           replyTarget: replyTargetObj,
         });
@@ -157,7 +167,10 @@ export async function persistPost(
         quoteTarget instanceof Article ||
         quoteTarget instanceof Question
       ) {
-        const quoteTargetObj = await persistPost(db, quoteTarget, options);
+        const quoteTargetObj = await persistPost(db, quoteTarget, {
+          ...options,
+          skipUpdate: true,
+        });
         logger.debug("Persisted the quote target: {quoteTarget}", {
           quoteTarget: quoteTargetObj,
         });
@@ -363,21 +376,21 @@ export async function persistPost(
       ...thumbnail,
     } satisfies NewMedium);
   }
-  if (replies != null) {
+  post = await db.query.posts.findFirst({
+    where: eq(posts.iri, object.id.href),
+    with: { account: true, media: true },
+  });
+  if (post != null && replies != null) {
     for await (const item of replies.getItems()) {
       if (
         item instanceof Article ||
         item instanceof Note ||
         item instanceof Question
       ) {
-        await persistPost(db, item, options);
+        await persistPost(db, item, { ...options, skipUpdate: true });
       }
     }
   }
-  post = await db.query.posts.findFirst({
-    where: eq(posts.iri, object.id.href),
-    with: { account: true, media: true },
-  });
   return post!;
 }
 
