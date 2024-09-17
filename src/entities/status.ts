@@ -98,6 +98,7 @@ export function getPostRelations(ownerId: string) {
     shares: { where: eq(posts.accountId, ownerId) },
     bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
     pin: true,
+    replies: true,
   } as const;
 }
 

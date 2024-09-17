@@ -250,6 +250,7 @@ federation
         poll: { with: { options: true } },
         mentions: { with: { account: true } },
         sharing: { with: { account: true } },
+        replies: true,
       },
     });
     return {
@@ -337,6 +338,7 @@ federation.setFeaturedDispatcher("/@{handle}/pinned", async (ctx, handle) => {
           media: true,
           poll: { with: { options: { orderBy: pollOptions.index } } },
           mentions: { with: { account: true } },
+          replies: true,
         },
       },
     },
@@ -533,6 +535,7 @@ federation
             },
           },
           mentions: { with: { account: true } },
+          replies: true,
         },
         where: eq(posts.pollId, vote.pollId),
       });
@@ -556,12 +559,36 @@ federation
       object instanceof Note ||
       object instanceof Question
     ) {
-      await db.transaction(async (tx) => {
+      const post = await db.transaction(async (tx) => {
         const post = await persistPost(tx, object, ctx);
         if (post?.replyTargetId != null) {
           await updatePostStats(tx, { id: post.replyTargetId });
         }
+        return post;
       });
+      if (post?.replyTargetId != null) {
+        // TODO: Forward activity to the followers
+        // https://github.com/dahlia/fedify/issues/137
+        const replyTarget = await db.query.posts.findFirst({
+          where: eq(posts.id, post.replyTargetId),
+          with: {
+            account: { with: { owner: true } },
+            replyTarget: true,
+            quoteTarget: true,
+            media: true,
+            poll: { with: { options: true } },
+            mentions: { with: { account: true } },
+            replies: true,
+          },
+        });
+        if (replyTarget?.account.owner != null) {
+          await ctx.sendActivity(
+            replyTarget.account.owner,
+            "followers",
+            toUpdate(replyTarget, ctx),
+          );
+        }
+      }
     } else {
       inboxLogger.debug("Unsupported object on Create: {object}", { object });
     }
@@ -790,6 +817,7 @@ federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
       media: true,
       poll: { with: { options: { orderBy: pollOptions.index } } },
       mentions: { with: { account: true } },
+      replies: true,
     },
   });
   if (post == null) return null;

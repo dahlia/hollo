@@ -9,6 +9,7 @@ import {
   LanguageString,
   Link,
   Note,
+  OrderedCollection,
   PUBLIC_COLLECTION,
   Question,
   type Recipient,
@@ -563,6 +564,7 @@ export function toObject(
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
+    replies: Post[];
   },
   ctx: Context<unknown>,
 ): Note | Article | Question {
@@ -640,6 +642,10 @@ export function toObject(
     ],
     replyTarget:
       post.replyTarget == null ? null : new URL(post.replyTarget.iri),
+    replies: new OrderedCollection({
+      totalItems: post.replies.length,
+      items: post.replies.map((r) => new URL(r.iri)),
+    }),
     attachments: post.media.map(
       (medium) =>
         new vocab.Image({
@@ -679,6 +685,7 @@ export function toCreate(
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
+    replies: Post[];
   },
   ctx: Context<unknown>,
 ): Create {
@@ -701,6 +708,7 @@ export function toUpdate(
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
+    replies: Post[];
   },
   ctx: Context<unknown>,
   updated?: Date,
@@ -727,6 +735,7 @@ export function toDelete(
     media: Medium[];
     poll: (Poll & { options: PollOption[] }) | null;
     mentions: (Mention & { account: Account })[];
+    replies: Post[];
   },
   ctx: Context<unknown>,
   deleted: Date = new Date(),
