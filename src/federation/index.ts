@@ -10,7 +10,10 @@ import {
   Follow,
   Hashtag,
   Image,
+  type KvStore,
   Like,
+  MemoryKvStore,
+  type MessageQueue,
   Note,
   PropertyValue,
   Question,
@@ -38,7 +41,7 @@ import {
 } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import db from "../db";
-import redis, { createRedis } from "../redis";
+import { createRedis, getRedisUrl } from "../redis";
 import {
   type NewLike,
   type NewPinnedPost,
@@ -63,12 +66,25 @@ import {
   updatePostStats,
 } from "./post";
 
-export const federation = createFederation({
-  kv: new RedisKvStore(redis),
-  queue: new RedisMessageQueue(createRedis, {
+const logger = getLogger(["hollo", "federation"]);
+
+let kv: KvStore;
+let queue: MessageQueue | undefined;
+
+if (getRedisUrl() == null) {
+  kv = new MemoryKvStore();
+  queue = undefined;
+  logger.warn(
+    "No REDIS_URL is defined, using in-memory store and in-process queue.",
+  );
+} else {
+  kv = new RedisKvStore(createRedis());
+  queue = new RedisMessageQueue(createRedis, {
     loopInterval: { seconds: 2, milliseconds: 500 },
-  }),
-});
+  });
+}
+
+export const federation = createFederation({ kv, queue });
 
 federation
   .setActorDispatcher("/@{handle}", async (ctx, handle) => {
