@@ -5,6 +5,7 @@ import {
   bigserial,
   boolean,
   foreignKey,
+  index,
   integer,
   json,
   jsonb,
@@ -314,6 +315,9 @@ export const posts = pgTable(
       table.accountId,
     ),
     uniquePollId: unique().on(table.pollId),
+    sharingIdIdx: index().on(table.sharingId),
+    actorIdSharingIdIdx: index().on(table.accountId, table.sharingId),
+    replyTargetIdIdx: index().on(table.replyTargetId),
   }),
 );
 
@@ -361,20 +365,28 @@ export const postRelations = relations(posts, ({ one, many }) => ({
   }),
 }));
 
-export const media = pgTable("media", {
-  id: uuid("id").primaryKey(),
-  postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
-  type: text("type").notNull(),
-  url: text("url").notNull(),
-  width: integer("width").notNull(),
-  height: integer("height").notNull(),
-  description: text("description"),
-  thumbnailType: text("thumbnail_type").notNull(),
-  thumbnailUrl: text("thumbnail_url").notNull(),
-  thumbnailWidth: integer("thumbnail_width").notNull(),
-  thumbnailHeight: integer("thumbnail_height").notNull(),
-  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
-});
+export const media = pgTable(
+  "media",
+  {
+    id: uuid("id").primaryKey(),
+    postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    url: text("url").notNull(),
+    width: integer("width").notNull(),
+    height: integer("height").notNull(),
+    description: text("description"),
+    thumbnailType: text("thumbnail_type").notNull(),
+    thumbnailUrl: text("thumbnail_url").notNull(),
+    thumbnailWidth: integer("thumbnail_width").notNull(),
+    thumbnailHeight: integer("thumbnail_height").notNull(),
+    created: timestamp("created", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    postIdIdx: index().on(table.postId),
+  }),
+);
 
 export type Medium = typeof media.$inferSelect;
 export type NewMedium = typeof media.$inferInsert;
@@ -453,6 +465,7 @@ export const pollVotes = pgTable(
       columns: [table.pollId, table.optionIndex],
       foreignColumns: [pollOptions.pollId, pollOptions.index],
     }),
+    pollIOdAccountIdIdx: index().on(table.pollId, table.accountId),
   }),
 );
 
@@ -585,6 +598,7 @@ export const bookmarks = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.accountOwnerId] }),
+    postIdAccountOwnerIdIdx: index().on(table.postId, table.accountOwnerId),
   }),
 );
 

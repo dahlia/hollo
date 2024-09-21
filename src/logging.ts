@@ -16,6 +16,7 @@ await configure({
   loggers: [
     { category: "fedify", level: LOG_LEVEL, sinks: ["console"] },
     { category: "hollo", level: LOG_LEVEL, sinks: ["console"] },
+    { category: "drizzle-orm", level: LOG_LEVEL, sinks: ["console"] },
     { category: ["logtape", "meta"], level: "warning", sinks: ["console"] },
   ],
 });
