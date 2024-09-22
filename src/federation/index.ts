@@ -14,6 +14,7 @@ import {
   Like,
   type MessageQueue,
   Note,
+  ParallelMessageQueue,
   PropertyValue,
   Question,
   Reject,
@@ -84,7 +85,10 @@ if (getRedisUrl() == null) {
   });
 }
 
-export const federation = createFederation({ kv, queue });
+export const federation = createFederation({
+  kv,
+  queue: new ParallelMessageQueue(queue, 10),
+});
 
 federation
   .setActorDispatcher("/@{handle}", async (ctx, handle) => {
