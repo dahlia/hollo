@@ -13,10 +13,11 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.577.0",
     "@aws-sdk/credential-providers": "^3.577.0",
-    "@fedify/fedify": "1.0.0-dev.388",
+    "@fedify/fedify": "^1.0.0-dev.410",
     "@fedify/markdown-it-hashtag": "0.2.0",
     "@fedify/markdown-it-mention": "^0.1.1",
-    "@fedify/redis": "^0.1.1",
+    "@fedify/postgres": "0.1.0-dev.4",
+    "@fedify/redis": "^0.2.0-dev.10",
     "@hono/zod-validator": "^0.2.1",
     "@js-temporal/polyfill": "^0.4.4",
     "@logtape/logtape": "^0.4.2",

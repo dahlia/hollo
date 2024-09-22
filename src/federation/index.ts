@@ -12,7 +12,6 @@ import {
   Image,
   type KvStore,
   Like,
-  MemoryKvStore,
   type MessageQueue,
   Note,
   PropertyValue,
@@ -26,6 +25,7 @@ import {
   importJwk,
   isActor,
 } from "@fedify/fedify";
+import { PostgresKvStore, PostgresMessageQueue } from "@fedify/postgres";
 import { RedisKvStore, RedisMessageQueue } from "@fedify/redis";
 import { getLogger } from "@logtape/logtape";
 import { parse } from "@std/semver";
@@ -40,7 +40,7 @@ import {
   like,
 } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
-import db from "../db";
+import { db, postgres } from "../db";
 import { createRedis, getRedisUrl } from "../redis";
 import {
   type NewLike,
@@ -69,13 +69,13 @@ import {
 const logger = getLogger(["hollo", "federation"]);
 
 let kv: KvStore;
-let queue: MessageQueue | undefined;
+let queue: MessageQueue;
 
 if (getRedisUrl() == null) {
-  kv = new MemoryKvStore();
-  queue = undefined;
+  kv = new PostgresKvStore(postgres);
+  queue = new PostgresMessageQueue(postgres);
   logger.warn(
-    "No REDIS_URL is defined, using in-memory store and in-process queue.",
+    "No REDIS_URL is defined, using PostgresKvStore and PostgresMessageQueue.",
   );
 } else {
   kv = new RedisKvStore(createRedis());

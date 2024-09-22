@@ -1,7 +1,7 @@
 import { getLogger } from "@logtape/logtape";
 import type { Logger } from "drizzle-orm/logger";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import createPostgres from "postgres";
 import * as schema from "./schema";
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
@@ -56,7 +56,7 @@ class LogTapeLogger implements Logger {
   }
 }
 
-const client = postgres(databaseUrl, { connect_timeout: 5 });
-export const db = drizzle(client, { schema, logger: new LogTapeLogger() });
+export const postgres = createPostgres(databaseUrl, { connect_timeout: 5 });
+export const db = drizzle(postgres, { schema, logger: new LogTapeLogger() });
 
 export default db;
