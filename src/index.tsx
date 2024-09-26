@@ -1,11 +1,11 @@
+import "./logging";
 import { federation } from "@fedify/fedify/x/hono";
 import { Hono } from "hono";
+import { behindProxy } from "x-forwarded-fetch";
 import api from "./api";
 import fedi from "./federation";
 import image from "./image";
 import oauth from "./oauth";
-import "./logging";
-import { behindProxy } from "x-forwarded-fetch";
 import pages from "./pages";
 const app = new Hono();
 

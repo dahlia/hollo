@@ -75,7 +75,7 @@ let queue: MessageQueue;
 if (getRedisUrl() == null) {
   kv = new PostgresKvStore(postgres);
   queue = new PostgresMessageQueue(postgres);
-  logger.warn(
+  logger.info(
     "No REDIS_URL is defined, using PostgresKvStore and PostgresMessageQueue.",
   );
 } else {
@@ -91,9 +91,9 @@ export const federation = createFederation({
 });
 
 federation
-  .setActorDispatcher("/@{handle}", async (ctx, handle) => {
+  .setActorDispatcher("/@{identifier}", async (ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: eq(accountOwners.handle, handle),
+      where: eq(accountOwners.handle, identifier),
       with: { account: true },
     });
     if (owner == null) return null;
@@ -102,7 +102,7 @@ federation
     return new cls({
       id: new URL(account.iri),
       name: account.name,
-      preferredUsername: handle,
+      preferredUsername: identifier,
       summary: account.bioHtml,
       url: account.url ? new URL(account.url) : null,
       manuallyApprovesFollowers: account.protected,
@@ -115,17 +115,17 @@ federation
       published: account.published
         ? toTemporalInstant(account.published)
         : null,
-      publicKey: (await ctx.getActorKeyPairs(handle))[0].cryptographicKey,
-      assertionMethods: (await ctx.getActorKeyPairs(handle)).map(
+      publicKey: (await ctx.getActorKeyPairs(identifier))[0].cryptographicKey,
+      assertionMethods: (await ctx.getActorKeyPairs(identifier)).map(
         (pair) => pair.multikey,
       ),
-      followers: ctx.getFollowersUri(handle),
-      following: ctx.getFollowingUri(handle),
-      outbox: ctx.getOutboxUri(handle),
-      liked: ctx.getLikedUri(handle),
-      featured: ctx.getFeaturedUri(handle),
-      featuredTags: ctx.getFeaturedTagsUri(handle),
-      inbox: ctx.getInboxUri(handle),
+      followers: ctx.getFollowersUri(identifier),
+      following: ctx.getFollowingUri(identifier),
+      outbox: ctx.getOutboxUri(identifier),
+      liked: ctx.getLikedUri(identifier),
+      featured: ctx.getFeaturedUri(identifier),
+      featuredTags: ctx.getFeaturedTagsUri(identifier),
+      inbox: ctx.getInboxUri(identifier),
       endpoints: new Endpoints({
         sharedInbox: ctx.getInboxUri(),
       }),
@@ -138,9 +138,9 @@ federation
       ),
     });
   })
-  .setKeyPairsDispatcher(async (_ctx, handle) => {
+  .setKeyPairsDispatcher(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: eq(accountOwners.handle, handle),
+      where: eq(accountOwners.handle, identifier),
     });
     if (owner == null) return [];
     return [
@@ -157,10 +157,10 @@ federation
 
 federation
   .setFollowersDispatcher(
-    "/@{handle}/followers",
-    async (_ctx, handle, cursor, filter) => {
+    "/@{identifier}/followers",
+    async (_ctx, identifier, cursor, filter) => {
       const owner = await db.query.accountOwners.findFirst({
-        where: eq(accountOwners.handle, handle),
+        where: eq(accountOwners.handle, identifier),
       });
       if (owner == null || cursor == null) return null;
       const offset = Number.parseInt(cursor);
@@ -199,10 +199,10 @@ federation
       };
     },
   )
-  .setFirstCursor(async (_ctx, _handle) => "0")
-  .setCounter(async (_ctx, handle) => {
+  .setFirstCursor(async (_ctx, _identifier) => "0")
+  .setCounter(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: eq(accountOwners.handle, handle),
+      where: eq(accountOwners.handle, identifier),
       with: { account: true },
     });
     return owner == null ? 0 : owner.account.followersCount;
@@ -210,10 +210,10 @@ federation
 
 federation
   .setFollowingDispatcher(
-    "/@{handle}/following",
-    async (_ctx, handle, cursor) => {
+    "/@{identifier}/following",
+    async (_ctx, identifier, cursor) => {
       const owner = await db.query.accountOwners.findFirst({
-        where: eq(accountOwners.handle, handle),
+        where: eq(accountOwners.handle, identifier),
       });
       if (owner == null || cursor == null) return null;
       const offset = Number.parseInt(cursor);
@@ -241,51 +241,55 @@ federation
       };
     },
   )
-  .setFirstCursor(async (_ctx, _handle) => "0")
-  .setCounter(async (_ctx, handle) => {
+  .setFirstCursor(async (_ctx, _identifier) => "0")
+  .setCounter(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: eq(accountOwners.handle, handle),
+      where: eq(accountOwners.handle, identifier),
       with: { account: true },
     });
     return owner == null ? 0 : owner.account.followingCount;
   });
 
 federation
-  .setOutboxDispatcher("/@{handle}/outbox", async (ctx, handle, cursor) => {
-    if (cursor == null) return null;
+  .setOutboxDispatcher(
+    "/@{identifier}/outbox",
+    async (ctx, identifier, cursor) => {
+      if (cursor == null) return null;
+      const owner = await db.query.accountOwners.findFirst({
+        where: eq(accountOwners.handle, identifier),
+      });
+      if (owner == null) return null;
+      const items = await db.query.posts.findMany({
+        where: eq(posts.accountId, owner.id),
+        orderBy: desc(posts.published),
+        offset: Number.parseInt(cursor),
+        limit: 41,
+        with: {
+          account: { with: { owner: true } },
+          replyTarget: true,
+          quoteTarget: true,
+          media: true,
+          poll: { with: { options: true } },
+          mentions: { with: { account: true } },
+          sharing: { with: { account: true } },
+          replies: true,
+        },
+      });
+      return {
+        items: items
+          .slice(0, 40)
+          .map((p) =>
+            p.sharing == null ? toCreate(p, ctx) : toAnnounce(p, ctx),
+          ),
+        nextCursor:
+          items.length > 40 ? `${Number.parseInt(cursor) + 40}` : null,
+      };
+    },
+  )
+  .setFirstCursor(async (_ctx, _identifier) => "0")
+  .setCounter(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: eq(accountOwners.handle, handle),
-    });
-    if (owner == null) return null;
-    const items = await db.query.posts.findMany({
-      where: eq(posts.accountId, owner.id),
-      orderBy: desc(posts.published),
-      offset: Number.parseInt(cursor),
-      limit: 41,
-      with: {
-        account: { with: { owner: true } },
-        replyTarget: true,
-        quoteTarget: true,
-        media: true,
-        poll: { with: { options: true } },
-        mentions: { with: { account: true } },
-        sharing: { with: { account: true } },
-        replies: true,
-      },
-    });
-    return {
-      items: items
-        .slice(0, 40)
-        .map((p) =>
-          p.sharing == null ? toCreate(p, ctx) : toAnnounce(p, ctx),
-        ),
-      nextCursor: items.length > 40 ? `${Number.parseInt(cursor) + 40}` : null,
-    };
-  })
-  .setFirstCursor(async (_ctx, _handle) => "0")
-  .setCounter(async (_ctx, handle) => {
-    const owner = await db.query.accountOwners.findFirst({
-      where: eq(accountOwners.handle, handle),
+      where: eq(accountOwners.handle, identifier),
     });
     if (owner == null) return null;
     const result = await db
@@ -297,39 +301,43 @@ federation
   });
 
 federation
-  .setLikedDispatcher("/@{handle}/liked", async (_ctx, handle, cursor) => {
-    if (cursor == null) return null;
+  .setLikedDispatcher(
+    "/@{identifier}/liked",
+    async (_ctx, identifier, cursor) => {
+      if (cursor == null) return null;
+      const owner = await db.query.accountOwners.findFirst({
+        where: eq(accountOwners.handle, identifier),
+        with: { account: true },
+      });
+      if (owner == null) return null;
+      const items = await db.query.likes.findMany({
+        where: eq(likes.accountId, owner.id),
+        orderBy: desc(likes.created),
+        offset: Number.parseInt(cursor),
+        limit: 41,
+        with: { post: true },
+      });
+      return {
+        items: items.slice(0, 40).map(
+          (like) =>
+            new Like({
+              id: new URL(
+                `#likes/${like.created.toISOString()}`,
+                owner.account.iri,
+              ),
+              actor: new URL(owner.account.iri),
+              object: new URL(like.post.iri),
+            }),
+        ),
+        nextCursor:
+          items.length > 40 ? `${Number.parseInt(cursor) + 40}` : null,
+      };
+    },
+  )
+  .setFirstCursor(async (_ctx, _identifier) => "0")
+  .setCounter(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
-      where: eq(accountOwners.handle, handle),
-      with: { account: true },
-    });
-    if (owner == null) return null;
-    const items = await db.query.likes.findMany({
-      where: eq(likes.accountId, owner.id),
-      orderBy: desc(likes.created),
-      offset: Number.parseInt(cursor),
-      limit: 41,
-      with: { post: true },
-    });
-    return {
-      items: items.slice(0, 40).map(
-        (like) =>
-          new Like({
-            id: new URL(
-              `#likes/${like.created.toISOString()}`,
-              owner.account.iri,
-            ),
-            actor: new URL(owner.account.iri),
-            object: new URL(like.post.iri),
-          }),
-      ),
-      nextCursor: items.length > 40 ? `${Number.parseInt(cursor) + 40}` : null,
-    };
-  })
-  .setFirstCursor(async (_ctx, _handle) => "0")
-  .setCounter(async (_ctx, handle) => {
-    const owner = await db.query.accountOwners.findFirst({
-      where: eq(accountOwners.handle, handle),
+      where: eq(accountOwners.handle, identifier),
     });
     if (owner == null) return null;
     const result = await db
@@ -340,57 +348,63 @@ federation
     return result[0].cnt;
   });
 
-federation.setFeaturedDispatcher("/@{handle}/pinned", async (ctx, handle) => {
-  const owner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.handle, handle),
-    with: { account: true },
-  });
-  if (owner == null) return null;
-  const items = await db.query.pinnedPosts.findMany({
-    where: eq(pinnedPosts.accountId, owner.id),
-    orderBy: desc(pinnedPosts.index),
-    with: {
-      post: {
-        with: {
-          account: { with: { owner: true } },
-          replyTarget: true,
-          quoteTarget: true,
-          media: true,
-          poll: { with: { options: { orderBy: pollOptions.index } } },
-          mentions: { with: { account: true } },
-          replies: true,
+federation.setFeaturedDispatcher(
+  "/@{identifier}/pinned",
+  async (ctx, identifier) => {
+    const owner = await db.query.accountOwners.findFirst({
+      where: eq(accountOwners.handle, identifier),
+      with: { account: true },
+    });
+    if (owner == null) return null;
+    const items = await db.query.pinnedPosts.findMany({
+      where: eq(pinnedPosts.accountId, owner.id),
+      orderBy: desc(pinnedPosts.index),
+      with: {
+        post: {
+          with: {
+            account: { with: { owner: true } },
+            replyTarget: true,
+            quoteTarget: true,
+            media: true,
+            poll: { with: { options: { orderBy: pollOptions.index } } },
+            mentions: { with: { account: true } },
+            replies: true,
+          },
         },
       },
-    },
-  });
-  return {
-    items: items
-      .map((p) => p.post)
-      .filter((p) => p.visibility === "public" || p.visibility === "unlisted")
-      .map((p) => toObject(p, ctx)),
-  };
-});
+    });
+    return {
+      items: items
+        .map((p) => p.post)
+        .filter((p) => p.visibility === "public" || p.visibility === "unlisted")
+        .map((p) => toObject(p, ctx)),
+    };
+  },
+);
 
-federation.setFeaturedTagsDispatcher("/@{handle}/tags", async (ctx, handle) => {
-  const owner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.handle, handle),
-    with: { account: true, featuredTags: true },
-  });
-  if (owner == null) return null;
-  const items = owner.featuredTags.map(
-    (tag) =>
-      new Hashtag({
-        name: `#${tag.name}`,
-        href: new URL(`/tags/${tag.name}?handle=${owner.handle}`, ctx.url),
-      }),
-  );
-  return { items };
-});
+federation.setFeaturedTagsDispatcher(
+  "/@{identifier}/tags",
+  async (ctx, identifier) => {
+    const owner = await db.query.accountOwners.findFirst({
+      where: eq(accountOwners.handle, identifier),
+      with: { account: true, featuredTags: true },
+    });
+    if (owner == null) return null;
+    const items = owner.featuredTags.map(
+      (tag) =>
+        new Hashtag({
+          name: `#${tag.name}`,
+          href: new URL(`/tags/${tag.name}?handle=${owner.handle}`, ctx.url),
+        }),
+    );
+    return { items };
+  },
+);
 
 const inboxLogger = getLogger(["hollo", "inbox"]);
 
 federation
-  .setInboxListeners("/@{handle}/inbox", "/inbox")
+  .setInboxListeners("/@{identifier}/inbox", "/inbox")
   .setSharedKeyDispatcher(async (_) => {
     const anyOwner = await db.query.accountOwners.findFirst();
     return anyOwner ?? null;
@@ -428,7 +442,7 @@ federation
       .onConflictDoNothing();
     if (!following.protected) {
       await ctx.sendActivity(
-        following.owner,
+        { username: following.owner.handle },
         actor,
         new Accept({
           id: new URL(
@@ -561,7 +575,7 @@ federation
       });
       if (post?.account.owner == null || post.poll == null) return;
       await ctx.sendActivity(
-        post.account.owner,
+        { username: post.account.owner.handle },
         post.poll.votes.map((v) => ({
           id: new URL(v.account.iri),
           inboxId: new URL(v.account.inboxUrl),
@@ -603,7 +617,7 @@ federation
         });
         if (replyTarget?.account.owner != null) {
           await ctx.sendActivity(
-            replyTarget.account.owner,
+            { username: replyTarget.account.owner.handle },
             "followers",
             toUpdate(replyTarget, ctx),
           );
@@ -822,44 +836,53 @@ federation
     }
   });
 
-federation.setObjectDispatcher(Note, "/@{handle}/{id}", async (ctx, values) => {
-  const owner = await db.query.accountOwners.findFirst({
-    where: like(accountOwners.handle, values.handle),
-    with: { account: true },
-  });
-  if (owner == null) return null;
-  const post = await db.query.posts.findFirst({
-    where: and(eq(posts.id, values.id), eq(posts.accountId, owner.account.id)),
-    with: {
-      account: { with: { owner: true } },
-      replyTarget: true,
-      quoteTarget: true,
-      media: true,
-      poll: { with: { options: { orderBy: pollOptions.index } } },
-      mentions: { with: { account: true } },
-      replies: true,
-    },
-  });
-  if (post == null) return null;
-  if (post.visibility === "private") {
-    const keyOwner = await ctx.getSignedKeyOwner();
-    if (keyOwner?.id == null) return null;
-    const found = await db.query.follows.findFirst({
-      where: and(
-        eq(follows.followerId, keyOwner.id.href),
-        eq(follows.followingId, owner.id),
-      ),
+federation.setObjectDispatcher(
+  Note,
+  "/@{username}/{id}",
+  async (ctx, values) => {
+    const owner = await db.query.accountOwners.findFirst({
+      where: like(accountOwners.handle, values.username),
+      with: { account: true },
     });
-    if (found == null) return null;
-  } else if (post.visibility === "direct") {
-    const keyOwner = await ctx.getSignedKeyOwner();
-    const keyOwnerId = keyOwner?.id;
-    if (keyOwnerId == null) return null;
-    const found = post.mentions.some((m) => m.account.iri === keyOwnerId.href);
-    if (!found) return null;
-  }
-  return toObject(post, ctx);
-});
+    if (owner == null) return null;
+    const post = await db.query.posts.findFirst({
+      where: and(
+        eq(posts.id, values.id),
+        eq(posts.accountId, owner.account.id),
+      ),
+      with: {
+        account: { with: { owner: true } },
+        replyTarget: true,
+        quoteTarget: true,
+        media: true,
+        poll: { with: { options: { orderBy: pollOptions.index } } },
+        mentions: { with: { account: true } },
+        replies: true,
+      },
+    });
+    if (post == null) return null;
+    if (post.visibility === "private") {
+      const keyOwner = await ctx.getSignedKeyOwner();
+      if (keyOwner?.id == null) return null;
+      const found = await db.query.follows.findFirst({
+        where: and(
+          eq(follows.followerId, keyOwner.id.href),
+          eq(follows.followingId, owner.id),
+        ),
+      });
+      if (found == null) return null;
+    } else if (post.visibility === "direct") {
+      const keyOwner = await ctx.getSignedKeyOwner();
+      const keyOwnerId = keyOwner?.id;
+      if (keyOwnerId == null) return null;
+      const found = post.mentions.some(
+        (m) => m.account.iri === keyOwnerId.href,
+      );
+      if (!found) return null;
+    }
+    return toObject(post, ctx);
+  },
+);
 
 federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
   return {
