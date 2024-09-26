@@ -1,4 +1,4 @@
-FROM docker.io/oven/bun:1.1.17-alpine
+FROM docker.io/oven/bun:1.1.29-alpine
 
 LABEL org.opencontainers.image.title Hollo
 LABEL org.opencontainers.image.description \
