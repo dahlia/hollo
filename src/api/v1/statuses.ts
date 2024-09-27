@@ -114,7 +114,7 @@ app.post(
     const data = c.req.valid("json");
     const handle = owner.handle;
     const id = uuidv7();
-    const url = fedCtx.getObjectUri(Note, { handle, id });
+    const url = fedCtx.getObjectUri(Note, { username: handle, id });
     const published = new Date();
     const content =
       data.status == null ? null : await formatText(db, data.status, fmtOpts);
@@ -633,7 +633,7 @@ app.post(
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const id = uuidv7();
-    const url = fedCtx.getObjectUri(Note, { handle: owner.handle, id });
+    const url = fedCtx.getObjectUri(Note, { username: owner.handle, id });
     const published = new Date();
     await db.transaction(async (tx) => {
       await tx.insert(posts).values({
