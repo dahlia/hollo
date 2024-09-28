@@ -1,5 +1,6 @@
 import xss from "xss";
 import type { Account, AccountOwner } from "../schema";
+import { serializeEmojis } from "./emoji";
 
 export function serializeAccount(account: Account, baseUrl: URL | string) {
   const username = account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
@@ -29,7 +30,7 @@ export function serializeAccount(account: Account, baseUrl: URL | string) {
     following_count: account.followingCount,
     statuses_count: account.postsCount,
     last_status_at: null,
-    emojis: [],
+    emojis: serializeEmojis(account.emojis),
     fields: Object.entries(account.fieldHtmls).map(([name, value]) => ({
       name,
       value,

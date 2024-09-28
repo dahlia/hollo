@@ -253,6 +253,13 @@
       "when": 1726896082133,
       "tag": "0035_indices",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "6",
+      "when": 1727530292800,
+      "tag": "0036_emojis",
+      "breakpoints": true
     }
   ]
 }

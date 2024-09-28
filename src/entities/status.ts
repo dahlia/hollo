@@ -21,6 +21,7 @@ import {
 } from "../schema";
 import { extractText } from "../text";
 import { serializeAccount } from "./account";
+import { serializeEmojis } from "./emoji";
 import { serializeMedium } from "./medium";
 import { serializePoll } from "./poll";
 
@@ -238,7 +239,7 @@ export function serializePost(
     })),
     card:
       post.previewCard == null ? null : serializePreviewCard(post.previewCard),
-    emojis: [], // TODO
+    emojis: serializeEmojis(post.emojis),
     poll:
       post.poll == null ? null : serializePoll(post.poll, currentAccountOwner),
   };

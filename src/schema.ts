@@ -61,6 +61,7 @@ export const accounts = pgTable("accounts", {
     .notNull()
     .default({})
     .$type<Record<string, string>>(),
+  emojis: jsonb("emojis").notNull().default({}).$type<Record<string, string>>(),
   sensitive: boolean("sensitive").notNull().default(false),
   published: timestamp("published", { withTimezone: true }),
   updated: timestamp("updated", { withTimezone: true }).notNull().defaultNow(),
@@ -298,6 +299,10 @@ export const posts = pgTable(
     }),
     language: text("language"),
     tags: jsonb("tags").notNull().default({}).$type<Record<string, string>>(),
+    emojis: jsonb("emojis")
+      .notNull()
+      .default({})
+      .$type<Record<string, string>>(),
     sensitive: boolean("sensitive").notNull().default(false),
     url: text("url"),
     previewCard: jsonb("preview_card").$type<PreviewCard>(),

@@ -5,6 +5,7 @@ import {
   type Context,
   Create,
   type DocumentLoader,
+  Emoji,
   Hashtag,
   LanguageString,
   Link,
@@ -87,7 +88,7 @@ export async function persistPost(
     });
     if (post != null) return post;
   }
-  const actor = await object.getAttribution();
+  const actor = await object.getAttribution(options);
   logger.debug("Fetched actor: {actor}", { actor });
   if (!isActor(actor)) return null;
   const account =
@@ -110,7 +111,7 @@ export async function persistPost(
       });
     } else {
       logger.debug("Persisting the reply target...");
-      const replyTarget = await object.getReplyTarget();
+      const replyTarget = await object.getReplyTarget(options);
       if (
         replyTarget instanceof Note ||
         replyTarget instanceof Article ||
@@ -128,10 +129,20 @@ export async function persistPost(
     }
   }
   const tags: Record<string, string> = {};
+  const emojis: Record<string, string> = {};
   let objectLink: URL | null = null; // FEP-e232
-  for await (const tag of object.getTags()) {
+  for await (const tag of object.getTags(options)) {
     if (tag instanceof Hashtag && tag.name != null && tag.href != null) {
       tags[tag.name.toString()] = tag.href.href;
+    } else if (tag instanceof Emoji && tag.name != null) {
+      const icon = await tag.getIcon();
+      if (icon?.url == null) continue;
+      let href: string;
+      if (icon.url instanceof Link) {
+        if (icon.url.href == null) continue;
+        href = icon.url.href.href;
+      } else href = icon.url.href;
+      emojis[tag.name.toString()] = href;
     } else if (
       objectLink == null &&
       tag instanceof Link &&
@@ -180,7 +191,7 @@ export async function persistPost(
   }
   const to = new Set(object.toIds.map((url) => url.href));
   const cc = new Set(object.ccIds.map((url) => url.href));
-  const replies = await object.getReplies();
+  const replies = await object.getReplies(options);
   const previewLink =
     object.content == null
       ? null
@@ -217,6 +228,7 @@ export async function persistPost(
     previewCard,
     // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
     tags: sql`${tags}::jsonb`,
+    emojis: sql`${emojis}::jsonb`,
     sensitive: object.sensitive ?? false,
     url: object.url instanceof Link ? object.url.href?.href : object.url?.href,
     repliesCount: replies?.totalItems ?? 0,
