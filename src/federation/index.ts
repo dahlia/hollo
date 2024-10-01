@@ -6,6 +6,7 @@ import {
   Article,
   Create,
   Delete,
+  EmojiReact,
   Endpoints,
   Follow,
   Hashtag,
@@ -44,7 +45,6 @@ import metadata from "../../package.json" with { type: "json" };
 import { db, postgres } from "../db";
 import { createRedis, getRedisUrl } from "../redis";
 import {
-  type NewLike,
   type NewPinnedPost,
   accountOwners,
   accounts,
@@ -56,6 +56,12 @@ import {
 } from "../schema";
 import { persistAccount, updateAccountStats } from "./account";
 import { toTemporalInstant } from "./date";
+import {
+  onEmojiReactionAdded,
+  onEmojiReactionRemoved,
+  onLiked,
+  onUnliked,
+} from "./inbox";
 import {
   persistPollVote,
   persistPost,
@@ -85,7 +91,7 @@ if (getRedisUrl() == null) {
   });
 }
 
-export const federation = createFederation({
+export const federation = createFederation<void>({
   kv,
   queue: new ParallelMessageQueue(queue, 10),
 });
@@ -627,33 +633,8 @@ federation
       inboxLogger.debug("Unsupported object on Create: {object}", { object });
     }
   })
-  .on(Like, async (ctx, like) => {
-    if (like.objectId == null) return;
-    const parsed = ctx.parseUri(like.objectId);
-    if (parsed == null) return;
-    const { type } = parsed;
-    if (
-      type === "object" &&
-      (parsed.class === Note || parsed.class === Article)
-    ) {
-      const actor = await like.getActor();
-      if (actor == null) return;
-      const account = await persistAccount(db, actor, ctx);
-      if (account == null) return;
-      // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
-      const postId = parsed.values["id"];
-      await db.transaction(async (tx) => {
-        await tx
-          .insert(likes)
-          .values({ postId, accountId: account.id } satisfies NewLike);
-        await updatePostStats(tx, { id: postId });
-      });
-    } else {
-      inboxLogger.debug("Unsupported object on Like: {objectId}", {
-        objectId: like.objectId,
-      });
-    }
-  })
+  .on(Like, onLiked)
+  .on(EmojiReact, onEmojiReactionAdded)
   .on(Announce, async (ctx, announce) => {
     const object = await announce.getObject();
     if (object instanceof Article || object instanceof Note) {
@@ -773,34 +754,9 @@ federation
         await updateAccountStats(db, { id: deleted[0].followingId });
       }
     } else if (object instanceof Like) {
-      const like = object;
-      if (like.objectId == null) return;
-      const parsed = ctx.parseUri(like.objectId);
-      if (parsed == null) return;
-      const { type } = parsed;
-      if (
-        type === "object" &&
-        (parsed.class === Note || parsed.class === Article)
-      ) {
-        const actor = await like.getActor();
-        if (actor == null) return;
-        const account = await persistAccount(db, actor, ctx);
-        if (account == null) return;
-        // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
-        const postId = parsed.values["id"];
-        await db.transaction(async (tx) => {
-          await tx
-            .delete(likes)
-            .where(
-              and(eq(likes.postId, postId), eq(likes.accountId, account.id)),
-            );
-          await updatePostStats(tx, { id: postId });
-        });
-      } else {
-        inboxLogger.debug("Unsupported object on Undo<Like>: {objectId}", {
-          objectId: like.objectId,
-        });
-      }
+      await onUnliked(ctx, undo);
+    } else if (object instanceof EmojiReact) {
+      await onEmojiReactionRemoved(ctx, undo);
     } else if (object instanceof Announce) {
       const sharer = object.actorId;
       const originalPost = object.objectId;

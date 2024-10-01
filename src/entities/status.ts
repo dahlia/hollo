@@ -13,6 +13,7 @@ import {
   type PollOption,
   type PollVote,
   type Post,
+  type Reaction,
   bookmarks,
   likes,
   pollOptions,
@@ -21,7 +22,7 @@ import {
 } from "../schema";
 import { extractText } from "../text";
 import { serializeAccount } from "./account";
-import { serializeEmojis } from "./emoji";
+import { serializeEmojis, serializeReactions } from "./emoji";
 import { serializeMedium } from "./medium";
 import { serializePoll } from "./poll";
 
@@ -49,6 +50,7 @@ export function getPostRelations(ownerId: string) {
             },
             mentions: { with: { account: { with: { owner: true } } } },
             likes: { where: eq(likes.accountId, ownerId) },
+            reactions: { with: { account: true } },
             shares: { where: eq(posts.accountId, ownerId) },
             bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
             pin: true,
@@ -63,6 +65,7 @@ export function getPostRelations(ownerId: string) {
         },
         mentions: { with: { account: { with: { owner: true } } } },
         likes: { where: eq(likes.accountId, ownerId) },
+        reactions: { with: { account: true } },
         shares: { where: eq(posts.accountId, ownerId) },
         bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
         pin: true,
@@ -82,6 +85,7 @@ export function getPostRelations(ownerId: string) {
         },
         mentions: { with: { account: { with: { owner: true } } } },
         likes: { where: eq(likes.accountId, ownerId) },
+        reactions: { with: { account: true } },
         shares: { where: eq(posts.accountId, ownerId) },
         bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
         pin: true,
@@ -96,6 +100,7 @@ export function getPostRelations(ownerId: string) {
     },
     mentions: { with: { account: { with: { owner: true } } } },
     likes: { where: eq(likes.accountId, ownerId) },
+    reactions: { with: { account: true } },
     shares: { where: eq(posts.accountId, ownerId) },
     bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
     pin: true,
@@ -126,6 +131,7 @@ export function serializePost(
                   account: Account & { owner: AccountOwner | null };
                 })[];
                 likes: Like[];
+                reactions: (Reaction & { account: Account })[];
                 shares: Post[];
                 bookmarks: Bookmark[];
                 pin: PinnedPost | null;
@@ -137,6 +143,7 @@ export function serializePost(
             account: Account & { owner: AccountOwner | null };
           })[];
           likes: Like[];
+          reactions: (Reaction & { account: Account })[];
           shares: Post[];
           bookmarks: Bookmark[];
           pin: PinnedPost | null;
@@ -153,6 +160,7 @@ export function serializePost(
             account: Account & { owner: AccountOwner | null };
           })[];
           likes: Like[];
+          reactions: (Reaction & { account: Account })[];
           shares: Post[];
           bookmarks: Bookmark[];
           pin: PinnedPost | null;
@@ -164,6 +172,7 @@ export function serializePost(
       account: Account & { owner: AccountOwner | null };
     })[];
     likes: Like[];
+    reactions: (Reaction & { account: Account })[];
     shares: Post[];
     bookmarks: Bookmark[];
     pin: PinnedPost | null;
@@ -240,6 +249,7 @@ export function serializePost(
     card:
       post.previewCard == null ? null : serializePreviewCard(post.previewCard),
     emojis: serializeEmojis(post.emojis),
+    emoji_reactions: serializeReactions(post.reactions),
     poll:
       post.poll == null ? null : serializePoll(post.poll, currentAccountOwner),
   };

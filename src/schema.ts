@@ -345,6 +345,7 @@ export const postRelations = relations(posts, ({ one, many }) => ({
   }),
   replies: many(posts, { relationName: "reply" }),
   likes: many(likes),
+  reactions: many(reactions),
   sharing: one(posts, {
     fields: [posts.sharingId],
     references: [posts.id],
@@ -584,6 +585,40 @@ export const likeRelations = relations(likes, ({ one }) => ({
   }),
   account: one(accounts, {
     fields: [likes.accountId],
+    references: [accounts.id],
+  }),
+}));
+
+export const reactions = pgTable(
+  "reactions",
+  {
+    postId: uuid("post_id")
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    emoji: text("emoji").notNull(),
+    customEmoji: text("custom_emoji"),
+    created: timestamp("created", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.postId, table.accountId, table.emoji] }),
+  }),
+);
+
+export type Reaction = typeof reactions.$inferSelect;
+export type NewReaction = typeof reactions.$inferInsert;
+
+export const reactionRelations = relations(reactions, ({ one }) => ({
+  post: one(posts, {
+    fields: [reactions.postId],
+    references: [posts.id],
+  }),
+  account: one(accounts, {
+    fields: [reactions.accountId],
     references: [accounts.id],
   }),
 }));

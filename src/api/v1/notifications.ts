@@ -1,3 +1,4 @@
+import { getLogger } from "@logtape/logtape";
 import {
   and,
   desc,
@@ -16,6 +17,7 @@ import {
   serializeAccount,
   serializeAccountOwner,
 } from "../../entities/account";
+import { serializeReaction } from "../../entities/emoji";
 import { getPostRelations, serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import {
@@ -26,7 +28,10 @@ import {
   pollVotes,
   polls,
   posts,
+  reactions,
 } from "../../schema";
+
+const logger = getLogger(["hollo", "notifications"]);
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -37,6 +42,7 @@ export type NotificationType =
   | "follow"
   | "follow_request"
   | "favourite"
+  | "emoji_reaction"
   | "poll"
   | "update"
   | "admin.sign_up"
@@ -65,6 +71,7 @@ app.get(
         "follow",
         "follow_request",
         "favourite",
+        "emoji_reaction",
         "poll",
         "update",
         "admin.sign_up",
@@ -81,6 +88,8 @@ app.get(
           created: sql<Date>`coalesce(${posts.published}, ${posts.updated})`,
           accountId: posts.accountId,
           postId: sql<string | null>`${posts.id}`,
+          emoji: sql<string | null>`null`,
+          customEmoji: sql<string | null>`null`,
         })
         .from(posts)
         .leftJoin(mentions, eq(posts.id, mentions.postId))
@@ -93,6 +102,8 @@ app.get(
           created: sql<Date>`coalesce(${posts.published}, ${posts.updated})`,
           accountId: posts.accountId,
           postId: sql<string | null>`${sharingPosts.id}`,
+          emoji: sql<string | null>`null`,
+          customEmoji: sql<string | null>`null`,
         })
         .from(posts)
         .leftJoin(sharingPosts, eq(posts.sharingId, sharingPosts.id))
@@ -105,6 +116,8 @@ app.get(
           created: sql<Date>`${follows.approved}`,
           accountId: follows.followerId,
           postId: sql<string | null>`null`,
+          emoji: sql<string | null>`null`,
+          customEmoji: sql<string | null>`null`,
         })
         .from(follows)
         .where(
@@ -118,6 +131,8 @@ app.get(
           created: follows.created,
           accountId: follows.followerId,
           postId: sql<string | null>`null`,
+          emoji: sql<string | null>`null`,
+          customEmoji: sql<string | null>`null`,
         })
         .from(follows)
         .where(and(eq(follows.followingId, owner.id), isNull(follows.approved)))
@@ -129,11 +144,27 @@ app.get(
           created: likes.created,
           accountId: likes.accountId,
           postId: sql<string | null>`${likes.postId}`,
+          emoji: sql<string | null>`null`,
+          customEmoji: sql<string | null>`null`,
         })
         .from(likes)
         .leftJoin(posts, eq(likes.postId, posts.id))
         .where(eq(posts.accountId, owner.id))
         .orderBy(desc(likes.created)),
+      emoji_reaction: db
+        .select({
+          id: sql<string>`${reactions.postId} || ':' || ${reactions.accountId} || ':' || ${reactions.emoji}`,
+          type: sql<NotificationType>`'emoji_reaction'`,
+          created: reactions.created,
+          accountId: reactions.accountId,
+          postId: sql<string | null>`${reactions.postId}`,
+          emoji: sql<string | null>`${reactions.emoji}`,
+          customEmoji: sql<string | null>`${reactions.customEmoji}`,
+        })
+        .from(reactions)
+        .leftJoin(posts, eq(reactions.postId, posts.id))
+        .where(eq(posts.accountId, owner.id))
+        .orderBy(desc(reactions.created)),
       poll: db
         .select({
           id: sql<string>`${polls.id}::text`,
@@ -141,6 +172,8 @@ app.get(
           created: polls.expires,
           accountId: posts.accountId,
           postId: posts.id,
+          emoji: sql<string | null>`null`,
+          customEmoji: sql<string | null>`null`,
         })
         .from(polls)
         .leftJoin(posts, eq(polls.id, posts.pollId))
@@ -184,8 +217,12 @@ app.get(
         created: sql<Date>`q.created`,
         accountId: sql<string>`q.accountId`,
         postId: sql<string | null>`q.postId`,
+        emoji: sql<string | null>`q.emoji`,
+        customEmoji: sql<string | null>`q.customEmoji`,
       })
-      .from(sql`${q} AS q (id, "type", created, accountId, postId)`)
+      .from(
+        sql`${q} AS q (id, "type", created, accountId, postId, emoji, customEmoji)`,
+      )
       .orderBy(desc(sql`q.created`))
       .limit(limit)) as {
       id: string;
@@ -193,6 +230,8 @@ app.get(
       created: Date | string;
       accountId: string;
       postId: string | null;
+      emoji: string | null;
+      customEmoji: string | null;
     }[];
     const accountIds = notifications.map((n) => n.accountId);
     const postIds = notifications
@@ -217,31 +256,54 @@ app.get(
       ).map((p) => [p.id, p]),
     );
     return c.json(
-      notifications.map((n) => {
-        const created_at =
-          n.created instanceof Date
-            ? n.created.toISOString()
-            : new Date(n.created).toISOString();
-        return {
-          id: `${created_at}/${n.type}/${n.id}`,
-          type: n.type,
-          created_at,
-          account:
-            accountMap[n.accountId].owner == null
-              ? serializeAccount(accountMap[n.accountId], c.req.url)
-              : serializeAccountOwner(
-                  {
-                    ...accountMap[n.accountId].owner,
-                    account: accountMap[n.accountId],
-                  },
-                  c.req.url,
-                ),
-          status:
-            n.postId == null
-              ? null
-              : serializePost(postMap[n.postId], owner, c.req.url),
-        };
-      }),
+      notifications
+        .map((n) => {
+          const created_at =
+            n.created instanceof Date
+              ? n.created.toISOString()
+              : new Date(n.created).toISOString();
+          const account = accountMap[n.accountId];
+          if (account == null) {
+            logger.error(
+              "Notification {id} references non-existent account {accountId}; " +
+                "available accounts: {accountIds}",
+              { ...n, accountIds: Object.keys(accountMap) },
+            );
+            return null;
+          }
+          return {
+            id: `${created_at}/${n.type}/${n.id}`,
+            type: n.type,
+            created_at,
+            account:
+              account.owner == null
+                ? serializeAccount(account, c.req.url)
+                : serializeAccountOwner(
+                    {
+                      ...account.owner,
+                      account: account,
+                    },
+                    c.req.url,
+                  ),
+            status:
+              n.postId == null
+                ? null
+                : serializePost(postMap[n.postId], owner, c.req.url),
+            ...(n.emoji == null || n.postId == null
+              ? {}
+              : {
+                  emoji_reaction: serializeReaction({
+                    postId: n.postId,
+                    accountId: n.accountId,
+                    account,
+                    emoji: n.emoji,
+                    customEmoji: n.customEmoji,
+                    created: new Date(created_at),
+                  }),
+                }),
+          };
+        })
+        .filter((n) => n != null),
     );
   },
 );
