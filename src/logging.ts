@@ -1,16 +1,42 @@
 import {
   type LogLevel,
   configure,
-  getConsoleSink,
+  getAnsiColorFormatter,
+  getStreamSink,
   parseLogLevel,
 } from "@logtape/logtape";
+import type { FileSink } from "bun";
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const LOG_LEVEL: LogLevel = parseLogLevel(process.env["LOG_LEVEL"] ?? "info");
 
+let writer: FileSink | undefined = undefined;
+const stdout = new WritableStream({
+  start() {
+    writer = Bun.stderr.writer();
+  },
+  write(chunk) {
+    writer?.write(chunk);
+  },
+  close() {
+    if (
+      writer != null &&
+      "close" in writer &&
+      typeof writer.close === "function"
+    ) {
+      writer.close();
+    }
+  },
+  abort() {},
+});
+
 await configure({
   sinks: {
-    console: getConsoleSink(),
+    console: getStreamSink(stdout, {
+      formatter: getAnsiColorFormatter({
+        timestamp: "time",
+      }),
+    }),
   },
   filters: {},
   loggers: [
