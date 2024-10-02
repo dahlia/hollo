@@ -28,6 +28,13 @@ app.route("/instance", instance);
 
 app.post("/media", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
+app.post("/:actor/accountExport", async (c) => {
+  const logger = getLogger(["hollo", "api", "v2", "accountExport"]);
+  logger.info("Received account export request");
+
+  return c.json({}, 200);
+});
+
 app.get(
   "/search",
   tokenRequired,
