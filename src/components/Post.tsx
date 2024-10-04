@@ -4,6 +4,7 @@ import type {
   Poll as DbPoll,
   Post as DbPost,
   PollOption,
+  Reaction,
 } from "../schema";
 
 export interface PostProps {
@@ -23,8 +24,10 @@ export interface PostProps {
                 media: DbMedium[];
                 poll: (DbPoll & { options: PollOption[] }) | null;
                 replyTarget: (DbPost & { account: Account }) | null;
+                reactions: Reaction[];
               })
             | null;
+          reactions: Reaction[];
         })
       | null;
     replyTarget: (DbPost & { account: Account }) | null;
@@ -34,8 +37,10 @@ export interface PostProps {
           media: DbMedium[];
           poll: (DbPoll & { options: PollOption[] }) | null;
           replyTarget: (DbPost & { account: Account }) | null;
+          reactions: Reaction[];
         })
       | null;
+    reactions: Reaction[];
   };
   readonly pinned?: boolean;
   readonly quoted?: boolean;
@@ -110,27 +115,72 @@ export function Post({ post, pinned, quoted }: PostProps) {
               </time>
             </small>
           </a>
-          <small>
-            {" "}
-            &middot; 👍{" "}
-            {`${post.likesCount} ${
-              post.likesCount === null || post.likesCount < 2 ? "like" : "likes"
-            }`}
-          </small>
-          <small>
-            {" "}
-            &middot; 🔁{" "}
-            {`${post.sharesCount} ${
-              post.sharesCount === null || post.sharesCount < 2
-                ? "share"
-                : "shares"
-            }`}
-          </small>
-          {pinned ? <small> &middot; Pinned</small> : ""}
+          {post.likesCount != null && post.likesCount > 0 && (
+            <small>
+              {" "}
+              &middot;{" "}
+              {`${post.likesCount} ${
+                post.likesCount === null || post.likesCount < 2
+                  ? "like"
+                  : "likes"
+              }`}
+            </small>
+          )}
+          {post.reactions.length > 0 && (
+            <small>
+              {" "}
+              &middot;{" "}
+              {Object.entries(groupByEmojis(post.reactions)).map(
+                ([emoji, { src, count }]) => (
+                  <>
+                    {src == null ? (
+                      <span title={`${emoji} × ${count}`}>{emoji}</span>
+                    ) : (
+                      <img
+                        src={src}
+                        alt={emoji}
+                        title={`${emoji} × ${count}`}
+                        style="vertical-align: text-bottom; height: 22px;"
+                      />
+                    )}{" "}
+                  </>
+                ),
+              )}
+            </small>
+          )}
+          {post.sharesCount != null && post.sharesCount > 0 && (
+            <small>
+              {" "}
+              &middot;{" "}
+              {`${post.sharesCount} ${
+                post.sharesCount === null || post.sharesCount < 2
+                  ? "share"
+                  : "shares"
+              }`}
+            </small>
+          )}
+          {pinned && <small> &middot; Pinned</small>}
         </p>
       </footer>
     </article>
   );
+}
+
+function groupByEmojis(
+  reactions: Reaction[],
+): Record<string, { src?: string; count: number }> {
+  const result: Record<string, { src?: string; count: number }> = {};
+  for (const reaction of reactions) {
+    if (result[reaction.emoji] == null) {
+      result[reaction.emoji] = {
+        src: reaction.customEmoji ?? undefined,
+        count: 1,
+      };
+    } else {
+      result[reaction.emoji].count++;
+    }
+  }
+  return result;
 }
 
 interface PostContentProps {
@@ -143,6 +193,7 @@ interface PostContentProps {
           media: DbMedium[];
           poll: (DbPoll & { options: PollOption[] }) | null;
           replyTarget: (DbPost & { account: Account }) | null;
+          reactions: Reaction[];
         })
       | null;
   };

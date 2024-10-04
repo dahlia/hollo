@@ -9,6 +9,7 @@ import {
   type Poll,
   type PollOption,
   type Post,
+  type Reaction,
   accountOwners,
   posts,
 } from "../../schema.ts";
@@ -50,8 +51,10 @@ tags.get(async (c) => {
               media: true,
               poll: { with: { options: true } },
               replyTarget: { with: { account: true } },
+              reactions: true,
             },
           },
+          reactions: true,
         },
       },
       replyTarget: { with: { account: true } },
@@ -61,8 +64,10 @@ tags.get(async (c) => {
           media: true,
           poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
+          reactions: true,
         },
       },
+      reactions: true,
     },
   });
   return c.html(<TagPage tag={tag} posts={postList} />);
@@ -86,8 +91,10 @@ interface TagPageProps {
                 media: Medium[];
                 poll: (Poll & { options: PollOption[] }) | null;
                 replyTarget: (Post & { account: Account }) | null;
+                reactions: Reaction[];
               })
             | null;
+          reactions: Reaction[];
         })
       | null;
     replyTarget: (Post & { account: Account }) | null;
@@ -97,8 +104,10 @@ interface TagPageProps {
           media: Medium[];
           poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
+          reactions: Reaction[];
         })
       | null;
+    reactions: Reaction[];
   })[];
 }
 

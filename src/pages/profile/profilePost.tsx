@@ -9,6 +9,7 @@ import {
   type Poll,
   type PollOption,
   type Post,
+  type Reaction,
   accountOwners,
   posts,
 } from "../../schema.ts";
@@ -46,8 +47,10 @@ profilePost.get<"/:handle{@[^/]+}/:id">(async (c) => {
               media: true,
               poll: { with: { options: true } },
               replyTarget: { with: { account: true } },
+              reactions: true,
             },
           },
+          reactions: true,
         },
       },
       replyTarget: { with: { account: true } },
@@ -57,6 +60,7 @@ profilePost.get<"/:handle{@[^/]+}/:id">(async (c) => {
           media: true,
           poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
+          reactions: true,
         },
       },
       replies: {
@@ -76,8 +80,10 @@ profilePost.get<"/:handle{@[^/]+}/:id">(async (c) => {
                   media: true,
                   poll: { with: { options: true } },
                   replyTarget: { with: { account: true } },
+                  reactions: true,
                 },
               },
+              reactions: true,
             },
           },
           replyTarget: { with: { account: true } },
@@ -87,10 +93,13 @@ profilePost.get<"/:handle{@[^/]+}/:id">(async (c) => {
               media: true,
               poll: { with: { options: true } },
               replyTarget: { with: { account: true } },
+              reactions: true,
             },
           },
+          reactions: true,
         },
       },
+      reactions: true,
     },
   });
   if (post == null) return c.notFound();
@@ -114,8 +123,10 @@ interface PostPageProps {
                 media: Medium[];
                 poll: (Poll & { options: PollOption[] }) | null;
                 replyTarget: (Post & { account: Account }) | null;
+                reactions: Reaction[];
               })
             | null;
+          reactions: Reaction[];
         })
       | null;
     replyTarget: (Post & { account: Account }) | null;
@@ -125,6 +136,7 @@ interface PostPageProps {
           media: Medium[];
           poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
+          reactions: Reaction[];
         })
       | null;
     replies: (Post & {
@@ -143,8 +155,10 @@ interface PostPageProps {
                   media: Medium[];
                   poll: (Poll & { options: PollOption[] }) | null;
                   replyTarget: (Post & { account: Account }) | null;
+                  reactions: Reaction[];
                 })
               | null;
+            reactions: Reaction[];
           })
         | null;
       replyTarget: (Post & { account: Account }) | null;
@@ -154,9 +168,12 @@ interface PostPageProps {
             media: Medium[];
             poll: (Poll & { options: PollOption[] }) | null;
             replyTarget: (Post & { account: Account }) | null;
+            reactions: Reaction[];
           })
         | null;
+      reactions: Reaction[];
     })[];
+    reactions: Reaction[];
   };
 }
 
@@ -165,7 +182,7 @@ function PostPage({ post }: PostPageProps) {
     post.summary ??
     ((post.content ?? "").length > 30
       ? `${(post.content ?? "").substring(0, 30)}…`
-      : post.content ?? "");
+      : (post.content ?? ""));
   return (
     <Layout
       title={`${summary} — ${post.account.name}`}

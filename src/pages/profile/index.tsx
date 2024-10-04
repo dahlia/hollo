@@ -12,6 +12,7 @@ import {
   type Poll,
   type PollOption,
   type Post,
+  type Reaction,
   accountOwners,
   featuredTags,
   pinnedPosts,
@@ -49,8 +50,10 @@ profile.get("/", async (c) => {
               media: true,
               poll: { with: { options: true } },
               replyTarget: { with: { account: true } },
+              reactions: true,
             },
           },
+          reactions: true,
         },
       },
       replyTarget: { with: { account: true } },
@@ -60,8 +63,10 @@ profile.get("/", async (c) => {
           media: true,
           poll: { with: { options: true } },
           replyTarget: { with: { account: true } },
+          reactions: true,
         },
       },
+      reactions: true,
     },
   });
   const pinnedPostList = await db.query.pinnedPosts.findMany({
@@ -85,8 +90,10 @@ profile.get("/", async (c) => {
                   media: true,
                   poll: { with: { options: true } },
                   replyTarget: { with: { account: true } },
+                  reactions: true,
                 },
               },
+              reactions: true,
             },
           },
           replyTarget: { with: { account: true } },
@@ -96,8 +103,10 @@ profile.get("/", async (c) => {
               media: true,
               poll: { with: { options: true } },
               replyTarget: { with: { account: true } },
+              reactions: true,
             },
           },
+          reactions: true,
         },
       },
     },
@@ -138,8 +147,10 @@ interface ProfilePageProps {
                 media: Medium[];
                 poll: (Poll & { options: PollOption[] }) | null;
                 replyTarget: (Post & { account: Account }) | null;
+                reactions: Reaction[];
               })
             | null;
+          reactions: Reaction[];
         })
       | null;
     replyTarget: (Post & { account: Account }) | null;
@@ -149,8 +160,10 @@ interface ProfilePageProps {
           media: Medium[];
           poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
+          reactions: Reaction[];
         })
       | null;
+    reactions: Reaction[];
   })[];
   readonly pinnedPosts: (Post & {
     account: Account;
@@ -168,8 +181,10 @@ interface ProfilePageProps {
                 media: Medium[];
                 poll: (Poll & { options: PollOption[] }) | null;
                 replyTarget: (Post & { account: Account }) | null;
+                reactions: Reaction[];
               })
             | null;
+          reactions: Reaction[];
         })
       | null;
     replyTarget: (Post & { account: Account }) | null;
@@ -179,8 +194,10 @@ interface ProfilePageProps {
           media: Medium[];
           poll: (Poll & { options: PollOption[] }) | null;
           replyTarget: (Post & { account: Account }) | null;
+          reactions: Reaction[];
         })
       | null;
+    reactions: Reaction[];
   })[];
   readonly featuredTags: FeaturedTag[];
 }
