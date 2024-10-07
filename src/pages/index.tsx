@@ -16,6 +16,6 @@ page.route("/", profile.route("/:id", profilePost));
 page.route("/", login);
 page.route("/", setup);
 page.route("/", accounts.route("/new", accountsNew).route("/:id", accountsId));
-page.route("/", tags);
+page.route("/tags", tags);
 
 export default page;
