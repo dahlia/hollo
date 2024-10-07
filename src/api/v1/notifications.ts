@@ -6,6 +6,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  lt,
   lte,
   or,
   sql,
@@ -62,6 +63,8 @@ app.get(
     }
     let types = c.req.queries("types[]") as NotificationType[];
     const excludeTypes = c.req.queries("exclude_types[]") as NotificationType[];
+    const olderThanStr = c.req.query("older_than");
+    const olderThan = olderThanStr == null ? null : new Date(olderThanStr);
     const limit = Number.parseInt(c.req.query("limit") ?? "40");
     if (types == null || types.length < 1) {
       types = [
@@ -93,7 +96,12 @@ app.get(
         })
         .from(posts)
         .leftJoin(mentions, eq(posts.id, mentions.postId))
-        .where(eq(mentions.accountId, owner.id))
+        .where(
+          and(
+            eq(mentions.accountId, owner.id),
+            olderThan == null ? undefined : lt(posts.published, olderThan),
+          ),
+        )
         .orderBy(desc(posts.published)),
       reblog: db
         .select({
@@ -107,7 +115,12 @@ app.get(
         })
         .from(posts)
         .leftJoin(sharingPosts, eq(posts.sharingId, sharingPosts.id))
-        .where(eq(sharingPosts.accountId, owner.id))
+        .where(
+          and(
+            eq(sharingPosts.accountId, owner.id),
+            olderThan == null ? undefined : lt(posts.published, olderThan),
+          ),
+        )
         .orderBy(desc(posts.published)),
       follow: db
         .select({
@@ -121,7 +134,11 @@ app.get(
         })
         .from(follows)
         .where(
-          and(eq(follows.followingId, owner.id), isNotNull(follows.approved)),
+          and(
+            eq(follows.followingId, owner.id),
+            isNotNull(follows.approved),
+            olderThan == null ? undefined : lt(follows.approved, olderThan),
+          ),
         )
         .orderBy(desc(follows.approved)),
       follow_request: db
@@ -135,7 +152,13 @@ app.get(
           customEmoji: sql<string | null>`null`,
         })
         .from(follows)
-        .where(and(eq(follows.followingId, owner.id), isNull(follows.approved)))
+        .where(
+          and(
+            eq(follows.followingId, owner.id),
+            isNull(follows.approved),
+            olderThan == null ? undefined : lt(follows.created, olderThan),
+          ),
+        )
         .orderBy(desc(follows.created)),
       favourite: db
         .select({
@@ -149,7 +172,12 @@ app.get(
         })
         .from(likes)
         .leftJoin(posts, eq(likes.postId, posts.id))
-        .where(eq(posts.accountId, owner.id))
+        .where(
+          and(
+            eq(posts.accountId, owner.id),
+            olderThan == null ? undefined : lt(likes.created, olderThan),
+          ),
+        )
         .orderBy(desc(likes.created)),
       emoji_reaction: db
         .select({
@@ -163,7 +191,12 @@ app.get(
         })
         .from(reactions)
         .leftJoin(posts, eq(reactions.postId, posts.id))
-        .where(eq(posts.accountId, owner.id))
+        .where(
+          and(
+            eq(posts.accountId, owner.id),
+            olderThan == null ? undefined : lt(reactions.created, olderThan),
+          ),
+        )
         .orderBy(desc(reactions.created)),
       poll: db
         .select({
@@ -196,6 +229,7 @@ app.get(
               ),
             ),
             lte(polls.expires, sql`current_timestamp`),
+            olderThan == null ? undefined : lt(polls.expires, olderThan),
           ),
         )
         .orderBy(desc(polls.expires)),
@@ -233,6 +267,15 @@ app.get(
       emoji: string | null;
       customEmoji: string | null;
     }[];
+    let nextLink: URL | null = null;
+    if (notifications.length >= limit) {
+      const oldest = notifications[notifications.length - 1].created;
+      nextLink = new URL(c.req.url);
+      nextLink.searchParams.set(
+        "older_than",
+        oldest instanceof Date ? oldest.toISOString() : oldest,
+      );
+    }
     const accountIds = notifications.map((n) => n.accountId);
     const postIds = notifications
       .filter((n) => n.postId != null)
@@ -304,6 +347,10 @@ app.get(
           };
         })
         .filter((n) => n != null),
+      {
+        headers:
+          nextLink == null ? {} : { Link: `<${nextLink.href}>; rel="next"` },
+      },
     );
   },
 );
