@@ -1,0 +1,118 @@
+---
+title: 手动安装
+description: 如何手动安装 Hollo。
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Hollo 可以手动安装在您的服务器上。本指南将引导您完成在服务器上设置 Hollo 的过程。假设您有运行 Web 应用程序的经验，并且熟悉命令行操作。
+
+<Aside type="tip">
+  如果您对类 Unix 系统不熟悉或更喜欢自动化的方式部署 Hollo，可以使用 [Railway] 仅需几次点击即可部署 Hollo。
+
+  [Railway]: ./railway
+</Aside>
+
+
+准备工作
+-------------
+
+开始之前，请确保您的服务器上安装了以下软件：
+
+ -  [Git]
+ -  [Bun]
+ -  [PostgreSQL]
+ -  [Redis]（可选）
+ -  L7 负载均衡器（例如，[nginx]，[Caddy]）
+ -  指向您服务器的域名
+
+[Git]: https://git-scm.com/
+[Bun]: https://bun.sh/
+[PostgreSQL]: https://www.postgresql.org/
+[Redis]: https://redis.io/
+[nginx]: https://nginx.org/
+[Caddy]: https://caddyserver.com/
+
+
+安装
+------------
+
+import { Steps } from "@astrojs/starlight/components";
+
+<Aside>
+  Hollo 目前没有稳定版本。您可以从 GitHub 的 `main` 分支查看最新代码。
+</Aside>
+
+<Steps>
+ 1. 从 [GitHub] 获取 Hollo 的最新代码：
+
+    ~~~~ sh frame="none"
+    git clone https://github.com/dahlia/hollo.git
+    cd hollo/
+    ~~~~
+
+ 2. 使用 Bun 安装依赖项：
+
+    ~~~~ sh frame="none"
+    bun install
+    ~~~~
+
+ 3. 为 Hollo 创建 PostgreSQL 用户和数据库：
+
+    ~~~~ sh frame="none"
+    createuser --createdb --pwprompt hollo
+    createdb --username=hollo --encoding=utf8 --template=postgres hollo
+    ~~~~
+
+ 4. 为 Hollo 创建配置文件：
+
+    ~~~~ sh frame="none"
+    cp .env.sample .env
+    ~~~~
+
+[GitHub]: https://github.com/dahlia/hollo
+</Steps>
+
+
+配置
+-------------
+
+安装 Hollo 后，您需要进行配置。打开之前创建的 *.env* 文件并调整环境变量。
+
+有关如何配置 Hollo 的详细信息，请参阅 [*环境变量*](./env) 章节。
+
+
+启动服务端
+-------------------
+
+要启动服务端，请运行以下命令：
+
+~~~~ sh frame="none"
+bun prod
+~~~~
+
+
+升级 Hollo
+---------------
+
+要升级 Hollo，只需从 GitHub 拉取最新代码并重新安装依赖项：
+
+<Steps>
+ 1. 从 GitHub 拉取最新代码：
+
+    ~~~~ sh frame="none"
+    git pull
+    ~~~~
+
+ 2. 重新安装依赖项：
+
+    ~~~~ sh frame="none"
+    bun install
+    ~~~~
+
+ 3. 重启服务端：
+
+    ~~~~ sh frame="none"
+    bun prod
+    ~~~~
+</Steps>
