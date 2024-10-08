@@ -10,9 +10,9 @@ them to deploy Hollo on your server or your local machine:
 docker pull ghcr.io/dahlia/hollo:latest
 ~~~~
 
-To run Hollo, you need to set up a PostgreSQL database, Redis, and
+To run Hollo, you need to set up a PostgreSQL database and
 an S3-compatible object storage for media storage.  You can use the
-official Docker images for [PostgreSQL] and [Redis], and you can use
+official Docker image for [PostgreSQL], and you can use
 [MinIO] for the S3-compatible object storage.  Or you can use other
 managed services like AWS [RDS], [ElastiCache], and [S3].
 
@@ -23,7 +23,6 @@ supports, see the [*Environment variables*](./env) chapter.
 
 [GitHub Packages]: https://github.com/dahlia/hollo/pkgs/container/hollo
 [PostgreSQL]: https://hub.docker.com/_/postgres
-[Redis]: https://hub.docker.com/_/redis
 [MinIO]: https://hub.docker.com/r/minio/minio
 [RDS]: https://aws.amazon.com/rds/
 [ElastiCache]: https://aws.amazon.com/elasticache/
