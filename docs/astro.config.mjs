@@ -25,6 +25,9 @@ export default defineConfig({
         ko: {
           label: "한국어",
         },
+        ja: {
+          label: "日本語",
+        },
       },
       sidebar: [
         {
@@ -32,18 +35,21 @@ export default defineConfig({
           label: "What is Hollo?",
           translations: {
             ko: "Hollo란?",
+            ja: "Holloとは？",
           },
         },
         {
           label: "Installation",
           translations: {
             ko: "설치",
+            ja: "インストール",
           },
           items: [
             {
               label: "Deploy to Railway",
               translations: {
                 ko: "Railway에 배포",
+                ja: "Railwayにデプロイ",
               },
               slug: "install/railway",
             },
@@ -51,6 +57,7 @@ export default defineConfig({
               label: "Deploy using Docker",
               translations: {
                 ko: "Docker로 배포",
+                ja: "Dockerでデプロイ",
               },
               slug: "install/docker",
             },
@@ -58,6 +65,7 @@ export default defineConfig({
               label: "Manual installation",
               translations: {
                 ko: "수동 설치",
+                ja: "手動インストール",
               },
               slug: "install/manual",
             },
@@ -65,6 +73,7 @@ export default defineConfig({
               label: "Environment variables",
               translations: {
                 ko: "환경 변수",
+                ja: "環境変数",
               },
               slug: "install/env",
             },
@@ -72,6 +81,7 @@ export default defineConfig({
               label: "Setting up",
               translations: {
                 ko: "설정하기",
+                ja: "初期設定",
               },
               slug: "install/setup",
             },

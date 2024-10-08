@@ -1,0 +1,76 @@
+---
+title: ようこそHolloへ！
+description: >-
+  Holloは1人用の連合マイクロブログソフトウェアです。
+template: splash
+hero:
+  tagline: >-
+    1人用の連合マイクロブログソフトウェア。
+    ActivityPub、Mastodon互換API、CommonMark、Misskeyスタイルの引用をサポート。
+  image:
+    light: ../../../assets/logo-black.svg
+    dark: ../../../assets/logo-white.svg
+  actions:
+  - text: Holloとは？
+    link: /ja/intro
+    icon: right-arrow
+    variant: secondary
+  - text: インストール
+    link: /ja/install/railway
+    icon: rocket
+    variant: primary
+  - text: 公式インスタンス
+    link: https://hollo.social/@hollo
+    icon: external
+    variant: minimal
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+<CardGrid>
+  <Card title="1人用" icon="seti:lock">
+    Holloは1人用に設計されているため、
+    インスタンスを所有し、データに完全な制御権を持つことができます。
+    個人用のマイクロブログ、ノート、日記に最適です。
+  </Card>
+  <Card title="複数アカウント" icon="seti:folder">
+    Holloは1人用に設計されていますが、
+    同じインスタンスで複数のアカウントを持つことができます。
+    アカウント間の切り替えも簡単で、
+    各アカウントには独自のプロフィール、投稿、設定を持ちます。
+  </Card>
+  <Card title="Mastodon互換API" icon="puzzle">
+    Holloには独自のウェブインターフェースがありません。
+    代わりに、[Mastodon API]と互換性があり、
+    どんなMastodon互換クライアントアプリでも
+    Holloを利用することができます。
+
+    [Mastodon API]: https://docs.joinmastodon.org/methods/
+  </Card>
+  <Card title="CommonMark" icon="seti:markdown">
+    [CommonMark]（通称Markdown）で投稿を作成できます。
+    そのようにして作成した投稿は、
+    フェディバース（fediverse）の他のソフトウェアでもうまく表示されます。
+    また、投稿ごとに最大4,096文字まで作成できます。
+
+    [CommonMark]: https://commonmark.org/
+  </Card>
+  <Card title="Misskeyスタイルの引用" icon="comment">
+    Holloは[Misskey]スタイルの引用機能をサポートしているため、
+    他の投稿を引用して自分の投稿に含めることができます。
+    これはMisskey、[Akkoma]、[Fedibird]、[Threads]など、
+    Misskeyスタイルの引用をサポートする他のフェディバースソフトウェアとも互換性があります。
+
+    [Misskey]: https://misskey-hub.net/ja/
+    [Akkoma]: https://akkoma.social/
+    [Fedibird]: https://github.com/fedibird/mastodon
+    [Threads]: https://www.threads.net/
+  </Card>
+  <Card title="FedifyとBunベース" icon="bun">
+    HolloはTypeScript向けのActivityPubサーバーフレームワークである[Fedify]で作られており、
+    Node.jsの代替となる超高速JavaScriptランタイムである[Bun]上で動作します。
+
+    [Fedify]: https://fedify.dev/
+    [Bun]: https://bun.sh/
+  </Card>
+</CardGrid>

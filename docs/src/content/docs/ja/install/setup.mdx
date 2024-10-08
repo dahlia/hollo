@@ -1,0 +1,71 @@
+---
+title: 初期設定
+description: Holloをインストールした後、セットアップ方法を説明します。
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+<Aside type="caution" title="注意">
+  Holloの初期設定を行う前に、まずドメイン名を決めてそのドメイン名があなたのサーバーを指すようにしておく必要があります。
+  なぜなら、一度Holloを設定した後はドメイン名を変更できないからです。
+</Aside>
+
+Holloをインストールした後、初期設定を行う必要があります。
+このガイドでは、Holloの設定手順を説明します。
+
+<Steps>
+ 1. **https://<var>yourdomain</var>/setup**にアクセスします。
+    ここで、<var>yourdomain</var>はあなたのドメイン名です。
+
+ 2. ログインに使用するメールアドレスとパスワードを設定します。
+
+    ![メールアドレスとパスワードを設定](../../install/setup/setup.png)
+
+ 3. 空のAccountsページが表示されます。
+    **Create a new account**ボタンをクリックします。
+
+    ![空のAccountsページ](../../install/setup/accounts-empty.png)
+
+ 4. アカウントを作成するためにフォームを入力します。**Username**フィールド以外の項目は後で変更できます。
+
+    ![アカウント作成](../../install/setup/create-account.png)
+
+ 5. アカウントを作成すると、Accountsページに作成したアカウントが表示されます。
+
+    ![Accountsページ](../../install/setup/accounts.png)
+
+ 6. Holloには独自のウェブインターフェースがないため、
+    [Phanpy]などのMastodon互換クライアントアプリを選んで使用する必要があります。
+    ここではPhanpyを例に説明します。
+
+    **https://phanpy.social/**にアクセスし、
+    **Mastodonにログイン**ボタンをクリックします。
+
+ 7. Holloインスタンスのドメイン名を入力し、**ログイン**ボタンをクリックします。
+
+    ![Phanpy](../../install/setup/phanpy-login.png)
+
+ 8. この時、Holloアカウントでログインするように求められるかもしれません。
+    その場合は、先ほど設定したメールアドレスとパスワードを入力し、
+    **Sign in**ボタンをクリックします。
+
+    ログインを求められない場合は、次のステップに進んでください。
+
+ 9. **Authorized Phanpy**ページが表示されます。
+    **Allow**ボタンをクリックして、PhanpyがHolloアカウントにアクセスできるように許可します。
+
+    ![Authorize Phanpy](../../install/setup/authorize.png)
+
+10. これで完了です！Phanpyを使用してHolloアカウントにログインしました。
+
+    タイムラインは初めてなので空ですが、
+    投稿を行い他のユーザーをフォローすることができます。
+    Hollo公式アカウントをフォローしたい場合は、
+    `@hollo@hollo.social`を検索してプロフィールページから**フォロー**ボタンをクリックしてください。
+
+    では、Holloをお楽しみください！
+
+    ![Phanpy](../../install/setup/phanpy.png)
+
+[Phanpy]: https://phanpy.social/
+</Steps>

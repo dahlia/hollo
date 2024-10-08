@@ -1,0 +1,125 @@
+---
+title: 手動インストール
+description: Holloを手動でインストールする方法を説明します。
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Holloは手動でインストールすることもできます。
+このマニュアルでは、Holloを手動でインストールする手順を説明します。
+ただし、すでにウェブアプリケーションの運用経験があり、コマンドラインに慣れていることを前提としています。
+
+<Aside type="tip">
+  もし、Unix系システムに慣れていないか、
+  Holloをもっと自動化された方法でデプロイしたい場合、[Railway]を使えば、
+  数回のクリックでHolloをデプロイすることができます。
+
+  [Railway]: ./railway
+</Aside>
+
+
+前提条件
+--------
+
+始める前に、サーバーに以下のソフトウェアがインストールされていることを確認してください：
+
+ -  [Git]
+ -  [Bun]
+ -  [PostgreSQL]
+ -  [Redis]（オプション）
+ - L7ロードバランサー（例：[nginx]、[Caddy]）
+ - あなたのサーバーを指しているドメイン名
+
+[Git]: https://git-scm.com/
+[Bun]: https://bun.sh/
+[PostgreSQL]: https://www.postgresql.org/
+[Redis]: https://redis.io/
+[nginx]: https://nginx.org/
+[Caddy]: https://caddyserver.com/
+
+
+インストール
+------------
+
+import { Steps } from "@astrojs/starlight/components";
+
+<Aside>
+  Holloは現時点ではまだ安定版がありません。
+  GitHubの`main`ブランチから最新のコードを取得できます。
+</Aside>
+
+<Steps>
+ 1. Hollonの最新コードを[GitHub]から取得します：
+
+    ~~~~ sh frame="none"
+    git clone https://github.com/dahlia/hollo.git
+    cd hollo/
+    ~~~~
+
+ 2. Bunで依存関係をインストールします：
+
+    ~~~~ sh frame="none"
+    bun install
+    ~~~~
+
+ 3. HolloのためにPostgreSQLユーザーとデータベースを作成します：
+
+    ~~~~ sh frame="none"
+    createuser --createdb --pwprompt hollo
+    createdb --username=hollo --encoding=utf8 --template=postgres hollo
+    ~~~~
+
+ 4. Holloの設定ファイルを作成します：
+
+    ~~~~ sh frame="none"
+    cp .env.sample .env
+    ~~~~
+
+[GitHub]: https://github.com/dahlia/hollo
+</Steps>
+
+
+設定
+----
+
+Holloをインストールしたら、設定を行う必要があります。
+先に作った*.env*ファイルを開いて環境変数の値を適切に変更してください。
+
+[**環境変数**](./env)の章でより詳しい内容を確認することができます。
+
+
+サーバー起動
+------------
+
+サーバーを起動する準備が整ったら、以下のコマンドを実行します：
+
+~~~~ sh frame="none"
+bun prod
+~~~~
+
+
+アップデート
+------------
+
+Holloをアップデートするには、
+GitHubリポジトリから最新のコードを取得し、依存関係を再インストールするだけです。
+
+<Steps>
+ 1. GitHubリポジトリから最新のHolloコードを取得します：
+
+    ~~~~ sh frame="none"
+    git pull
+    ~~~~
+
+ 2. Bunで依存関係を再インストールします：
+
+    ~~~~ sh frame="none"
+    bun install
+    ~~~~
+
+ 3. サーバーを再起動します：
+
+    ~~~~ sh frame="none"
+    bun prod
+    ~~~~
+</Steps>

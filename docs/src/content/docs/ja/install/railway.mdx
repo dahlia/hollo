@@ -1,0 +1,64 @@
+---
+title: Railwayにデプロイ
+descriptipn: HolloをRailwayにデプロイする方法を説明します。
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+[![Deploy on Railway][]][Railway template]
+
+Holloをデプロイする最も簡単な方法は[Railway]を使うことです。
+Railwayはサーバーアプリを簡単にデプロイできるプラットフォームで、Node.js、Python、Rubyなど多くの言語とフレームワークをサポートしています。
+
+上にある**Deploy on Railway**ボタンを押すと、RailwayにHolloをデプロイできます。
+このテンプレートを使うと、Holloをデプロイするのに必要なすべてが数回のクリックで自動的に設定されます。
+
+Holloをデプロイするには、画像などのメディアを保存するS3やS3互換のオブジェクトストレージが必要です。
+S3互換のオブジェクトストレージには、AWS S3、Cloudflare R2、MinIO、DigitalOcean
+Spaces、Linode Object Storageなどがあります。
+オブジェクトストレージの準備ができたら、環境変数を適切に設定する必要があります。
+（各サービスのS3クライアントAPIの使い方を参照してください）
+詳しくは[**環境変数**](./env)の章を参照してください。
+
+環境変数を設定し、HolloがRailwayにデプロイされたら、
+https://yourdomain/setup
+​（yourdomainは各自のドメインに置き換えてください）
+にアクセスしてログイン情報を設定し、プロフィールを追加してください。
+
+<Aside type="caution" title="注意">
+  Holloをデプロイした後、初期設定の**前に**ドメイン名を決定する必要があります。
+  なぜなら、**一度Holloの初期設定を終えたら、ドメイン名を変更することができないからです**。
+</Aside>
+
+プロファイルを作成したら、Holloを使う準備が整いました。
+ちなみに、Holloは独自のウェブインターフェースがほとんどないので、
+現時点では[Phanpy]のようなクライアントアプリを使う必要があります。
+
+[Railway]: https://railway.app/
+[Deploy on Railway]: https://railway.app/button.svg
+[Railway template]: https://railway.app/template/eopPyH?referralCode=qeEK5G
+[Phanpy]: https://phanpy.social/
+
+
+アップデート方法
+----------------
+
+import { Steps } from "@astrojs/starlight/components";
+
+Holloをアップデートするためには、Railwayにあるサービスを再デプロイするだけです：
+
+<Steps>
+ 1. Railwayのダッシュボードにログインしてください。
+
+ 2. リストからHolloプロジェクトを選択してください。
+
+ 3. サービスリストからHolloを選んでください。
+
+    ![サービスリストからHolloを選んでください](../../install/railway/project.png)
+
+ 4. Deploymentsタブの右隅にある縦に並んだ三つの点をクリックします。
+
+ 5. 開かれたドロップダウンメニューから、**Redeploy**を押してHolloを再デプロイします。
+
+    ![サービスの再デプロイ](../../install/railway/deployments.png)
+</Steps>

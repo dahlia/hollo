@@ -1,0 +1,48 @@
+---
+title: Dockerでデプロイ
+description: HolloをDockerでデプロイする方法を説明します。
+---
+
+Holloは[GitHub Packages]で公式のDockerイメージを提供しています。
+そのイメージをローカルマシンでHolloをデプロイできます：
+
+~~~~ sh frame="none"
+docker pull ghcr.io/dahlia/hollo:latest
+~~~~
+
+Holloを実行するには、PostgreSQLのデータベースとメディアを保存するためのS3互換のオブジェクトストレージが必要です。
+[PostgreSQL]の公式のDockerイメージとS3互換のオブジェクトストレージである[MinIO]を使うことができます。
+またはAWSの[RDS]、[ElastiCache]、[S3]などのマネージドサービスを使用することもできます。
+
+Holloにこれらのサービスを組み合わせるには、
+`docker run`コマンドの[`-e`/`--env`オプションまたは`--env-file`オプション][1]を使用して
+環境変数を設定する必要があります。
+Holloがサポートする環境変数のリストは[**環境変数**](./env)章で確認できます。
+
+[GitHub Packages]: https://github.com/dahlia/hollo/pkgs/container/hollo
+[PostgreSQL]: https://hub.docker.com/_/postgres
+[MinIO]: https://hub.docker.com/r/minio/minio
+[RDS]: https://aws.amazon.com/rds/
+[ElastiCache]: https://aws.amazon.com/elasticache/
+[S3]: https://aws.amazon.com/s3/
+[1]: https://docs.docker.com/reference/cli/docker/container/run/#env
+
+
+Docker Compose
+--------------
+
+import { Code } from "@astrojs/starlight/components";
+import composeYaml from "../../install/docker/compose-yaml?raw";
+
+PostgreSQLとS3互換のオブジェクトストレージなどをHolloに接続してデプロイするために、
+[Docker Compose]を使用することができます。以下は*compose.yaml*ファイルの例です：
+
+<Code code={composeYaml} lang="yaml" title="compose.yaml" />
+
+上記のファイルを作業ディレクトリに*compose.yaml*として保存し、次のコマンドを実行します：
+
+~~~~ sh frame="none"
+docker compose up -d
+~~~~
+
+[Docker Compose]: https://docs.docker.com/compose/
