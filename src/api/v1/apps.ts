@@ -1,14 +1,22 @@
+import { getLogger } from "@logtape/logtape";
 import { encodeBase64Url } from "@std/encoding/base64url";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { type Scope, applications, scopeEnum } from "../../schema";
+import {
+  type NewApplication,
+  type Scope,
+  applications,
+  scopeEnum,
+} from "../../schema";
+
+const logger = getLogger(["hollo", "api", "v1", "apps"]);
 
 const app = new Hono<{ Variables: Variables }>();
 
 const applicationSchema = z.object({
-  client_name: z.string(),
+  client_name: z.string().optional(),
   redirect_uris: z
     .string()
     .trim()
@@ -24,7 +32,8 @@ const applicationSchema = z.object({
         }
       }
       return uris;
-    }),
+    })
+    .optional(),
   scopes: z
     .string()
     .trim()
@@ -53,6 +62,7 @@ app.post("/", async (c) => {
     const json = await c.req.json();
     const result = await applicationSchema.safeParseAsync(json);
     if (!result.success) {
+      logger.debug("Invalid request: {error}", { error: result.error });
       return c.json({ error: "Invalid request", zod_error: result.error }, 400);
     }
     form = result.data;
@@ -60,6 +70,7 @@ app.post("/", async (c) => {
     const formData = await c.req.parseBody();
     const result = await applicationSchema.safeParseAsync(formData);
     if (!result.success) {
+      logger.debug("Invalid request: {error}", { error: result.error });
       return c.json({ error: "Invalid request", zod_error: result.error }, 400);
     }
     form = result.data;
@@ -75,23 +86,25 @@ app.post("/", async (c) => {
     .insert(applications)
     .values({
       id: crypto.randomUUID(),
-      name: form.client_name,
-      redirectUris: form.redirect_uris,
+      name: form.client_name ?? "",
+      redirectUris: form.redirect_uris ?? [],
       scopes: form.scopes ?? (["read"] satisfies Scope[]),
       website: form.website,
       clientId,
       clientSecret,
-    })
+    } satisfies NewApplication)
     .returning();
   const app = apps[0];
-  return c.json({
+  const result = {
     id: app.id,
     name: app.name,
     website: app.website,
     redirect_uri: app.redirectUris.join(" "),
     client_id: app.clientId,
     client_secret: app.clientSecret,
-  });
+  };
+  logger.debug("Created application: {app}", { app: result });
+  return c.json(result);
 });
 
 app.get(
