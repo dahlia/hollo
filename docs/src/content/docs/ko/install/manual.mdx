@@ -1,0 +1,126 @@
+---
+title: 수동 설치
+description: Hollo를 수동으로 설치하는 방법을 설명합니다.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+Hollo는 수동으로도 설치할 수 있습니다.
+이 설명서는 Hollo를 수동으로 설치하는 과정을 안내합니다.
+다만, 여러분이 이미 웹 애플리케이션을 운영해 본 경험이 있으며
+커맨드라인에 익숙하다는 것을 전제로 합니다.
+
+<Aside type="tip">
+  만약 여러분이 Unix 계열 시스템에 익숙하지 않거나 Hollo를 좀 더 자동화된
+  방식으로 배포하고 싶다면, [Railway]를 사용하면 몇 번의 클릭만으로 Hollo를
+  배포할 수 있습니다.
+
+  [Railway]: ./railway
+</Aside>
+
+
+준비물
+------
+
+시작하기에 앞서, 서버에 다음 소프트웨어가 설치되어 있는지 확인하세요:
+
+ -  [Git]
+ -  [Bun]
+ -  [PostgreSQL]
+ -  [Redis] (optional)
+ -  L7 로드 밸런서 (e.g., [nginx], [Caddy])
+ -  여러분의 서버를 가리키고 있는 도메인 이름
+
+[Git]: https://git-scm.com/
+[Bun]: https://bun.sh/
+[PostgreSQL]: https://www.postgresql.org/
+[Redis]: https://redis.io/
+[nginx]: https://nginx.org/
+[Caddy]: https://caddyserver.com/
+
+
+설치
+----
+
+import { Steps } from "@astrojs/starlight/components";
+
+<Aside>
+  Hollo는 현재로서는 아직 안정 버전이 없습니다.
+  GitHub 저장소의 `main` 브랜치에서 최신 코드를 받을 수 있습니다.
+</Aside>
+
+<Steps>
+ 1. Hollo의 최신 코드를 [GitHub] 저장소에서 받습니다:
+
+    ~~~~ sh frame="none"
+    git clone https://github.com/dahlia/hollo.git
+    cd hollo/
+    ~~~~
+
+ 2. Bun으로 의존성을 설치합니다:
+
+    ~~~~ sh frame="none"
+    bun install
+    ~~~~
+
+ 3. Hollo에서 쓸 PostgreSQL 사용자와 데이터베이스를 만듭니다:
+
+    ~~~~ sh frame="none"
+    createuser --createdb --pwprompt hollo
+    createdb --username=hollo --encoding=utf8 --template=postgres hollo
+    ~~~~
+
+ 4. Hollo의 설정 파일을 만듭니다:
+
+    ~~~~ sh frame="none"
+    cp .env.sample .env
+    ~~~~
+
+[GitHub]: https://github.com/dahlia/hollo
+</Steps>
+
+
+설정
+----
+
+Hollo가 설치되었다면, 설정을 해야 합니다.
+앞서 만든 *.env* 파일을 열어 환경 변수의 값들을 적절하게 변경해 주세요.
+
+[**환경 변수**](./env) 챕터에서 좀 더 자세한 내용을 확인할 수 있습니다.
+
+
+서버 시작하기
+-------------
+
+서버를 시작하려면 다음 명령을 실행하세요:
+
+~~~~ sh frame="none"
+bun prod
+~~~~
+
+
+업데이트하기
+------------
+
+Hollo를 업데이트하려면,
+GitHub 저장소에서 최신 코드를 받고 의존성을 다시 설치하면 됩니다.
+
+<Steps>
+ 1. GitHub 저장소에서 Hollo 최신 코드를 받습니다:
+
+    ~~~~ sh frame="none"
+    git pull
+    ~~~~
+
+ 2. 의존성을 재설치합니다:
+
+    ~~~~ sh frame="none"
+    bun install
+    ~~~~
+
+ 3. 서버를 다시 시작합니다:
+
+    ~~~~ sh frame="none"
+    bun prod
+    ~~~~
+</Steps>

@@ -1,0 +1,64 @@
+---
+title: Railway에 배포
+descriptipn: Hollo를 Railway에 배포하는 방법을 설명합니다.
+---
+
+import { Aside } from "@astrojs/starlight/components";
+
+[![Deploy on Railway][]][Railway template]
+
+Hollo를 배포하는 가장 쉬운 방법은 [Railway]를 쓰는 것입니다.
+Railway는 서버 앱을 쉽게 배포할 수 있는 플랫폼인데,
+Node.js, Python, Ruby 등 여러 언어와 프레임워크를 지원합니다.
+
+위에 있는 **Deploy on Railway** 버튼을 누르면 Railway에 Hollo를 배포할 수 있습니다.
+이 템플릿을 사용하면 Hollo를 배포하는 데 필요한 모든 것이 클릭 몇 번으로 자동으로 설정됩니다.
+
+Hollo를 배포하려면 이미지 등의 미디어를 저장할 S3나 S3 호환 오브젝트 스토리지가 필요합니다.
+S3 호환 오브젝트 스토리지로는 AWS S3, Cloudflare R2, MinIO, DigitalOcean Spaces,
+Linode Object Storage 등 여러가지가 있습니다.
+여러분의 오브젝트 스토리지가 준비되었다면, 환경 변수를 적절하게 설정해야 합니다
+(각 서비스의 S3 클라이언트 API 사용법을 참조하세요).
+더 자세한 정보는 [**환경 변수**](./env) 챕터를 참조하세요.
+
+환경 변수를 설정하고 Hollo가 Railway에 배포되었다면,
+https://yourdomain/setup (yourdomain은 여러분의 도메인으로 치환)
+페이지에서 이메일과 암호를 설정하고 프로필을 추가하세요.
+
+<Aside type="caution" title="주의">
+  Hollo를 배포한 후 최초 설정 **전에** 도메인 이름을 결정해야 합니다.
+  왜냐하면 **일단 Hollo의 최초 설정을 마치고 나면, 도메인 이름을 바꿀 수 없기 때문입니다.**
+</Aside>
+
+프로필을 만들었다면, Hollo를 쓸 준비가 되었습니다.
+참고로, Hollo는 자체적인 웹 인터페이스가 거의 없기 때문에,
+현재로서는 [Phanpy]와 같은 클라이언트 앱을 사용해야 합니다.
+
+[Railway]: https://railway.app/
+[Deploy on Railway]: https://railway.app/button.svg
+[Railway template]: https://railway.app/template/eopPyH?referralCode=qeEK5G
+[Phanpy]: https://phanpy.social/
+
+
+업데이트 방법
+-------------
+
+import { Steps } from "@astrojs/starlight/components";
+
+Hollo를 업데이트하려면, Railway에 있는 서비스를 다시 배포하면 됩니다:
+
+<Steps>
+ 1. Railway 대시보드로 가세요.
+
+ 2. Hollo 프로젝트를 고르세요.
+
+ 3. Hollo 서비스를 고르세요.
+
+    ![Hollo 서비스를 고르세요](../../install/railway/project.png)
+
+ 4. Deployments 탭에서 오른쪽 구석에 있는 세로로 쌓인 세 개의 점을 클릭하세요.
+
+ 5. 펼쳐진 드롭다운 메뉴에서, **Redeploy**를 눌러 Hollo를 다시 배포하세요.
+
+    ![서비스 재배포](../../install/railway/deployments.png)
+</Steps>

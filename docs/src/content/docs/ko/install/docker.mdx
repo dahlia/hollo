@@ -1,0 +1,50 @@
+---
+title: Docker로 배포
+description: Hollo를 Docker로 배포하는 방법에 대해 설명합니다.
+---
+
+Hollo는 [GitHub Packages]에서 공식 Docker 이미지를 제공합니다.
+그 이미지를 여러분의 로컬 머신에서 Hollo를 배포할 수 있습니다:
+
+~~~~ sh frame="none"
+docker pull ghcr.io/dahlia/hollo:latest
+~~~~
+
+Hollo를 돌리려면,
+PostgreSQL 데이터베이스와 미디어 저장을 위한 S3 호환 오브젝트 스토리지가 필요합니다.
+[PostgreSQL] 공식 Docker 이미지와 S3 호환 오브젝트 스토리지인 [MinIO]를 쓸 수 있습니다.
+아니면 AWS [RDS], [ElastiCache], [S3]와 같은 관리형 서비스를 사용할 수도 있습니다.
+
+Hollo에 해당 서비스들을 연결하려면,
+`docker run` 명령의 [`-e`/`--env` 옵션이나 `--env-file` 옵션][1]을 통해
+환경 변수를 설정해야 합니다.  Hollo가 지원하는 환경 변수 목록은
+[**환경 변수**](./env) 챕터에서 확인할 수 있습니다.
+
+[GitHub Packages]: https://github.com/dahlia/hollo/pkgs/container/hollo
+[PostgreSQL]: https://hub.docker.com/_/postgres
+[MinIO]: https://hub.docker.com/r/minio/minio
+[RDS]: https://aws.amazon.com/rds/
+[ElastiCache]: https://aws.amazon.com/elasticache/
+[S3]: https://aws.amazon.com/s3/
+[1]: https://docs.docker.com/reference/cli/docker/container/run/#env
+
+
+Docker Compose
+--------------
+
+import { Code } from "@astrojs/starlight/components";
+import composeYaml from "../../install/docker/compose-yaml?raw";
+
+PostgreSQL과 S3 호환 오브젝트 스토리지 등과 Hollo를 묶어서 배포하기 위해,
+[Docker Compose]를 사용할 수도 있습니다. 아래는 *compose.yaml* 파일의 예시입니다:
+
+<Code code={composeYaml} lang="yaml" title="compose.yaml" />
+
+위 파일을 작업 디렉터리에 *compose.yaml*로 저장한 다음,
+다음 명령을 실행하면 됩니다:
+
+~~~~ sh frame="none"
+docker compose up -d
+~~~~
+
+[Docker Compose]: https://docs.docker.com/compose/

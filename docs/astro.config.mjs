@@ -17,30 +17,64 @@ export default defineConfig({
         mastodon: "https://hollo.social/@hollo",
         github: "https://github.com/dahlia/hollo",
       },
+      locales: {
+        root: {
+          label: "English",
+          lang: "en",
+        },
+        ko: {
+          label: "한국어",
+        },
+      },
       sidebar: [
-        // {
-        //   label: "Guides",
-        //   items: [
-        //     // Each item here is one entry in the navigation menu.
-        //     { label: "Example Guide", slug: "guides/example" },
-        //   ],
-        // },
-        // {
-        //   label: "Reference",
-        //   autogenerate: { directory: "reference" },
-        // },
         {
-          label: "What is Hollo?",
           slug: "intro",
+          label: "What is Hollo?",
+          translations: {
+            ko: "Hollo란?",
+          },
         },
         {
           label: "Installation",
+          translations: {
+            ko: "설치",
+          },
           items: [
-            { label: "Deploy to Railway", slug: "install/railway" },
-            { label: "Deploy using Docker", slug: "install/docker" },
-            { label: "Manual installation", slug: "install/manual" },
-            { label: "Environment variables", slug: "install/env" },
-            { label: "Setting up", slug: "install/setup" },
+            {
+              label: "Deploy to Railway",
+              translations: {
+                ko: "Railway에 배포",
+              },
+              slug: "install/railway",
+            },
+            {
+              label: "Deploy using Docker",
+              translations: {
+                ko: "Docker로 배포",
+              },
+              slug: "install/docker",
+            },
+            {
+              label: "Manual installation",
+              translations: {
+                ko: "수동 설치",
+              },
+              slug: "install/manual",
+            },
+            {
+              label: "Environment variables",
+              translations: {
+                ko: "환경 변수",
+              },
+              slug: "install/env",
+            },
+            {
+              label: "Setting up",
+              translations: {
+                ko: "설정하기",
+              },
+              slug: "install/setup",
+            },
           ],
         },
       ],

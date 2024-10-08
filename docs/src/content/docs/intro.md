@@ -42,6 +42,7 @@ This means you can:
  -  Share media attachments
  -  Create polls
  -  Share and favorite posts
+ -  Seeing Misskey-style emoji reactions
 
 When it comes to writing your posts, Hollo keeps things flexible. You can:
 
@@ -55,6 +56,7 @@ and interact. This might sound odd at first, but it actually gives you
 the freedom to pick an app that suits your style.
 
 In essence, Hollo is a straightforward tool that brings the power of Mastodon
+or Misskey
 to individual users. It helps you share thoughts online--from quick updates to
 longer musings--connect with others in the fediverse, and do it all on your own
 terms. It's not aiming to be the next big social network--it's just here to
