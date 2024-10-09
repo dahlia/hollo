@@ -33,8 +33,16 @@ export async function fetchPreviewCard(
         : {
             url: result.ogImage[0].url,
             type: result.ogImage[0].type ?? null,
-            width: result.ogImage[0].width ?? null,
-            height: result.ogImage[0].height ?? null,
+            width:
+              result.ogImage[0].width == null
+                ? null
+                : Number.parseInt(result.ogImage[0].width as unknown as string),
+            height:
+              result.ogImage[0].height == null
+                ? null
+                : Number.parseInt(
+                    result.ogImage[0].height as unknown as string,
+                  ),
           },
   };
 }

@@ -267,8 +267,18 @@ export function serializePreviewCard(
     provider_name: "",
     provider_url: "",
     html: "",
-    width: card.image == null ? 0 : card.image.width,
-    height: card.image == null ? 0 : card.image.height,
+    width:
+      card.image == null
+        ? 0
+        : typeof card.image.width === "string"
+          ? Number.parseInt(card.image.width)
+          : card.image.width,
+    height:
+      card.image == null
+        ? 0
+        : typeof card.image.height === "string"
+          ? Number.parseInt(card.image.height)
+          : card.image.height,
     image: card.image == null ? null : card.image.url,
     embed_url: "",
     blurhash: null,
