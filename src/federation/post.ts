@@ -638,14 +638,11 @@ export function toObject(
             : [ctx.getFollowersUri(post.account.owner.handle)],
     cc: post.visibility === "unlisted" ? PUBLIC_COLLECTION : null,
     summaries:
-      post.summaryHtml == null
+      post.summary == null
         ? []
         : post.language == null
-          ? [post.summaryHtml]
-          : [
-              post.summaryHtml,
-              new LanguageString(post.summaryHtml, post.language),
-            ],
+          ? [post.summary]
+          : [post.summary, new LanguageString(post.summary, post.language)],
     contents:
       post.contentHtml == null
         ? []

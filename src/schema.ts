@@ -290,7 +290,6 @@ export const posts = pgTable(
       { onDelete: "set null" },
     ),
     visibility: postVisibilityEnum("visibility").notNull(),
-    summaryHtml: text("summary_html"),
     summary: text("summary"),
     contentHtml: text("content_html"),
     content: text("content"),

@@ -121,15 +121,9 @@ app.post(
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
-        : await formatText(db, data.spoiler_text, fmtOpts);
-    const mentionedIds = [
-      ...(content?.mentions ?? []),
-      ...(summary?.mentions ?? []),
-    ];
-    const hashtags = [
-      ...(content?.hashtags ?? []),
-      ...(summary?.hashtags ?? []),
-    ];
+        : data.spoiler_text;
+    const mentionedIds = content?.mentions ?? [];
+    const hashtags = content?.hashtags ?? [];
     const tags = Object.fromEntries(
       hashtags.map((tag) => [
         tag.toLowerCase(),
@@ -182,8 +176,7 @@ app.post(
         quoteTargetId,
         sharingId: null,
         visibility: data.visibility ?? owner.visibility,
-        summary: data.spoiler_text,
-        summaryHtml: summary?.html,
+        summary,
         content: data.status,
         contentHtml: content?.html,
         language: data.language ?? owner.language,
@@ -268,11 +261,8 @@ app.put(
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
-        : await formatText(db, data.spoiler_text, fmtOpts);
-    const hashtags = [
-      ...(content?.hashtags ?? []),
-      ...(summary?.hashtags ?? []),
-    ];
+        : data.spoiler_text;
+    const hashtags = content?.hashtags ?? [];
     const tags = Object.fromEntries(
       hashtags.map((tag) => [
         tag.toLowerCase(),
@@ -291,8 +281,7 @@ app.put(
           content: data.status,
           contentHtml: content?.html,
           sensitive: data.sensitive,
-          summary: data.spoiler_text,
-          summaryHtml: summary?.html,
+          summary,
           language: data.language ?? owner.language,
           // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
           tags: sql`${tags}::jsonb`,
@@ -303,10 +292,7 @@ app.put(
         .returning();
       if (result.length < 1) return c.json({ error: "Record not found" }, 404);
       await tx.delete(mentions).where(eq(mentions.postId, id));
-      const mentionedIds = [
-        ...(content?.mentions ?? []),
-        ...(summary?.mentions ?? []),
-      ];
+      const mentionedIds = content?.mentions ?? [];
       if (mentionedIds.length > 0) {
         await tx.insert(mentions).values(
           mentionedIds.map((accountId) => ({

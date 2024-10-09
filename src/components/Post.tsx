@@ -94,15 +94,11 @@ export function Post({ post, pinned, quoted }: PostProps) {
           </p>
         </hgroup>
       </header>
-      {post.summaryHtml == null || post.summaryHtml.trim() === "" ? (
+      {post.summary == null || post.summary.trim() === "" ? (
         <PostContent post={post} />
       ) : (
         <details>
-          <summary
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
-            dangerouslySetInnerHTML={{ __html: post.summaryHtml }}
-            lang={post.language ?? undefined}
-          />
+          <summary lang={post.language ?? undefined}>{post.summary}</summary>
           <PostContent post={post} />
         </details>
       )}
