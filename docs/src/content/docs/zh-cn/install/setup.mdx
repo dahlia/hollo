@@ -1,0 +1,59 @@
+---
+title: 配置指南
+description: 如何配置 Hollo。
+---
+
+import { Aside, Steps } from "@astrojs/starlight/components";
+
+<Aside type="caution" title="注意！">
+  在开始配置 Hollo 之前，您需要决定一个域名，并确保该域名已配置并指向您的服务器。
+  因为一旦 Hollo 配置完成，您将无法更改域名。
+</Aside>
+
+安装 Hollo 后，您需要进行配置。本指南将引导您在服务器上配置 Hollo 。
+
+<Steps>
+ 1. 访问 **https://<var>yourdomain</var>/setup**，其中 <var>yourdomain</var> 是您的域名。
+
+ 2. 设置您的登录凭据。
+
+    ![配置登录凭据](../../install/setup/setup.png)
+
+ 3. 您将看到空的 **Accounts**（账户）页面。点击 **Crate a new account**（创建新账户）按钮。
+
+    ![空账户页面](../../install/setup/accounts-empty.png)
+
+ 4. 填写表单以创建您的账户。除 **Username**（用户名）字段外，其他字段可以在之后更改。
+
+    ![创建新账户](../../install/setup/create-account.png)
+
+ 5. 创建账户后，您将看到 **Accounts**（账户）页面列出了您的账户。
+
+    ![账户页面](../../install/setup/accounts.png)
+
+ 6. 由于 Hollo 是无界面的，您需要使用兼容 Mastodon 的客户端应用，例如 [Phanpy]，来与其交互。这里以 Phanpy 为例。
+
+    访问 **https://phanpy.social/** 并点击 **使用 Mastodon 登录** 按钮开始登录。
+
+ 7. 输入您的 Hollo 域名并点击 **继续**。
+
+    ![Phanpy](../../install/setup/phanpy-login.png)
+
+ 8. 此时，您可能需要登录到您的 Hollo 账户。输入您的用户名和密码并点击 **Sign in**（登录）。
+
+    如果不需要登录，请跳到下一步。
+
+ 9. 您将看到 **Authorize Phanpy**（授权 Phanpy）页面。点击 **Allow**（允许）以授权 Phanpy 访问您的 Hollo 账户。
+
+    ![授权 Phanpy](../../install/setup/authorize.png)
+
+10. 这样就完成了！您现在已使用 Phanpy 登录到您的 Hollo 账户。
+
+    时间线一开始会是空的，但您可以开始发布内容和关注其他用户。如果您想关注官方 Hollo 账户，请搜索 `@hollo@hollo.social` 并在个人资料页面上点击 *关注* 按钮。
+
+    享受吧！
+
+    ![Phanpy](../../install/setup/phanpy.png)
+
+[Phanpy]: https://phanpy.social/
+</Steps>

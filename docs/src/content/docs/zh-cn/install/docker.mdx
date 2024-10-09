@@ -1,0 +1,41 @@
+---
+title: 使用 Docker 部署
+description: 如何使用 Docker 部署 Hollo。
+---
+
+Hollo 在 [GitHub Packages] 上提供了官方的 Docker 镜像。您可以使用这些镜像在您的服务器或本地机器上部署 Hollo：
+
+~~~~ sh frame="none"
+docker pull ghcr.io/dahlia/hollo:latest
+~~~~
+
+要运行 Hollo，您需要设置一个 PostgreSQL 数据库和一个用于媒体存储的 S3 兼容对象存储。您可以使用 [PostgreSQL] 的官方 Docker 镜像，也可以使用 [MinIO] 作为 S3 兼容对象存储。或者，您也可以使用其他托管服务，如 AWS 的 [RDS]、[ElastiCache] 和 [S3]。
+
+要将 Hollo 连接到这些服务，您需要通过 `docker run` 命令的 [`-e`/`--env` 选项或 `--env-file` 选项][1] 设置环境变量。要查看 Hollo 支持的环境变量，请参阅 [**环境变量**](./env) 章节。
+
+[GitHub Packages]: https://github.com/dahlia/hollo/pkgs/container/hollo
+[PostgreSQL]: https://hub.docker.com/_/postgres
+[MinIO]: https://hub.docker.com/r/minio/minio
+[RDS]: https://aws.amazon.com/rds/
+[ElastiCache]: https://aws.amazon.com/elasticache/
+[S3]: https://aws.amazon.com/s3/
+[1]: https://docs.docker.com/reference/cli/docker/container/run/#env
+
+
+Docker Compose
+--------------
+
+import { Code } from "@astrojs/starlight/components";
+import composeYaml from "../../install/docker/compose-yaml?raw";
+
+要连接这些服务，您可以使用 [Docker Compose]。以下是一个示例 *compose.yaml* 文件：
+
+<Code code={composeYaml} lang="yaml" title="compose.yaml" />
+
+将此文件保存为 *compose.yaml* 到您的工作目录中，然后运行以下命令：
+
+~~~~ sh frame="none"
+docker compose up -d
+~~~~
+
+[Docker Compose]: https://docs.docker.com/compose/
