@@ -11,7 +11,7 @@ docker pull ghcr.io/dahlia/hollo:latest
 
 要运行 Hollo，您需要设置一个 PostgreSQL 数据库和一个用于媒体存储的 S3 兼容对象存储。您可以使用 [PostgreSQL] 的官方 Docker 镜像，也可以使用 [MinIO] 作为 S3 兼容对象存储。或者，您也可以使用其他托管服务，如 AWS 的 [RDS]、[ElastiCache] 和 [S3]。
 
-要将 Hollo 连接到这些服务，您需要通过 `docker run` 命令的 [`-e`/`--env` 选项或 `--env-file` 选项][1] 设置环境变量。要查看 Hollo 支持的环境变量，请参阅 [*环境变量*](./env) 章节。
+要将 Hollo 连接到这些服务，您需要通过 `docker run` 命令的 [`-e`/`--env` 选项或 `--env-file` 选项][1] 设置环境变量。要查看 Hollo 支持的环境变量，请参阅 [**环境变量**](./env) 章节。
 
 [GitHub Packages]: https://github.com/dahlia/hollo/pkgs/container/hollo
 [PostgreSQL]: https://hub.docker.com/_/postgres
@@ -26,7 +26,7 @@ Docker Compose
 --------------
 
 import { Code } from "@astrojs/starlight/components";
-import composeYaml from "./docker/compose-yaml?raw";
+import composeYaml from "../../install/docker/compose-yaml?raw";
 
 要连接这些服务，您可以使用 [Docker Compose]。以下是一个示例 *compose.yaml* 文件：
 

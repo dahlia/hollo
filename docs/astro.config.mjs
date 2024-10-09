@@ -28,6 +28,10 @@ export default defineConfig({
         ja: {
           label: "日本語",
         },
+        "zh-cn": {
+          label: "简体中文",
+          lang: "zh-CN",
+        },
       },
       sidebar: [
         {
@@ -36,6 +40,7 @@ export default defineConfig({
           translations: {
             ko: "Hollo란?",
             ja: "Holloとは？",
+            "zh-CN": "什么是 Hollo？",
           },
         },
         {
@@ -43,6 +48,7 @@ export default defineConfig({
           translations: {
             ko: "설치",
             ja: "インストール",
+            "zh-CN": "安装",
           },
           items: [
             {
@@ -50,6 +56,7 @@ export default defineConfig({
               translations: {
                 ko: "Railway에 배포",
                 ja: "Railwayにデプロイ",
+                "zh-CN": "部署到 Railway",
               },
               slug: "install/railway",
             },
@@ -58,6 +65,7 @@ export default defineConfig({
               translations: {
                 ko: "Docker로 배포",
                 ja: "Dockerでデプロイ",
+                "zh-CN": "使用 Docker 部署",
               },
               slug: "install/docker",
             },
@@ -66,6 +74,7 @@ export default defineConfig({
               translations: {
                 ko: "수동 설치",
                 ja: "手動インストール",
+                "zh-CN": "手动安装",
               },
               slug: "install/manual",
             },
@@ -74,6 +83,7 @@ export default defineConfig({
               translations: {
                 ko: "환경 변수",
                 ja: "環境変数",
+                "zh-CN": "环境变量",
               },
               slug: "install/env",
             },
@@ -82,6 +92,7 @@ export default defineConfig({
               translations: {
                 ko: "설정하기",
                 ja: "初期設定",
+                "zh-CN": "配置指南",
               },
               slug: "install/setup",
             },
