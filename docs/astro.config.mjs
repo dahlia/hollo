@@ -99,8 +99,24 @@ export default defineConfig({
           ],
         },
       ],
-      head:
-        process.env.PLAUSIBLE_DOMAIN == null
+      head: [
+        {
+          tag: "link",
+          attrs: {
+            rel: "icon",
+            href: "/favicon.svg",
+            media: "(prefers-color-scheme: light)",
+          },
+        },
+        {
+          tag: "link",
+          attrs: {
+            rel: "icon",
+            href: "/favicon-darkmode.svg",
+            media: "(prefers-color-scheme: dark)",
+          },
+        },
+        ...(process.env.PLAUSIBLE_DOMAIN == null
           ? []
           : [
               {
@@ -111,7 +127,8 @@ export default defineConfig({
                   src: "https://plausible.io/js/script.outbound-links.js",
                 },
               },
-            ],
+            ]),
+      ],
     }),
   ],
 });
