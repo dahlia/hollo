@@ -58,7 +58,11 @@ const applicationSchema = z.object({
 
 app.post("/", async (c) => {
   let form: z.infer<typeof applicationSchema>;
-  if (c.req.header("Content-Type") === "application/json") {
+  const contentType = c.req.header("Content-Type");
+  if (
+    contentType === "application/json" ||
+    contentType?.match(/^application\/json\s*;/)
+  ) {
     const json = await c.req.json();
     const result = await applicationSchema.safeParseAsync(json);
     if (!result.success) {

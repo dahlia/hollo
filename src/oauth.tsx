@@ -304,7 +304,11 @@ const tokenRequestSchema = z.object({
 
 app.post("/token", cors(), async (c) => {
   let form: z.infer<typeof tokenRequestSchema>;
-  if (c.req.header("Content-Type") === "application/json") {
+  const contentType = c.req.header("Content-Type");
+  if (
+    contentType === "application/json" ||
+    contentType?.match(/^application\/json\s*;/)
+  ) {
     const json = await c.req.json();
     const result = await tokenRequestSchema.safeParseAsync(json);
     if (!result.success) {

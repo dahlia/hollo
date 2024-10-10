@@ -251,6 +251,7 @@ export function serializePost(
     emoji_reactions: serializeReactions(post.reactions),
     poll:
       post.poll == null ? null : serializePoll(post.poll, currentAccountOwner),
+    filtered: null,
   };
 }
 
