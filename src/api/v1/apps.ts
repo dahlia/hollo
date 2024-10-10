@@ -102,6 +102,7 @@ app.post("/", async (c) => {
     redirect_uri: app.redirectUris.join(" "),
     client_id: app.clientId,
     client_secret: app.clientSecret,
+    vapid_key: "",
   };
   logger.debug("Created application: {app}", { app: result });
   return c.json(result);
