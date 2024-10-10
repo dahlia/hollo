@@ -269,13 +269,13 @@ export function serializePreviewCard(
     provider_url: "",
     html: "",
     width:
-      card.image == null
+      card.image?.width == null
         ? 0
         : typeof card.image.width === "string"
           ? Number.parseInt(card.image.width)
           : card.image.width,
     height:
-      card.image == null
+      card.image?.height == null
         ? 0
         : typeof card.image.height === "string"
           ? Number.parseInt(card.image.height)
