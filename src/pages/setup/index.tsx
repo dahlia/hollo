@@ -6,7 +6,7 @@ import { SetupForm } from "../../components/SetupForm.tsx";
 import db from "../../db.ts";
 import { credentials } from "../../schema.ts";
 
-const setup = new Hono().basePath("/setup");
+const setup = new Hono();
 
 setup
   .get("/", async (c) => {

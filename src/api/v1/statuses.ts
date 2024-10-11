@@ -124,6 +124,7 @@ app.post(
         : data.spoiler_text;
     const mentionedIds = content?.mentions ?? [];
     const hashtags = content?.hashtags ?? [];
+    const emojis = content?.emojis ?? {};
     const tags = Object.fromEntries(
       hashtags.map((tag) => [
         tag.toLowerCase(),
@@ -183,6 +184,7 @@ app.post(
         pollId: poll == null ? null : poll.id,
         // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
         tags: sql`${tags}::jsonb`,
+        emojis: sql`${emojis}::jsonb`,
         sensitive: data.sensitive,
         url: url.href,
         previewCard,
@@ -270,6 +272,7 @@ app.put(
           .href,
       ]),
     );
+    const emojis = content?.emojis ?? {};
     let previewCard: PreviewCard | null = null;
     if (content?.previewLink != null) {
       previewCard = await fetchPreviewCard(content.previewLink);
@@ -285,6 +288,7 @@ app.put(
           language: data.language ?? owner.language,
           // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
           tags: sql`${tags}::jsonb`,
+          emojis: sql`${emojis}::jsonb`,
           previewCard,
           updated: new Date(),
         })

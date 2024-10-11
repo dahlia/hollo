@@ -815,3 +815,13 @@ export const muteRelations = relations(mutes, ({ one }) => ({
     relationName: "muted",
   }),
 }));
+
+export const customEmojis = pgTable("custom_emojis", {
+  shortcode: text("shortcode").primaryKey(),
+  url: text("url").notNull(),
+  category: text("category"),
+  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+});
+
+export type CustomEmoji = typeof customEmojis.$inferSelect;
+export type NewCustomEmoji = typeof customEmojis.$inferInsert;

@@ -22,6 +22,7 @@ export interface FormatResult {
   html: string;
   mentions: string[];
   hashtags: string[];
+  emojis: Record<string, string>;
   previewLink: string | null;
   quoteTarget: Article | Note | Question | null;
 }
@@ -31,6 +32,8 @@ interface Env {
   previewLink: string | null;
   links: string[];
 }
+
+const CUSTOM_EMOJI_REGEXP = /:([a-z0-9_-]+):/gi;
 
 export async function formatText(
   db: PgDatabase<
@@ -82,6 +85,13 @@ export async function formatText(
       id: account.id,
     };
   }
+
+  // Collect custom emojis:
+  const emojis: string[] = [];
+  for (const m of text.matchAll(CUSTOM_EMOJI_REGEXP)) emojis.push(m[1]);
+  const customEmojis = await db.query.customEmojis.findMany({
+    where: inArray(schema.customEmojis.shortcode, emojis),
+  });
 
   // Render the final HTML:
   const md = new MarkdownIt({ linkify: true })
@@ -158,6 +168,9 @@ export async function formatText(
     hashtags: env.hashtags,
     previewLink: env.previewLink,
     quoteTarget,
+    emojis: Object.fromEntries(
+      customEmojis.map((emoji) => [emoji.shortcode, emoji.url]),
+    ),
   };
 }
 

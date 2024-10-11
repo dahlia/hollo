@@ -57,7 +57,7 @@ homePage.get("/", async (c) => {
       ))}
       <div>
         <a role="button" href="/accounts">
-          Manage accounts (signing in required)
+          Administration dashboard (signing in required)
         </a>
       </div>
     </Layout>,

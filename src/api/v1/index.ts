@@ -53,8 +53,17 @@ app.get(
   },
 );
 
-app.get("/custom_emojis", (c) => {
-  return c.json([]);
+app.get("/custom_emojis", async (c) => {
+  const emojis = await db.query.customEmojis.findMany();
+  return c.json(
+    emojis.map((emoji) => ({
+      shortcode: emoji.shortcode,
+      url: emoji.url,
+      static_url: emoji.url,
+      visible_in_picker: true,
+      category: emoji.category,
+    })),
+  );
 });
 
 app.get("/announcements", (c) => {

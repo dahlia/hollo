@@ -18,9 +18,13 @@ import {
   pinnedPosts,
   posts,
 } from "../../schema.ts";
+import profilePost from "./profilePost.tsx";
 
-const profile = new Hono().basePath("/:handle{@[^/]+}");
-profile.get("/", async (c) => {
+const profile = new Hono();
+
+profile.route("/:id", profilePost);
+
+profile.get<"/:handle">(async (c) => {
   let handle = c.req.param("handle");
   if (handle.startsWith("@")) handle = handle.substring(1);
   const owner = await db.query.accountOwners.findFirst({

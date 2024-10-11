@@ -6,6 +6,7 @@ import {
   Article,
   Create,
   Delete,
+  Emoji,
   EmojiReact,
   Endpoints,
   Follow,
@@ -48,6 +49,7 @@ import {
   type NewPinnedPost,
   accountOwners,
   accounts,
+  customEmojis,
   follows,
   likes,
   pinnedPosts,
@@ -837,6 +839,24 @@ federation.setObjectDispatcher(
       if (!found) return null;
     }
     return toObject(post, ctx);
+  },
+);
+
+federation.setObjectDispatcher(
+  Emoji,
+  "/emojis/:{shortcode}:",
+  async (ctx, { shortcode }) => {
+    const emoji = await db.query.customEmojis.findFirst({
+      where: eq(customEmojis.shortcode, shortcode),
+    });
+    if (emoji == null) return null;
+    return new Emoji({
+      id: ctx.getObjectUri(Emoji, { shortcode }),
+      name: `:${shortcode}:`,
+      icon: new Image({
+        url: new URL(emoji.url),
+      }),
+    });
   },
 );
 

@@ -7,6 +7,7 @@ import {
   type DocumentLoader,
   Emoji,
   Hashtag,
+  Image,
   LanguageString,
   Link,
   Note,
@@ -670,9 +671,17 @@ export function toObject(
       ),
       ...Object.entries(post.tags).map(
         ([name, url]) =>
-          new vocab.Hashtag({
+          new Hashtag({
             name,
             href: new URL(url),
+          }),
+      ),
+      ...Object.entries(post.emojis).map(
+        ([shortcode, url]) =>
+          new Emoji({
+            id: ctx.getObjectUri(Emoji, { shortcode }),
+            name: `:${shortcode}:`,
+            icon: new Image({ url: new URL(url) }),
           }),
       ),
       ...(post.quoteTarget == null

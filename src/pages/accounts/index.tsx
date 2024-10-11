@@ -2,7 +2,7 @@ import { exportJwk, generateCryptoKeyPair } from "@fedify/fedify";
 import { Hono } from "hono";
 import { AccountList } from "../../components/AccountList.tsx";
 import { NewAccountPage } from "../../components/AccountNewPage.tsx";
-import { Layout } from "../../components/Layout.tsx";
+import { DashboardLayout } from "../../components/DashboardLayout.tsx";
 import db from "../../db.ts";
 import federation from "../../federation";
 import { loginRequired } from "../../login.ts";
@@ -11,13 +11,21 @@ import {
   type AccountOwner,
   type PostVisibility,
   accountOwners,
-  accounts,
+  accounts as accountsTable,
 } from "../../schema.ts";
 import { formatText } from "../../text.ts";
+import accountsId from "./accountsId";
+import accountsNew from "./accountsNew";
 
-const accountsPage = new Hono().basePath("/accounts");
-accountsPage.use(loginRequired);
-accountsPage
+const accounts = new Hono();
+
+accounts.use(loginRequired);
+
+accounts.route("/new", accountsNew);
+
+accounts.route("/:id", accountsId);
+
+accounts
   .get("/", async (c) => {
     const owners = await db.query.accountOwners.findMany({
       with: { account: true },
@@ -63,7 +71,7 @@ accountsPage
     const fedCtx = federation.createContext(c.req.raw, undefined);
     await db.transaction(async (tx) => {
       const account = await tx
-        .insert(accounts)
+        .insert(accountsTable)
         .values({
           id: crypto.randomUUID(),
           iri: fedCtx.getActorUri(username).href,
@@ -106,7 +114,7 @@ interface AccountListPageProps {
 
 function AccountListPage({ accountOwners }: AccountListPageProps) {
   return (
-    <Layout title="Hollo: Accounts">
+    <DashboardLayout title="Hollo: Accounts" selectedMenu="accounts">
       <hgroup>
         <h1>Accounts</h1>
         <p>
@@ -118,8 +126,8 @@ function AccountListPage({ accountOwners }: AccountListPageProps) {
       <a role="button" href="/accounts/new">
         Create a new account
       </a>
-    </Layout>
+    </DashboardLayout>
   );
 }
 
-export default accountsPage;
+export default accounts;

@@ -11,7 +11,7 @@ import { credentials } from "../../schema.ts";
 const SECRET_KEY = process.env["SECRET_KEY"];
 if (SECRET_KEY == null) throw new Error("SECRET_KEY is required");
 
-const login = new Hono().basePath("/login");
+const login = new Hono();
 
 login
   .get("/", (c) => {
