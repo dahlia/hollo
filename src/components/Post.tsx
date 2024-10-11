@@ -6,6 +6,7 @@ import type {
   PollOption,
   Reaction,
 } from "../schema";
+import { renderCustomEmojis } from "../text";
 
 export interface PostProps {
   readonly post: DbPost & {
@@ -196,12 +197,13 @@ interface PostContentProps {
 }
 
 function PostContent({ post }: PostContentProps) {
+  const contentHtml = renderCustomEmojis(post.contentHtml, post.emojis);
   return (
     <>
       {post.contentHtml && (
         <div
           // biome-ignore lint/security/noDangerouslySetInnerHtml: xss
-          dangerouslySetInnerHTML={{ __html: post.contentHtml }}
+          dangerouslySetInnerHTML={{ __html: contentHtml ?? "" }}
           lang={post.language ?? undefined}
         />
       )}
