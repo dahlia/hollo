@@ -38,10 +38,10 @@ app.post("/:actor/accountExport",
     const actor = c.req.param("actor");
     const owner = c.get("token").accountOwner;
 
+    // TODO: Extract to validateActor() function
     if (owner == null) {
       return c.json({ error: "Unauthorized" }, 401);
     }
-
     if (owner.handle !== actor) {
       return c.json({ error: "Forbidden" }, 403);
     }
@@ -57,15 +57,15 @@ app.post("/:actor/accountExport",
       const outbox = await loadOutbox(owner.id)
 
       exportTarballStream = exportActorProfile({ actorProfile, outbox });
+
+      return c.body(exportTarballStream, 200, {
+        "Content-Type": "application/x-tar",
+        "Content-Disposition": `attachment; filename="account_export_${actor}.tar"`
+      });
     } catch (error) {
       logger.error("Account export failed: {error}", { error });
       return c.json({ error: "Export failed" }, 500);
     }
-
-    // exportTarballStream is now a WriteStream
-    exportTarballStream.pipe(/* ... */);
-
-    return /* look up how to return file streams in HonoX */;
   });
 
 app.get(
