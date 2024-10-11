@@ -20,6 +20,7 @@
     "@fedify/redis": "0.2.0",
     "@hexagon/base64": "^2.0.4",
     "@hono/zod-validator": "^0.2.1",
+    "@interop/wallet-export-ts": "^0.1.0",
     "@js-temporal/polyfill": "^0.4.4",
     "@logtape/logtape": "^0.6.2",
     "cheerio": "^1.0.0",

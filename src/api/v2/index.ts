@@ -10,6 +10,7 @@ import { getLogger } from "@logtape/logtape";
 import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
+import { exportActorProfile } from "@interop/wallet-export-ts";
 import { db } from "../../db";
 import { serializeAccount } from "../../entities/account";
 import { getPostRelations, serializePost } from "../../entities/status";
@@ -27,12 +28,45 @@ app.route("/instance", instance);
 
 app.post("/media", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
-app.post("/:actor/accountExport", async (c) => {
-  const logger = getLogger(["hollo", "api", "v2", "accountExport"]);
-  logger.info("Received account export request");
+app.post("/:actor/accountExport",
+  tokenRequired,
+  scopeRequired(["read:accounts"]),
+  async (c) => {
+    const logger = getLogger(["hollo", "api", "v2", "accountExport"]);
+    logger.info("Received account export request");
 
-  return c.json({}, 200);
-});
+    const actor = c.req.param("actor");
+    const owner = c.get("token").accountOwner;
+
+    if (owner == null) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    if (owner.handle !== actor) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    logger.info("Received account export request for actor: {actor}", { actor });
+
+    let exportTarballStream;
+    try {
+      // Load the Actor profile JSON
+      const actorProfile = await loadActorProfile(owner.id)
+
+      // Load the actor's Content (Notes etc) Collection
+      const outbox = await loadOutbox(owner.id)
+
+      exportTarballStream = exportActorProfile({ actorProfile, outbox });
+    } catch (error) {
+      logger.error("Account export failed: {error}", { error });
+      return c.json({ error: "Export failed" }, 500);
+    }
+
+    // exportTarballStream is now a WriteStream
+    exportTarballStream.pipe(/* ... */);
+
+    return /* look up how to return file streams in HonoX */;
+  });
 
 app.get(
   "/search",
