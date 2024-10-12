@@ -4,6 +4,7 @@ import {
   EmojiReact,
   Image,
   Note,
+  PUBLIC_COLLECTION,
   Remove,
   Undo,
 } from "@fedify/fedify";
@@ -998,6 +999,8 @@ app.put(
     const activity = new EmojiReact({
       id: new URL(`/#react/${owner.id}/${postId}/${emoji}`, url),
       actor: fedCtx.getActorUri(owner.handle),
+      tos: [new URL(post.account.iri), fedCtx.getFollowersUri(owner.handle)],
+      cc: PUBLIC_COLLECTION,
       object: new URL(post.iri),
       content: emojiCode,
       tags: tag == null ? [] : [tag],
@@ -1006,6 +1009,7 @@ app.put(
       { username: owner.handle },
       "followers",
       activity,
+      { preferSharedInbox: true },
     );
     await fedCtx.sendActivity(
       { username: owner.handle },
@@ -1020,6 +1024,7 @@ app.put(
               },
       },
       activity,
+      { preferSharedInbox: true },
     );
     return c.json(serializePost(post, owner, c.req.url));
   },
@@ -1063,9 +1068,13 @@ app.delete(
     const activity = new Undo({
       id: new URL(`/#react/undo/${owner.id}/${postId}/${emoji}`, url),
       actor: fedCtx.getActorUri(owner.handle),
+      tos: [new URL(post.account.iri), fedCtx.getFollowersUri(owner.handle)],
+      cc: PUBLIC_COLLECTION,
       object: new EmojiReact({
         id: new URL(`/#react/${owner.id}/${postId}/${emoji}`, url),
         actor: fedCtx.getActorUri(owner.handle),
+        tos: [new URL(post.account.iri), fedCtx.getFollowersUri(owner.handle)],
+        cc: PUBLIC_COLLECTION,
         object: new URL(post.iri),
         content: reaction.emoji,
         tags:
@@ -1086,6 +1095,7 @@ app.delete(
       { username: owner.handle },
       "followers",
       activity,
+      { preferSharedInbox: true },
     );
     await fedCtx.sendActivity(
       { username: owner.handle },
@@ -1100,6 +1110,7 @@ app.delete(
               },
       },
       activity,
+      { preferSharedInbox: true },
     );
     return c.json(serializePost(post, owner, c.req.url));
   },
