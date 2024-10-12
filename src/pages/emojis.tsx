@@ -1,9 +1,9 @@
-import { desc, ne } from "drizzle-orm";
+import { desc, isNotNull, ne } from "drizzle-orm";
 import { Hono } from "hono";
 import { DashboardLayout } from "../components/DashboardLayout";
 import db from "../db";
 import { loginRequired } from "../login";
-import { accounts, customEmojis, posts } from "../schema";
+import { accounts, customEmojis, posts, reactions } from "../schema";
 
 const emojis = new Hono();
 
@@ -62,6 +62,12 @@ emojis.get("/import", async (c) => {
     orderBy: desc(posts.updated),
     limit: 500,
   });
+  const reactionList = await db.query.reactions.findMany({
+    with: { account: true },
+    where: isNotNull(reactions.customEmoji),
+    orderBy: desc(reactions.created),
+    limit: 500,
+  });
   const accountList = await db.query.accounts.findMany({
     where: ne(accounts.emojis, {}),
     orderBy: desc(accounts.updated),
@@ -95,6 +101,20 @@ emojis.get("/import", async (c) => {
         domain,
       };
     }
+  }
+  for (const reaction of reactionList) {
+    if (reaction.customEmoji == null) continue;
+    const shortcode = reaction.emoji.replace(/^:|:$/g, "");
+    if (customEmojiCodes.has(shortcode)) continue;
+    if (customEmojiUrls.has(reaction.customEmoji)) continue;
+    const domain = reaction.account.handle.replace(/^@?[^@]+@/, "");
+    const id = `${shortcode}@${domain}`;
+    emojis[id] = {
+      id,
+      shortcode,
+      url: reaction.customEmoji,
+      domain,
+    };
   }
   for (const account of accountList) {
     for (let shortcode in account.emojis) {
