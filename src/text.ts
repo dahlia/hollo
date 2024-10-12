@@ -209,9 +209,27 @@ export function renderCustomEmojis(
       console.debug({ match, emojis });
       const emoji = emojis[match] ?? emojis[match.replace(/^:|:$/g, "")];
       if (emoji == null) return match;
-      return `<img src="${emoji}" alt="${match}" style="height: 24px">`;
+      return `<img src="${emoji}" alt="${match}" style="height: 1em">`;
     });
   }
+}
+
+export async function extractCustomEmojis(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  text: string,
+): Promise<Record<string, string>> {
+  const emojis = new Set<string>();
+  for (const m of text.matchAll(CUSTOM_EMOJI_REGEXP)) emojis.add(m[1]);
+  const customEmojis = await db.query.customEmojis.findMany({
+    where: inArray(schema.customEmojis.shortcode, [...emojis]),
+  });
+  return Object.fromEntries(
+    customEmojis.map((emoji) => [`:${emoji.shortcode}:`, emoji.url]),
+  );
 }
 
 export function extractPreviewLink(html: string): string | null {

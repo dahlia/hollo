@@ -1,4 +1,5 @@
 import type { Account, AccountOwner } from "../schema";
+import { renderCustomEmojis } from "../text";
 
 export interface ProfileProps {
   accountOwner: AccountOwner & { account: Account };
@@ -6,6 +7,12 @@ export interface ProfileProps {
 
 export function Profile({ accountOwner }: ProfileProps) {
   const account = accountOwner.account;
+  const nameHtml = renderCustomEmojis(
+    Bun.escapeHTML(account.name),
+    account.emojis,
+  );
+  const bioHtml = renderCustomEmojis(account.bioHtml ?? "", account.emojis);
+  const url = account.url ?? account.iri;
   return (
     <>
       <hgroup>
@@ -19,7 +26,8 @@ export function Profile({ accountOwner }: ProfileProps) {
           />
         )}
         <h1>
-          <a href={account.url ?? account.iri}>{account.name}</a>
+          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: xss protected */}
+          <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={url} />
         </h1>
         <p>
           <span
@@ -37,7 +45,7 @@ export function Profile({ accountOwner }: ProfileProps) {
         </p>
       </hgroup>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: no xss */}
-      <div dangerouslySetInnerHTML={{ __html: account.bioHtml ?? "" }} />
+      <div dangerouslySetInnerHTML={{ __html: bioHtml }} />
       {account.fieldHtmls && (
         <table>
           <thead>

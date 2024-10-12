@@ -51,7 +51,12 @@ export function Post({ post, pinned, quoted }: PostProps) {
   if (post.sharing != null)
     return <Post post={{ ...post.sharing, sharing: null }} />;
   const account = post.account;
-  const authorName = <a href={account.url ?? account.iri}>{account.name}</a>;
+  const authorNameHtml = renderCustomEmojis(account.name, account.emojis);
+  const authorUrl = account.url ?? account.iri;
+  const authorName = (
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: xss protected
+    <a dangerouslySetInnerHTML={{ __html: authorNameHtml }} href={authorUrl} />
+  );
   return (
     <article
       style={

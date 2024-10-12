@@ -43,7 +43,7 @@ import {
   pinnedPosts,
   posts,
 } from "../../schema";
-import { formatText } from "../../text";
+import { extractCustomEmojis, formatText } from "../../text";
 import { timelineQuerySchema } from "./timelines";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -150,14 +150,20 @@ app.patch(
       const contentHtml = (await formatText(db, fields[i][1], fmtOpts)).html;
       fieldHtmls.push([fields[i][0], contentHtml]);
     }
+    const bioResult =
+      form.note == null ? null : await formatText(db, form.note, fmtOpts);
+    const name = form.display_name ?? account.name;
+    const nameEmojis = await extractCustomEmojis(db, name);
+    const emojis =
+      bioResult == null
+        ? { ...account.emojis, ...nameEmojis }
+        : { ...nameEmojis, ...bioResult.emojis };
     const updatedAccounts = await db
       .update(accounts)
       .set({
-        name: form.display_name ?? account.name,
-        bioHtml:
-          form.note == null
-            ? account.bioHtml
-            : (await formatText(db, form.note, fmtOpts)).html,
+        name,
+        emojis: sql`${emojis}::jsonb`,
+        bioHtml: bioResult == null ? account.bioHtml : bioResult.html,
         avatarUrl,
         coverUrl,
         fieldHtmls: Object.fromEntries(fieldHtmls),

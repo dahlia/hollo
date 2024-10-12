@@ -1,5 +1,5 @@
 import { Delete, PUBLIC_COLLECTION, Update } from "@fedify/fedify";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { AccountForm } from "../../components/AccountForm.tsx";
 import type { NewAccountPageProps } from "../../components/AccountNewPage.tsx";
@@ -13,7 +13,7 @@ import {
   accountOwners,
   accounts,
 } from "../../schema.ts";
-import { formatText } from "../../text.ts";
+import { extractCustomEmojis, formatText } from "../../text.ts";
 
 const accountsId = new Hono();
 
@@ -96,13 +96,17 @@ accountsId.post<"/:id">(async (c) => {
     contextLoader: fedCtx.contextLoader,
     documentLoader: await fedCtx.getDocumentLoader(accountOwner),
   };
+  const bioResult = await formatText(db, bio ?? "", fmtOpts);
+  const nameEmojis = await extractCustomEmojis(db, name);
+  const emojis = { ...nameEmojis, ...bioResult.emojis };
   const accountId = c.req.param("id");
   await db.transaction(async (tx) => {
     await tx
       .update(accounts)
       .set({
         name,
-        bioHtml: (await formatText(tx, bio ?? "", fmtOpts)).html,
+        emojis: sql`${emojis}::jsonb`,
+        bioHtml: bioResult.html,
         protected: protected_,
       })
       .where(eq(accounts.id, accountId));

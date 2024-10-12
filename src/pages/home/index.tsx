@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { Layout } from "../../components/Layout.tsx";
 import db from "../../db.ts";
+import { renderCustomEmojis } from "../../text.ts";
 
 const homePage = new Hono().basePath("/");
 
@@ -28,33 +29,43 @@ homePage.get("/", async (c) => {
         <h1>{host}</h1>
         <p>This Hollo instance has the below accounts.</p>
       </hgroup>
-      {owners.map((owner) => (
-        <article>
-          <hgroup>
-            {owner.account.avatarUrl && (
-              <a href={owner.account.url ?? owner.account.iri}>
-                <img
-                  src={owner.account.avatarUrl}
-                  alt={`${owner.account.name}'s avatar`}
-                  width={72}
-                  height={72}
-                  style="float: left; margin-right: 1em;"
-                />
-              </a>
-            )}
-            <h3>
-              <a href={owner.account.url ?? owner.account.iri}>
-                {owner.account.name}
-              </a>
-            </h3>
-            <p style="user-select: all;">{owner.account.handle}</p>
-          </hgroup>
-          <div
-            // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
-            dangerouslySetInnerHTML={{ __html: owner.account.bioHtml ?? "" }}
-          />
-        </article>
-      ))}
+      {owners.map((owner) => {
+        const url = owner.account.url ?? owner.account.iri;
+        const nameHtml = renderCustomEmojis(
+          Bun.escapeHTML(owner.account.name),
+          owner.account.emojis,
+        );
+        const bioHtml = renderCustomEmojis(
+          owner.account.bioHtml ?? "",
+          owner.account.emojis,
+        );
+        return (
+          <article>
+            <hgroup>
+              {owner.account.avatarUrl && (
+                <a href={owner.account.url ?? owner.account.iri}>
+                  <img
+                    src={owner.account.avatarUrl}
+                    alt={`${owner.account.name}'s avatar`}
+                    width={72}
+                    height={72}
+                    style="float: left; margin-right: 1em;"
+                  />
+                </a>
+              )}
+              <h3>
+                {/* biome-ignore lint/security/noDangerouslySetInnerHtml: xss protected */}
+                <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={url} />
+              </h3>
+              <p style="user-select: all;">{owner.account.handle}</p>
+            </hgroup>
+            <div
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: <explanation>
+              dangerouslySetInnerHTML={{ __html: bioHtml }}
+            />
+          </article>
+        );
+      })}
       <div>
         <a role="button" href="/accounts">
           Administration dashboard (signing in required)

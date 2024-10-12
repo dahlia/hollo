@@ -1,5 +1,6 @@
 import xss from "xss";
 import type { Account, AccountOwner } from "../schema";
+import { renderCustomEmojis } from "../text";
 
 export interface AccountListProps {
   accountOwners: (AccountOwner & { account: Account })[];
@@ -20,16 +21,25 @@ interface AccountItemProps {
 }
 
 function AccountItem({ accountOwner: { account } }: AccountItemProps) {
+  const nameHtml = renderCustomEmojis(
+    Bun.escapeHTML(account.name),
+    account.emojis,
+  );
+  const bioHtml = renderCustomEmojis(
+    xss(account.bioHtml ?? ""),
+    account.emojis,
+  );
   return (
     <article>
       <header>
         <hgroup>
-          <h2>{account.name}</h2>
+          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: xss protected */}
+          <h2 dangerouslySetInnerHTML={{ __html: nameHtml }} />
           <p style="user-select: all;">{account.handle}</p>
         </hgroup>
       </header>
       {/* biome-ignore lint/security/noDangerouslySetInnerHtml: xss protected */}
-      <div dangerouslySetInnerHTML={{ __html: xss(account.bioHtml ?? "") }} />
+      <div dangerouslySetInnerHTML={{ __html: bioHtml }} />
       <p>
         {account.published ? (
           <small>
