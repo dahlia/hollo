@@ -89,9 +89,12 @@ export async function formatText(
   // Collect custom emojis:
   const emojis: string[] = [];
   for (const m of text.matchAll(CUSTOM_EMOJI_REGEXP)) emojis.push(m[1]);
-  const customEmojis = await db.query.customEmojis.findMany({
-    where: inArray(schema.customEmojis.shortcode, emojis),
-  });
+  const customEmojis =
+    emojis.length > 0
+      ? await db.query.customEmojis.findMany({
+          where: inArray(schema.customEmojis.shortcode, emojis),
+        })
+      : [];
 
   // Render the final HTML:
   const md = new MarkdownIt({ linkify: true })
@@ -224,9 +227,12 @@ export async function extractCustomEmojis(
 ): Promise<Record<string, string>> {
   const emojis = new Set<string>();
   for (const m of text.matchAll(CUSTOM_EMOJI_REGEXP)) emojis.add(m[1]);
-  const customEmojis = await db.query.customEmojis.findMany({
-    where: inArray(schema.customEmojis.shortcode, [...emojis]),
-  });
+  const customEmojis =
+    emojis.size > 0
+      ? await db.query.customEmojis.findMany({
+          where: inArray(schema.customEmojis.shortcode, [...emojis]),
+        })
+      : [];
   return Object.fromEntries(
     customEmojis.map((emoji) => [`:${emoji.shortcode}:`, emoji.url]),
   );
