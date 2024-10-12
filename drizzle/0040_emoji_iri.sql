@@ -1,0 +1,1 @@
+ALTER TABLE "reactions" ADD COLUMN "emoji_iri" text;

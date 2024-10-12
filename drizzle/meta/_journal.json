@@ -281,6 +281,13 @@
       "when": 1728646733943,
       "tag": "0039_custom_emojis",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1728715804656,
+      "tag": "0040_emoji_iri",
+      "breakpoints": true
     }
   ]
 }

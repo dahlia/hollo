@@ -50,12 +50,12 @@ export async function persistAccount(
   ) {
     return null;
   }
-  if (options.skipUpdate) {
-    const account = await db.query.accounts.findFirst({
-      where: eq(schema.accounts.iri, actor.id.href),
-    });
-    if (account != null) return account;
-  }
+  const existingAccount = await db.query.accounts.findFirst({
+    with: { owner: true },
+    where: eq(schema.accounts.iri, actor.id.href),
+  });
+  if (options.skipUpdate && existingAccount != null) return existingAccount;
+  if (existingAccount?.owner != null) return existingAccount;
   let handle: string;
   try {
     handle = await getActorHandle(actor);

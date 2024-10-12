@@ -1,7 +1,15 @@
-import { Add, Note, Remove, Undo } from "@fedify/fedify";
+import {
+  Add,
+  Emoji,
+  EmojiReact,
+  Image,
+  Note,
+  Remove,
+  Undo,
+} from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
@@ -33,6 +41,7 @@ import {
   type NewPost,
   type Poll,
   bookmarks,
+  customEmojis,
   likes,
   media,
   mentions,
@@ -40,6 +49,7 @@ import {
   pollOptions,
   polls,
   posts,
+  reactions,
 } from "../../schema";
 import { formatText } from "../../text";
 
@@ -889,6 +899,209 @@ app.post(
       },
     );
     return c.json(serializePost(post!, owner, c.req.url));
+  },
+);
+
+app.put(
+  "/:id/emoji_reactions/:emoji",
+  tokenRequired,
+  scopeRequired(["write:favourites"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    const postId = c.req.param("id");
+    let emoji = c.req.param("emoji");
+    const url = new URL(c.req.url);
+    if (emoji.endsWith(`@${url.host}`)) emoji = emoji.replace(/@[^@]+$/, "");
+    let emojiCode = "";
+    let tag: Emoji | null = null;
+    if (emoji.includes("@")) {
+      // In case of using a remote custom emoji:
+      const [shortcode, domain] = emoji.split("@", 2);
+      const reactionList = await db.query.reactions.findMany({
+        with: { account: true },
+        where: and(
+          eq(reactions.postId, postId),
+          eq(reactions.emoji, `:${shortcode}:`),
+          isNotNull(reactions.customEmoji),
+          isNotNull(reactions.emojiIri),
+        ),
+      });
+      for (const reaction of reactionList) {
+        if (
+          reaction.customEmoji == null ||
+          reaction.emojiIri == null ||
+          !reaction.account.handle.endsWith(`@${domain}`)
+        ) {
+          continue;
+        }
+        await db.insert(reactions).values({
+          ...reaction,
+          accountId: owner.id,
+        });
+        emojiCode = reaction.emoji;
+        tag = new Emoji({
+          id: new URL(reaction.emojiIri),
+          name: emojiCode,
+          icon: new Image({
+            url: new URL(reaction.customEmoji),
+          }),
+        });
+        break;
+      }
+      if (emojiCode === "") return c.notFound();
+    } else {
+      const customEmoji = await db.query.customEmojis.findFirst({
+        where: eq(customEmojis.shortcode, emoji),
+      });
+      if (customEmoji == null) {
+        if (!/^[\p{Emoji}]+$/u.test(emoji)) return c.notFound();
+        // Unicode emoji:
+        await db.insert(reactions).values({
+          postId,
+          accountId: owner.id,
+          emoji,
+          customEmoji: null,
+        });
+        emojiCode = emoji;
+      } else {
+        // Local custom emoji:
+        emojiCode = `:${emoji}:`;
+        const emojiIri = fedCtx.getObjectUri(Emoji, { shortcode: emoji });
+        await db.insert(reactions).values({
+          postId,
+          accountId: owner.id,
+          emoji: emojiCode,
+          customEmoji: customEmoji.url,
+          emojiIri: emojiIri.href,
+        });
+        tag = new Emoji({
+          id: emojiIri,
+          name: emojiCode,
+          icon: new Image({
+            url: new URL(customEmoji.url),
+          }),
+        });
+      }
+    }
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      with: getPostRelations(owner.id),
+    });
+    if (post == null) return c.notFound();
+    const activity = new EmojiReact({
+      id: new URL(`/#react/${owner.id}/${postId}/${emoji}`, url),
+      actor: fedCtx.getActorUri(owner.handle),
+      object: new URL(post.iri),
+      content: emojiCode,
+      tags: tag == null ? [] : [tag],
+    });
+    await fedCtx.sendActivity(
+      { username: owner.handle },
+      "followers",
+      activity,
+    );
+    await fedCtx.sendActivity(
+      { username: owner.handle },
+      {
+        id: new URL(post.account.iri),
+        inboxId: new URL(post.account.inboxUrl),
+        endpoints:
+          post.account.sharedInboxUrl == null
+            ? null
+            : {
+                sharedInbox: new URL(post.account.sharedInboxUrl),
+              },
+      },
+      activity,
+    );
+    return c.json(serializePost(post, owner, c.req.url));
+  },
+);
+
+app.delete(
+  "/:id/emoji_reactions/:emoji",
+  tokenRequired,
+  scopeRequired(["write:favourites"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    const postId = c.req.param("id");
+    let emoji = c.req.param("emoji");
+    const url = new URL(c.req.url);
+    if (emoji.endsWith(`@${url.host}`)) emoji = emoji.replace(/@[^@]+$/, "");
+    const unicode = /^[\p{Emoji}]+$/u.test(emoji);
+    const deleted = await db
+      .delete(reactions)
+      .where(
+        and(
+          eq(reactions.postId, postId),
+          eq(reactions.accountId, owner.id),
+          eq(reactions.emoji, unicode ? emoji : `:${emoji}:`),
+        ),
+      )
+      .returning();
+    if (deleted.length < 1) return c.notFound();
+    const [reaction] = deleted;
+    const post = await db.query.posts.findFirst({
+      where: eq(posts.id, postId),
+      with: getPostRelations(owner.id),
+    });
+    if (post == null) return c.notFound();
+    const activity = new Undo({
+      id: new URL(`/#react/undo/${owner.id}/${postId}/${emoji}`, url),
+      actor: fedCtx.getActorUri(owner.handle),
+      object: new EmojiReact({
+        id: new URL(`/#react/${owner.id}/${postId}/${emoji}`, url),
+        actor: fedCtx.getActorUri(owner.handle),
+        object: new URL(post.iri),
+        content: reaction.emoji,
+        tags:
+          reaction.emojiIri == null || reaction.customEmoji == null
+            ? []
+            : [
+                new Emoji({
+                  id: new URL(reaction.emojiIri),
+                  name: reaction.emoji,
+                  icon: new Image({
+                    url: new URL(reaction.customEmoji),
+                  }),
+                }),
+              ],
+      }),
+    });
+    await fedCtx.sendActivity(
+      { username: owner.handle },
+      "followers",
+      activity,
+    );
+    await fedCtx.sendActivity(
+      { username: owner.handle },
+      {
+        id: new URL(post.account.iri),
+        inboxId: new URL(post.account.inboxUrl),
+        endpoints:
+          post.account.sharedInboxUrl == null
+            ? null
+            : {
+                sharedInbox: new URL(post.account.sharedInboxUrl),
+              },
+      },
+      activity,
+    );
+    return c.json(serializePost(post, owner, c.req.url));
   },
 );
 

@@ -23,17 +23,22 @@ export function serializeEmoji(
 
 export function serializeReaction(
   reaction: Reaction & { account: Account },
+  currentAccountOwner: { id: string },
 ): Record<string, unknown> {
-  const [result] = serializeReactions([reaction]);
+  const [result] = serializeReactions([reaction], currentAccountOwner);
   return result;
 }
 
 export function serializeReactions(
   reactions: (Reaction & { account: Account })[],
+  currentAccountOwner: { id: string },
 ): Record<string, unknown>[] {
   const result: Record<
     string,
-    { count: number; account_ids: string[] } & Record<string, unknown>
+    { count: number; account_ids: string[]; me: boolean } & Record<
+      string,
+      unknown
+    >
   > = {};
   for (const reaction of reactions) {
     const domain =
@@ -44,15 +49,17 @@ export function serializeReactions(
       reaction.customEmoji == null
         ? reaction.emoji
         : `${reaction.emoji}\n${domain}`;
+    const me = reaction.account.id === currentAccountOwner.id;
     if (key in result) {
       result[key].count++;
+      result[key].me ||= me;
       result[key].account_ids.push(reaction.account.id);
     } else {
       result[key] =
         reaction.customEmoji == null
           ? {
               name: reaction.emoji,
-              me: false,
+              me,
               count: 1,
               account_ids: [reaction.account.id],
             }
@@ -61,7 +68,7 @@ export function serializeReactions(
               domain,
               url: reaction.customEmoji,
               static_url: reaction.customEmoji,
-              me: false,
+              me,
               count: 1,
               account_ids: [reaction.account.id],
             };

@@ -599,6 +599,7 @@ export const reactions = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     emoji: text("emoji").notNull(),
     customEmoji: text("custom_emoji"),
+    emojiIri: text("emoji_iri"),
     created: timestamp("created", { withTimezone: true })
       .notNull()
       .defaultNow(),

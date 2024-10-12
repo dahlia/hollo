@@ -137,15 +137,21 @@ export async function onEmojiReactionAdded(
   if (actor == null) return;
   const account = await persistAccount(db, actor, ctx);
   if (account == null) return;
+  let emojiIri: URL | null = null;
   let customEmoji: URL | null = null;
   if (emoji.startsWith(":") && emoji.endsWith(":")) {
     for await (const tag of react.getTags()) {
-      if (!(tag instanceof Emoji) || tag.name?.toString()?.trim() !== emoji) {
+      if (
+        tag.id == null ||
+        !(tag instanceof Emoji) ||
+        tag.name?.toString()?.trim() !== emoji
+      ) {
         continue;
       }
       const icon = await tag.getIcon();
       if (!(icon instanceof Image) || icon.url == null) continue;
       customEmoji = icon.url instanceof Link ? icon.url.href : icon.url;
+      emojiIri = tag.id;
       if (customEmoji != null) break;
     }
   }
@@ -154,6 +160,7 @@ export async function onEmojiReactionAdded(
     accountId: account.id,
     emoji,
     customEmoji: customEmoji?.href,
+    emojiIri: emojiIri?.href,
   });
   await ctx.forwardActivity({ username }, "followers", {
     skipIfUnsigned: true,

@@ -335,14 +335,18 @@ app.get(
             ...(n.emoji == null || n.postId == null
               ? {}
               : {
-                  emoji_reaction: serializeReaction({
-                    postId: n.postId,
-                    accountId: n.accountId,
-                    account,
-                    emoji: n.emoji,
-                    customEmoji: n.customEmoji,
-                    created: new Date(created_at),
-                  }),
+                  emoji_reaction: serializeReaction(
+                    {
+                      postId: n.postId,
+                      accountId: n.accountId,
+                      account,
+                      emoji: n.emoji,
+                      customEmoji: n.customEmoji,
+                      emojiIri: null,
+                      created: new Date(created_at),
+                    },
+                    owner,
+                  ),
                 }),
           };
         })

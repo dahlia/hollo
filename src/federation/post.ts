@@ -83,11 +83,13 @@ export async function persistPost(
   } = {},
 ): Promise<schema.Post | null> {
   if (object.id == null) return null;
-  if (options.skipUpdate) {
-    const post = await db.query.posts.findFirst({
-      where: eq(posts.iri, object.id.href),
-    });
-    if (post != null) return post;
+  const existingPost = await db.query.posts.findFirst({
+    with: { account: { with: { owner: true } } },
+    where: eq(posts.iri, object.id.href),
+  });
+  if (options.skipUpdate && existingPost != null) return existingPost;
+  if (existingPost != null && existingPost.account.owner != null) {
+    return existingPost;
   }
   const actor = await object.getAttribution(options);
   logger.debug("Fetched actor: {actor}", { actor });

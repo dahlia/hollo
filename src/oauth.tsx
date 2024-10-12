@@ -18,6 +18,7 @@ import {
   applications,
   scopeEnum,
 } from "./schema";
+import { renderCustomEmojis } from "./text";
 
 export type Variables = {
   token: AccessToken & {
@@ -181,20 +182,28 @@ function AuthorizationPage(props: AuthorizationPageProps) {
       </ul>
       <form action="/oauth/authorize" method="post">
         <p>Choose an account to authorize:</p>
-        {props.accountOwners.map((accountOwner, i) => (
-          <label>
-            <input
-              type="radio"
-              name="account_id"
-              value={accountOwner.id}
-              checked={i === 0}
-            />
-            <strong>{accountOwner.account.name}</strong>
-            <p style="margin-left: 1.75em; margin-top: 0.25em;">
-              <small>{accountOwner.account.handle}</small>
-            </p>
-          </label>
-        ))}
+        {props.accountOwners.map((accountOwner, i) => {
+          const accountName = renderCustomEmojis(
+            Bun.escapeHTML(accountOwner.account.name),
+            accountOwner.account.emojis,
+          );
+          console.debug(accountName);
+          return (
+            <label>
+              <input
+                type="radio"
+                name="account_id"
+                value={accountOwner.id}
+                checked={i === 0}
+              />
+              {/* biome-ignore lint/security/noDangerouslySetInnerHtml: xss protected */}
+              <strong dangerouslySetInnerHTML={{ __html: accountName }} />
+              <p style="margin-left: 1.75em; margin-top: 0.25em;">
+                <small>{accountOwner.account.handle}</small>
+              </p>
+            </label>
+          );
+        })}
         <input
           type="hidden"
           name="application_id"

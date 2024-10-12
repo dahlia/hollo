@@ -248,7 +248,7 @@ export function serializePost(
     card:
       post.previewCard == null ? null : serializePreviewCard(post.previewCard),
     emojis: serializeEmojis(post.emojis),
-    emoji_reactions: serializeReactions(post.reactions),
+    emoji_reactions: serializeReactions(post.reactions, currentAccountOwner),
     poll:
       post.poll == null ? null : serializePoll(post.poll, currentAccountOwner),
     filtered: null,
