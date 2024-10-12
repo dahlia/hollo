@@ -1,8 +1,10 @@
+import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { desc, isNotNull, ne } from "drizzle-orm";
 import { Hono } from "hono";
 import { DashboardLayout } from "../components/DashboardLayout";
 import db from "../db";
 import { loginRequired } from "../login";
+import { S3_BUCKET, S3_URL_BASE, s3 } from "../s3";
 import { accounts, customEmojis, posts, reactions } from "../schema";
 
 const emojis = new Hono();
@@ -48,11 +50,109 @@ emojis.get("/", async (c) => {
           </tbody>
         </table>
       )}
-      <a role="button" href="/emojis/import">
-        Import custom emojis
-      </a>
+      <div role="group">
+        <a role="button" href="/emojis/new">
+          Add a custom emoji
+        </a>
+        <a role="button" href="/emojis/import" class="secondary">
+          Import custom emojis
+        </a>
+      </div>
     </DashboardLayout>,
   );
+});
+
+emojis.get("/new", async (c) => {
+  const categories = await db
+    .select({ category: customEmojis.category })
+    .from(customEmojis)
+    .where(isNotNull(customEmojis.category))
+    .groupBy(customEmojis.category);
+  return c.html(
+    <DashboardLayout title="Hollo: Add custom emoji" selectedMenu="emojis">
+      <hgroup>
+        <h1>Add custom emoji</h1>
+        <p>You can add a custom emoji to your Hollo server.</p>
+      </hgroup>
+      <form method="post" action="/emojis" enctype="multipart/form-data">
+        <fieldset class="grid">
+          <label>
+            Category
+            <select
+              name="category"
+              onchange="this.form.new.disabled = this.value != 'new'"
+            >
+              <option>None</option>
+              <option value="new">New category</option>
+              <hr />
+              {categories.map(({ category }) => (
+                <option value={`category:${category}`}>{category}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            New category
+            <input type="text" name="new" disabled={true} />
+          </label>
+        </fieldset>
+        <label>
+          <span>Short code</span>
+          <input
+            type="text"
+            name="shortcode"
+            required
+            pattern="^:(-|[a-z0-9_])+:$"
+            placeholder=":shortcode:"
+          />
+        </label>
+        <label>
+          <span>Image</span>
+          <input
+            type="file"
+            name="image"
+            required
+            accept="image/png, image/jpeg, image/gif, image/webp"
+          />
+        </label>
+        <button type="submit">Add</button>
+      </form>
+    </DashboardLayout>,
+  );
+});
+
+emojis.post("/", async (c) => {
+  const form = await c.req.formData();
+  const categoryValue = form.get("category")?.toString();
+  const category = categoryValue?.startsWith("category:")
+    ? categoryValue.slice(9)
+    : categoryValue === "new"
+      ? (form.get("new")?.toString() ?? "")
+      : null;
+  let shortcode = form.get("shortcode")?.toString();
+  if (shortcode == null) {
+    return c.text("No shortcode provided", 400);
+  }
+  shortcode = shortcode.replace(/^:|:$/g, "");
+  const image = form.get("image");
+  if (image == null || !(image instanceof File)) {
+    return c.text("No image provided", 400);
+  }
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: S3_BUCKET,
+      Key: `emojis/${shortcode}`,
+      Body: new Uint8Array(await image.arrayBuffer()),
+      ContentType: image.type,
+      ACL: "public-read",
+    }),
+  );
+  const url = new URL(`emojis/${shortcode}`, S3_URL_BASE).href;
+  await db.insert(customEmojis).values({
+    category,
+    shortcode,
+    url,
+  });
+  return c.redirect("/emojis");
 });
 
 emojis.get("/import", async (c) => {
