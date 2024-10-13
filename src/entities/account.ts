@@ -3,6 +3,8 @@ import type { Account, AccountOwner } from "../schema";
 import { serializeEmojis } from "./emoji";
 
 export function serializeAccount(account: Account, baseUrl: URL | string) {
+  // biome-ignore lint/style/noParameterAssign: make sure the URL is a URL
+  baseUrl = new URL(baseUrl);
   const username = account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
   const defaultAvatarUrl = new URL(
     "/image/avatars/original/missing.png",
@@ -12,10 +14,14 @@ export function serializeAccount(account: Account, baseUrl: URL | string) {
     "/image/headers/original/missing.png",
     baseUrl,
   ).href;
+  let acct = account.handle.replace(/^@/, "");
+  if (acct.endsWith(`@${baseUrl.host}`)) {
+    acct = acct.replace(/@[^@]+$/, "");
+  }
   return {
     id: account.id,
     username,
-    acct: account.handle.replace(/^@/, ""),
+    acct,
     display_name: account.name,
     locked: account.protected,
     bot: account.type === "Application" || account.type === "Service",
