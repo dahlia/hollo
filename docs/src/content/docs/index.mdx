@@ -28,7 +28,7 @@ hero:
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
-<CardGrid>
+<CardGrid stagger>
   <Card title="For single-users" icon="seti:lock">
     Hollo is designed for single-users, so you can own your instance
     and have full control over your data. It's perfect for personal microblogs,
@@ -63,6 +63,15 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
     [Akkoma]: https://akkoma.social/
     [Fedibird]: https://github.com/fedibird/mastodon
     [Threads]: https://www.threads.net/
+  </Card>
+  <Card title="Misskey-style emoji reactions" icon="heart">
+    Hollo supports [Misskey]-style emoji reactions, so you can react to posts
+    with Unicode emojis and custom emojis. It's compatible with other fediverse
+    software that supports Misskey-style emoji reactions, e.g., Misskey,
+    [Akkoma].
+
+    [Misskey]: https://misskey-hub.net/
+    [Akkoma]: https://akkoma.social/
   </Card>
   <Card title="Powered by Fedify &amp; Bun" icon="bun">
     Hollo is powered by [Fedify], an ActivityPub server framework for TypeScript.
