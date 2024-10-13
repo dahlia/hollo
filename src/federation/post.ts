@@ -220,7 +220,7 @@ export async function persistPost(
         : account.followersUrl != null && to.has(account.followersUrl)
           ? "private"
           : "direct",
-    summaryHtml: object.summary?.toString(),
+    summary: object.summary?.toString(),
     contentHtml: object.content?.toString(),
     language:
       object.content instanceof LanguageString
