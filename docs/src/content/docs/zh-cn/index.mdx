@@ -27,7 +27,7 @@ hero:
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
-<CardGrid>
+<CardGrid stagger>
   <Card title="为单用户设计" icon="seti:lock">
     Hollo 专为单用户设计，让您可以拥有自己的实例并完全控制您的数据。
     非常适合个人微博、笔记和日记。
@@ -55,6 +55,15 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
     [Akkoma]: https://akkoma.social/
     [Fedibird]: https://github.com/fedibird/mastodon
     [Threads]: https://www.threads.net/
+  </Card>
+  <Card title="支持 Misskey 风格表情回应" icon="heart">
+    Hollo 支持 [Misskey] 风格的表情回应，
+    您可以使用 Unicode 表情符号和自定义表情符号对贴文进行回应。
+    它兼容其他支持 Misskey 风格表情回应的联邦宇宙软件，
+    例如 Misskey 和 [Akkoma]。
+
+    [Misskey]: https://misskey-hub.net/cn/
+    [Akkoma]: https://akkoma.social/
   </Card>
   <Card title="由 Fedify 和 Bun 提供支持" icon="bun">
     Hollo 由 [Fedify] 提供支持，这是一个用于 TypeScript 的 ActivityPub 服务端框架。

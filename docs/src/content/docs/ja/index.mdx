@@ -27,7 +27,7 @@ hero:
 
 import { Card, CardGrid } from "@astrojs/starlight/components";
 
-<CardGrid>
+<CardGrid stagger>
   <Card title="1人用" icon="seti:lock">
     Holloは1人用に設計されているため、
     インスタンスを所有し、データに完全な制御権を持つことができます。
@@ -65,6 +65,15 @@ import { Card, CardGrid } from "@astrojs/starlight/components";
     [Akkoma]: https://akkoma.social/
     [Fedibird]: https://github.com/fedibird/mastodon
     [Threads]: https://www.threads.net/
+  </Card>
+  <Card title="Misskeyスタイルの絵文字リアクション" icon="heart">
+    Holloは[Misskey]スタイルの絵文字リアクション機能をサポートしているため、
+    他の投稿に絵文字リアクションを追加することができます。
+    これはMisskey、[Akkoma]など、
+    Misskeyスタイルの絵文字リアクションをサポートする他のフェディバースソフトウェアとも互換性があります。
+
+    [Misskey]: https://misskey-hub.net/ja/
+    [Akkoma]: https://akkoma.social/
   </Card>
   <Card title="FedifyとBunベース" icon="bun">
     HolloはTypeScript向けのActivityPubサーバーフレームワークである[Fedify]で作られており、

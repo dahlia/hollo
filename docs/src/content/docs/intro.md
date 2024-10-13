@@ -42,7 +42,7 @@ This means you can:
  -  Share media attachments
  -  Create polls
  -  Share and favorite posts
- -  Seeing Misskey-style emoji reactions
+ -  Misskey-style emoji reactions
 
 When it comes to writing your posts, Hollo keeps things flexible. You can:
 
