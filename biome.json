@@ -4,7 +4,13 @@
     "enabled": true
   },
   "files": {
-    "ignore": ["docs/.astro/", "docs/dist/", "docs/node_modules/", "drizzle/"]
+    "ignore": [
+      ".github/",
+      "docs/.astro/",
+      "docs/dist/",
+      "docs/node_modules/",
+      "drizzle/"
+    ]
   },
   "formatter": {
     "enabled": true,

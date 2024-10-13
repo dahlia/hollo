@@ -52,10 +52,10 @@ jobs:
           ghcr.io/${{ github.repository }}:latest
         labels:
           org.opencontainers.image.revision=${{ github.sha }}
-        annotations:
+        annotations: |
           org.opencontainers.image.title=Hollo
           org.opencontainers.image.description=Federated single-user microblogging software
-          org.opencontainers.image.url=https://github.com/dahlia/hollo
+          org.opencontainers.image.url=https://docs.hollo.social/
           org.opencontainers.image.source=https://github.com/dahlia/hollo
           org.opencontainers.image.revision=${{ github.sha }}
           org.opencontainers.image.licenses=AGPL-3.0-only
