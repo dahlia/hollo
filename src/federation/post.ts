@@ -682,7 +682,7 @@ export function toObject(
         ([shortcode, url]) =>
           new Emoji({
             id: ctx.getObjectUri(Emoji, { shortcode }),
-            name: `:${shortcode}:`,
+            name: `:${shortcode.replace(/^:|:$/g, "")}:`,
             icon: new Image({ url: new URL(url) }),
           }),
       ),

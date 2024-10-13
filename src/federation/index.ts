@@ -144,6 +144,14 @@ federation
             value,
           }),
       ),
+      tags: Object.entries(account.emojis).map(
+        ([shortcode, url]) =>
+          new Emoji({
+            id: ctx.getObjectUri(Emoji, { shortcode }),
+            name: `:${shortcode.replace(/^:|:$/g, "")}:`,
+            icon: new Image({ url: new URL(url) }),
+          }),
+      ),
     });
   })
   .setKeyPairsDispatcher(async (_ctx, identifier) => {
