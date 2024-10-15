@@ -1,5 +1,5 @@
 import xss from "xss";
-import type { Account, AccountOwner } from "../schema";
+import type { Account, AccountOwner, Follow, Mute } from "../schema";
 import { serializeEmojis } from "./emoji";
 
 export function serializeAccount(account: Account, baseUrl: URL | string) {
@@ -63,5 +63,44 @@ export function serializeAccountOwner(
         verified_at: null,
       })),
     },
+  };
+}
+
+export function serializeRelationship(
+  account: Account & {
+    followers: Follow[];
+    following: Follow[];
+    mutedBy: Mute[];
+  },
+  currentAccountOwner: { id: string },
+) {
+  const following = account.followers.find(
+    (f) => f.followerId === currentAccountOwner.id,
+  );
+  const followedBy = account.following.find(
+    (f) => f.followingId === currentAccountOwner.id,
+  );
+  const now = Date.now();
+  const muting = account.mutedBy.find(
+    (m) =>
+      m.accountId === currentAccountOwner.id &&
+      (m.duration <= 0 || now < m.created.getTime() + m.duration * 1000),
+  );
+  return {
+    id: account.id,
+    following: following?.approved != null,
+    showing_reblogs: following?.shares === true,
+    notifying: following?.notify === true,
+    languages: following == null ? null : following.languages,
+    followed_by: followedBy?.approved != null,
+    blocking: false, // TODO
+    blocked_by: false, // TODO
+    muting: muting != null,
+    muting_notifications: muting?.notifications === true,
+    requested: following != null && following.approved == null,
+    requested_by: followedBy != null && followedBy.approved == null,
+    domain_blocking: false, // TODO
+    endorsed: false, // TODO
+    note: "", // TODO
   };
 }

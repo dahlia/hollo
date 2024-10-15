@@ -22,6 +22,7 @@ import { db } from "../../db";
 import {
   serializeAccount,
   serializeAccountOwner,
+  serializeRelationship,
 } from "../../entities/account";
 import { serializeList } from "../../entities/list";
 import { getPostRelations, serializePost } from "../../entities/status";
@@ -30,7 +31,6 @@ import { persistAccount } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
 import {
-  type Mute,
   type NewFollow,
   type NewMute,
   accountOwners,
@@ -229,44 +229,20 @@ app.get(
     const accountList = await db.query.accounts.findMany({
       where: inArray(accounts.id, ids),
       with: {
-        owner: true,
         following: {
           where: eq(follows.followingId, owner.id),
         },
         followers: {
           where: eq(follows.followerId, owner.id),
         },
-        mutes: {
+        mutedBy: {
           where: eq(mutes.accountId, owner.id),
         },
       },
     });
     accountList.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
     return c.json(
-      accountList.map((account) => ({
-        id: account.id,
-        following:
-          account.followers.length > 0 && account.followers[0].approved != null,
-        showing_reblogs:
-          account.followers.length > 0 && account.followers[0].shares,
-        notifying: account.followers.length > 0 && account.followers[0].notify,
-        languages:
-          account.followers.length > 0 ? account.followers[0].languages : null,
-        followed_by:
-          account.following.length > 0 && account.following[0].approved != null,
-        blocking: false, // TODO
-        blocked_by: false, // TODO
-        muting: isCurrentlyMuted(account.mutes[0]),
-        muting_notifications:
-          isCurrentlyMuted(account.mutes[0]) && account.mutes[0].notifications,
-        requested:
-          account.followers.length > 0 && account.followers[0].approved == null,
-        requested_by:
-          account.following.length > 0 && account.following[0].approved == null,
-        domain_blocking: false, // TODO
-        endorsed: false, // TODO
-        note: "", // TODO
-      })),
+      accountList.map((account) => serializeRelationship(account, owner)),
     );
   },
 );
@@ -591,35 +567,22 @@ app.post(
         }),
       );
     }
-    const reverse = await db.query.follows.findFirst({
-      where: and(
-        eq(follows.followingId, owner.id),
-        eq(follows.followerId, following.id),
-      ),
+    const account = await db.query.accounts.findFirst({
+      where: eq(accounts.id, following.id),
+      with: {
+        following: {
+          where: eq(follows.followingId, owner.id),
+        },
+        followers: {
+          where: eq(follows.followerId, owner.id),
+        },
+        mutedBy: {
+          where: eq(mutes.accountId, owner.id),
+        },
+      },
     });
-
-    const mute = await db.query.mutes.findFirst({
-      where: and(eq(mutes.accountId, owner.id), eq(mutes.mutedAccountId, id)),
-    });
-
-    const muting = isCurrentlyMuted(mute);
-    return c.json({
-      id: follow.followingId,
-      following: follow.approved != null,
-      showing_reblogs: follow.shares,
-      notifying: follow.notify,
-      languages: follow.languages,
-      followed_by: reverse?.approved != null,
-      blocking: false, // TODO
-      blocked_by: false, // TODO
-      muting,
-      muting_notifications: muting && mute?.notifications,
-      requested: follow.approved == null,
-      requested_by: reverse != null && reverse.approved == null,
-      domain_blocking: false, // TODO
-      endorsed: false, // TODO
-      note: "", // TODO
-    });
+    if (account == null) return c.json({ error: "Record not found" }, 404);
+    return c.json(serializeRelationship(account, owner));
   },
 );
 
@@ -687,33 +650,22 @@ app.post(
         })
         .where(eq(accounts.id, owner.id));
     }
-    const reverse = await db.query.follows.findFirst({
-      where: and(eq(follows.followingId, owner.id), eq(follows.followerId, id)),
+    const account = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: {
+        following: {
+          where: eq(follows.followingId, owner.id),
+        },
+        followers: {
+          where: eq(follows.followerId, owner.id),
+        },
+        mutedBy: {
+          where: eq(mutes.accountId, owner.id),
+        },
+      },
     });
-
-    const mute = await db.query.mutes.findFirst({
-      where: and(eq(mutes.accountId, owner.id), eq(mutes.mutedAccountId, id)),
-    });
-
-    const muting = isCurrentlyMuted(mute);
-
-    return c.json({
-      id,
-      following: false,
-      showing_reblogs: false,
-      notifying: false,
-      languages: null,
-      followed_by: reverse?.approved != null,
-      blocking: false, // TODO
-      blocked_by: false, // TODO
-      muting,
-      muting_notifications: muting && mute?.notifications,
-      requested: false,
-      requested_by: reverse != null && reverse.approved == null,
-      domain_blocking: false, // TODO
-      endorsed: false, // TODO
-      note: "", // TODO
-    });
+    if (account == null) return c.json({ error: "Record not found" }, 404);
+    return c.json(serializeRelationship(account, owner));
   },
 );
 
@@ -837,16 +789,10 @@ app.post(
   tokenRequired,
   scopeRequired(["write:mutes"]),
   zValidator(
-    "form",
+    "json",
     z.object({
-      notifications: z
-        .enum(["true", "false"])
-        .default("true")
-        .transform((v) => v === "true"),
-      duration: z
-        .string()
-        .default("0")
-        .transform((v) => Number.parseInt(v, 10)),
+      notifications: z.boolean().default(true),
+      duration: z.number().default(0),
     }),
   ),
   async (c) => {
@@ -859,7 +805,7 @@ app.post(
       );
     }
     const id = c.req.param("id");
-    const { notifications, duration } = c.req.valid("form");
+    const { notifications, duration } = c.req.valid("json");
     const account = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
       with: {
@@ -869,39 +815,38 @@ app.post(
       },
     });
     if (account == null) return c.json({ error: "Record not found" }, 404);
-    const alreadyMuted = account.mutes.some((m) => m.accountId === owner.id);
-    if (!alreadyMuted) {
-      await db
-        .insert(mutes)
-        .values({
-          id: crypto.randomUUID(),
-          accountId: owner.id,
-          mutedAccountId: account.id,
+    await db
+      .insert(mutes)
+      .values({
+        id: crypto.randomUUID(),
+        accountId: owner.id,
+        mutedAccountId: account.id,
+        notifications,
+        duration,
+      } satisfies NewMute)
+      .onConflictDoUpdate({
+        target: [mutes.accountId, mutes.mutedAccountId],
+        set: {
           notifications,
           duration,
-        } satisfies NewMute)
-        .onConflictDoNothing();
-    }
-
-    const reverse = await db.query.follows.findFirst({
-      where: and(eq(follows.followingId, owner.id), eq(follows.followerId, id)),
+        },
+      });
+    const result = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: {
+        following: {
+          where: eq(follows.followingId, owner.id),
+        },
+        followers: {
+          where: eq(follows.followerId, owner.id),
+        },
+        mutedBy: {
+          where: eq(mutes.accountId, owner.id),
+        },
+      },
     });
-    return c.json({
-      id,
-      following: account.following.some((f) => f.followerId === owner.id),
-      showing_reblogs: false,
-      notifying: false,
-      languages: null,
-      followed_by: reverse?.approved != null,
-      blocking: false, // TODO
-      blocked_by: false, // TODO
-      muting: true,
-      muting_notifications: notifications,
-      requested: false,
-      domain_blocking: false, // TODO
-      endorsed: false, // TODO
-      note: "", // TODO
-    });
+    if (result == null) return c.json({ error: "Record not found" }, 404);
+    return c.json(serializeRelationship(result, owner));
   },
 );
 
@@ -921,44 +866,23 @@ app.post(
     await db
       .delete(mutes)
       .where(and(eq(mutes.accountId, owner.id), eq(mutes.mutedAccountId, id)));
-
     const account = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
       with: {
-        owner: true,
-        mutes: { where: eq(mutes.accountId, owner.id) },
-        following: { where: eq(follows.followingId, owner.id) },
+        following: {
+          where: eq(follows.followingId, owner.id),
+        },
+        followers: {
+          where: eq(follows.followerId, owner.id),
+        },
+        mutedBy: {
+          where: eq(mutes.accountId, owner.id),
+        },
       },
     });
     if (account == null) return c.json({ error: "Record not found" }, 404);
-
-    const reverse = await db.query.follows.findFirst({
-      where: and(eq(follows.followingId, owner.id), eq(follows.followerId, id)),
-    });
-    return c.json({
-      id,
-      following: account.following.some((f) => f.followerId === owner.id),
-      showing_reblogs: false,
-      notifying: false,
-      languages: null,
-      followed_by: reverse?.approved != null,
-      blocking: false, // TODO
-      blocked_by: false, // TODO
-      muting: false,
-      muting_notifications: false,
-      requested: false,
-      requested_by: reverse != null && reverse.approved == null,
-      domain_blocking: false, // TODO
-      endorsed: false, // TODO
-      note: "", // TODO
-    });
+    return c.json(serializeRelationship(account, owner));
   },
 );
-
-function isCurrentlyMuted(mute: Mute | undefined): boolean {
-  if (!mute) return false;
-  if (mute.duration === 0) return true;
-  return new Date() < new Date(mute.created.getTime() + mute.duration * 1000);
-}
 
 export default app;
