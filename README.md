@@ -8,6 +8,7 @@ Hollo
 =====
 
 [![Matrix][Matrix badge]][Matrix]
+[![Discord][Discord badge]][Discord]
 [![Official Hollo][Official Hollo badge]][Official Hollo]
 
 > [!NOTE]
@@ -26,6 +27,8 @@ the [existing Mastodon clients](#tested-clients).
 
 [Matrix badge]: https://img.shields.io/matrix/hollo-users%3Amatrix.org?logo=matrix
 [Matrix]: https://matrix.to/#/%23hollo-users:matrix.org
+[Discord badge]: https://img.shields.io/discord/1295652627505217647?logo=discord&cacheSeconds=60
+[Discord]: https://discord.gg/hGXXxUq2jK
 [Official Hollo]: https://hollo.social/@hollo
 [Official Hollo badge]: https://fedi-badge.deno.dev/@hollo@hollo.social/followers.svg
 [Fedify]: https://fedify.dev/

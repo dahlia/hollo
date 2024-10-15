@@ -15,6 +15,8 @@ export default defineConfig({
       customCss: ["./src/styles/custom.css"],
       social: {
         mastodon: "https://hollo.social/@hollo",
+        discord: "https://discord.gg/hGXXxUq2jK",
+        matrix: "https://matrix.to/#/%23hollo-users:matrix.org",
         github: "https://github.com/dahlia/hollo",
       },
       locales: {
