@@ -7,6 +7,7 @@
 Hollo
 =====
 
+[![Matrix][Matrix badge]][Matrix]
 [![Official Hollo][Official Hollo badge]][Official Hollo]
 
 > [!NOTE]
@@ -23,6 +24,8 @@ Hollo does not have its own web interface.  Instead, it implements
 Mastodon-compatible APIs so that you can integrate it with the most of
 the [existing Mastodon clients](#tested-clients).
 
+[Matrix badge]: https://img.shields.io/matrix/hollo-users%3Amatrix.org?logo=matrix
+[Matrix]: https://matrix.to/#/%23hollo-users:matrix.org
 [Official Hollo]: https://hollo.social/@hollo
 [Official Hollo badge]: https://fedi-badge.deno.dev/@hollo@hollo.social/followers.svg
 [Fedify]: https://fedify.dev/
