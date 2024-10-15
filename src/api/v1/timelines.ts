@@ -24,6 +24,7 @@ import {
   listMembers,
   lists,
   mentions,
+  mutes,
   posts,
 } from "../../schema";
 
@@ -81,6 +82,24 @@ app.get(
               db.select({ id: accountOwners.id }).from(accountOwners),
             )
           : undefined,
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: mutes.mutedAccountId })
+            .from(mutes)
+            .where(
+              and(
+                eq(mutes.accountId, owner.id),
+                or(
+                  isNull(mutes.duration),
+                  gt(
+                    sql`${mutes.created} + ${mutes.duration}`,
+                    sql`CURRENT_TIMESTAMP`,
+                  ),
+                ),
+              ),
+            ),
+        ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
@@ -178,6 +197,24 @@ app.get(
               ),
           ),
         ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: mutes.mutedAccountId })
+            .from(mutes)
+            .where(
+              and(
+                eq(mutes.accountId, owner.id),
+                or(
+                  isNull(mutes.duration),
+                  gt(
+                    sql`${mutes.created} + ${mutes.duration}`,
+                    sql`CURRENT_TIMESTAMP`,
+                  ),
+                ),
+              ),
+            ),
+        ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
@@ -259,6 +296,24 @@ app.get(
                   ),
               ),
         ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: mutes.mutedAccountId })
+            .from(mutes)
+            .where(
+              and(
+                eq(mutes.accountId, owner.id),
+                or(
+                  isNull(mutes.duration),
+                  gt(
+                    sql`${mutes.created} + ${mutes.duration}`,
+                    sql`CURRENT_TIMESTAMP`,
+                  ),
+                ),
+              ),
+            ),
+        ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
@@ -331,6 +386,24 @@ app.get(
               db.select({ id: accountOwners.id }).from(accountOwners),
             )
           : undefined,
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: mutes.mutedAccountId })
+            .from(mutes)
+            .where(
+              and(
+                eq(mutes.accountId, owner.id),
+                or(
+                  isNull(mutes.duration),
+                  gt(
+                    sql`${mutes.created} + ${mutes.duration}`,
+                    sql`CURRENT_TIMESTAMP`,
+                  ),
+                ),
+              ),
+            ),
+        ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),

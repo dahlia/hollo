@@ -288,6 +288,13 @@
       "when": 1728715804656,
       "tag": "0040_emoji_iri",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1729001138289,
+      "tag": "0041_change_mutes_duration_type_to_interval",
+      "breakpoints": true
     }
   ]
 }

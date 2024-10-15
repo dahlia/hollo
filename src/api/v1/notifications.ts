@@ -3,11 +3,13 @@ import {
   and,
   desc,
   eq,
+  gt,
   inArray,
   isNotNull,
   isNull,
   lt,
   lte,
+  notInArray,
   or,
   sql,
 } from "drizzle-orm";
@@ -26,6 +28,7 @@ import {
   follows,
   likes,
   mentions,
+  mutes,
   pollVotes,
   polls,
   posts,
@@ -100,9 +103,28 @@ app.get(
           and(
             eq(mentions.accountId, owner.id),
             olderThan == null ? undefined : lt(posts.published, olderThan),
+            notInArray(
+              posts.accountId,
+              db
+                .select({ accountId: mutes.mutedAccountId })
+                .from(mutes)
+                .where(
+                  and(
+                    eq(mutes.accountId, owner.id),
+                    or(
+                      isNull(mutes.duration),
+                      gt(
+                        sql`${mutes.created} + ${mutes.duration}`,
+                        sql`CURRENT_TIMESTAMP`,
+                      ),
+                    ),
+                  ),
+                ),
+            ),
           ),
         )
-        .orderBy(desc(posts.published)),
+        .orderBy(desc(posts.published))
+        .limit(limit),
       reblog: db
         .select({
           id: sql`${posts.id}::text`,
@@ -119,9 +141,28 @@ app.get(
           and(
             eq(sharingPosts.accountId, owner.id),
             olderThan == null ? undefined : lt(posts.published, olderThan),
+            notInArray(
+              posts.accountId,
+              db
+                .select({ accountId: mutes.mutedAccountId })
+                .from(mutes)
+                .where(
+                  and(
+                    eq(mutes.accountId, owner.id),
+                    or(
+                      isNull(mutes.duration),
+                      gt(
+                        sql`${mutes.created} + ${mutes.duration}`,
+                        sql`CURRENT_TIMESTAMP`,
+                      ),
+                    ),
+                  ),
+                ),
+            ),
           ),
         )
-        .orderBy(desc(posts.published)),
+        .orderBy(desc(posts.published))
+        .limit(limit),
       follow: db
         .select({
           id: sql<string>`${follows.followerId}::text`,
@@ -138,9 +179,28 @@ app.get(
             eq(follows.followingId, owner.id),
             isNotNull(follows.approved),
             olderThan == null ? undefined : lt(follows.approved, olderThan),
+            notInArray(
+              follows.followerId,
+              db
+                .select({ accountId: mutes.mutedAccountId })
+                .from(mutes)
+                .where(
+                  and(
+                    eq(mutes.accountId, owner.id),
+                    or(
+                      isNull(mutes.duration),
+                      gt(
+                        sql`${mutes.created} + ${mutes.duration}`,
+                        sql`CURRENT_TIMESTAMP`,
+                      ),
+                    ),
+                  ),
+                ),
+            ),
           ),
         )
-        .orderBy(desc(follows.approved)),
+        .orderBy(desc(follows.approved))
+        .limit(limit),
       follow_request: db
         .select({
           id: sql<string>`${follows.followerId}::text`,
@@ -157,9 +217,28 @@ app.get(
             eq(follows.followingId, owner.id),
             isNull(follows.approved),
             olderThan == null ? undefined : lt(follows.created, olderThan),
+            notInArray(
+              follows.followerId,
+              db
+                .select({ accountId: mutes.mutedAccountId })
+                .from(mutes)
+                .where(
+                  and(
+                    eq(mutes.accountId, owner.id),
+                    or(
+                      isNull(mutes.duration),
+                      gt(
+                        sql`${mutes.created} + ${mutes.duration}`,
+                        sql`CURRENT_TIMESTAMP`,
+                      ),
+                    ),
+                  ),
+                ),
+            ),
           ),
         )
-        .orderBy(desc(follows.created)),
+        .orderBy(desc(follows.created))
+        .limit(limit),
       favourite: db
         .select({
           id: sql<string>`${likes.postId} || ':' || ${likes.accountId}`,
@@ -176,9 +255,28 @@ app.get(
           and(
             eq(posts.accountId, owner.id),
             olderThan == null ? undefined : lt(likes.created, olderThan),
+            notInArray(
+              likes.accountId,
+              db
+                .select({ accountId: mutes.mutedAccountId })
+                .from(mutes)
+                .where(
+                  and(
+                    eq(mutes.accountId, owner.id),
+                    or(
+                      isNull(mutes.duration),
+                      gt(
+                        sql`${mutes.created} + ${mutes.duration}`,
+                        sql`CURRENT_TIMESTAMP`,
+                      ),
+                    ),
+                  ),
+                ),
+            ),
           ),
         )
-        .orderBy(desc(likes.created)),
+        .orderBy(desc(likes.created))
+        .limit(limit),
       emoji_reaction: db
         .select({
           id: sql<string>`${reactions.postId} || ':' || ${reactions.accountId} || ':' || ${reactions.emoji}`,
@@ -195,9 +293,28 @@ app.get(
           and(
             eq(posts.accountId, owner.id),
             olderThan == null ? undefined : lt(reactions.created, olderThan),
+            notInArray(
+              reactions.accountId,
+              db
+                .select({ accountId: mutes.mutedAccountId })
+                .from(mutes)
+                .where(
+                  and(
+                    eq(mutes.accountId, owner.id),
+                    or(
+                      isNull(mutes.duration),
+                      gt(
+                        sql`${mutes.created} + ${mutes.duration}`,
+                        sql`CURRENT_TIMESTAMP`,
+                      ),
+                    ),
+                  ),
+                ),
+            ),
           ),
         )
-        .orderBy(desc(reactions.created)),
+        .orderBy(desc(reactions.created))
+        .limit(limit),
       poll: db
         .select({
           id: sql<string>`${polls.id}::text`,
@@ -230,9 +347,28 @@ app.get(
             ),
             lte(polls.expires, sql`current_timestamp`),
             olderThan == null ? undefined : lt(polls.expires, olderThan),
+            notInArray(
+              posts.accountId,
+              db
+                .select({ accountId: mutes.mutedAccountId })
+                .from(mutes)
+                .where(
+                  and(
+                    eq(mutes.accountId, owner.id),
+                    or(
+                      isNull(mutes.duration),
+                      gt(
+                        sql`${mutes.created} + ${mutes.duration}`,
+                        sql`CURRENT_TIMESTAMP`,
+                      ),
+                    ),
+                  ),
+                ),
+            ),
           ),
         )
-        .orderBy(desc(polls.expires)),
+        .orderBy(desc(polls.expires))
+        .limit(limit),
     };
     const qs = Object.entries(queries)
       .filter(([t]) => types.includes(t as NotificationType))

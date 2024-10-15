@@ -81,11 +81,13 @@ export function serializeRelationship(
     (f) => f.followingId === currentAccountOwner.id,
   );
   const now = Date.now();
-  const muting = account.mutedBy.find(
-    (m) =>
-      m.accountId === currentAccountOwner.id &&
-      (m.duration <= 0 || now < m.created.getTime() + m.duration * 1000),
-  );
+  const muting = account.mutedBy.find((m) => {
+    if (m.accountId !== currentAccountOwner.id) return false;
+    if (m.duration == null) return true;
+    let d = +new Date(`1970-01-01T${m.duration.replace(/^-/, "")}Z`);
+    if (m.duration.startsWith("-")) d = -d;
+    return d <= 0 || now < m.created.getTime() + d;
+  });
   return {
     id: account.id,
     following: following?.approved != null,

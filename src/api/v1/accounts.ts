@@ -736,7 +736,7 @@ app.get(
 );
 
 app.get(
-  "/:id/mutes",
+  "/mutes",
   tokenRequired,
   scopeRequired(["read:mutes"]),
   zValidator(
@@ -817,6 +817,12 @@ app.post(
       },
     });
     if (account == null) return c.json({ error: "Record not found" }, 404);
+    const durationStr =
+      duration <= 0
+        ? null
+        : new Date(duration * 1000)
+            .toISOString()
+            .replace(/^[^T]+T|\.[^Z]+Z?$/g, "");
     await db
       .insert(mutes)
       .values({
@@ -824,13 +830,14 @@ app.post(
         accountId: owner.id,
         mutedAccountId: account.id,
         notifications,
-        duration,
+        duration: durationStr,
       } satisfies NewMute)
       .onConflictDoUpdate({
         target: [mutes.accountId, mutes.mutedAccountId],
         set: {
           notifications,
-          duration,
+          duration: durationStr,
+          created: new Date(),
         },
       });
     const result = await db.query.accounts.findFirst({

@@ -7,6 +7,7 @@ import {
   foreignKey,
   index,
   integer,
+  interval,
   json,
   jsonb,
   pgEnum,
@@ -789,7 +790,7 @@ export const mutes = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     notifications: boolean("notifications").notNull().default(true),
-    duration: integer("duration").notNull().default(0),
+    duration: interval("duration"),
     created: timestamp("created", { withTimezone: true })
       .notNull()
       .defaultNow(),
