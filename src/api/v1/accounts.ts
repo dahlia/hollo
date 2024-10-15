@@ -110,6 +110,7 @@ app.patch(
           Bucket: S3_BUCKET,
           Key: `avatars/${account.id}`,
           Body: new Uint8Array(await form.avatar.arrayBuffer()),
+          ContentType: form.avatar.type,
           ACL: "public-read",
         }),
       );
@@ -122,6 +123,7 @@ app.patch(
           Bucket: S3_BUCKET,
           Key: `covers/${account.id}`,
           Body: new Uint8Array(await form.header.arrayBuffer()),
+          ContentType: form.header.type,
           ACL: "public-read",
         }),
       );
