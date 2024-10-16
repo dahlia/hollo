@@ -393,7 +393,8 @@ export async function persistPost(
       postId: post.id,
       type: mediaType,
       url,
-      description: attachment.name?.toString(),
+      description:
+        attachment.summary?.toString() ?? attachment.name?.toString(),
       width: attachment.width ?? metadata.width!,
       height: attachment.height ?? metadata.height!,
       ...thumbnail,
@@ -721,6 +722,7 @@ export function toObject(
             mediaType: medium.type,
             url: new URL(medium.url),
             name: medium.description,
+            summary: medium.description,
             width: medium.width,
             height: medium.height,
           })
@@ -728,6 +730,7 @@ export function toObject(
             mediaType: medium.type,
             url: new URL(medium.url),
             name: medium.description,
+            summary: medium.description,
             width: medium.width,
             height: medium.height,
           }),
