@@ -209,7 +209,6 @@ export function renderCustomEmojis(
 
   function replaceEmojis(html: string): string {
     return html.replaceAll(CUSTOM_EMOJI_REGEXP, (match) => {
-      console.debug({ match, emojis });
       const emoji = emojis[match] ?? emojis[match.replace(/^:|:$/g, "")];
       if (emoji == null) return match;
       return `<img src="${emoji}" alt="${match}" style="height: 1em">`;

@@ -1,5 +1,5 @@
 import xss from "xss";
-import type { Account, AccountOwner, Follow, Mute } from "../schema";
+import type { Account, AccountOwner, Block, Follow, Mute } from "../schema";
 import { serializeEmojis } from "./emoji";
 
 export function serializeAccount(account: Account, baseUrl: URL | string) {
@@ -71,6 +71,8 @@ export function serializeRelationship(
     followers: Follow[];
     following: Follow[];
     mutedBy: Mute[];
+    blocks: Block[];
+    blockedBy: Block[];
   },
   currentAccountOwner: { id: string },
 ) {
@@ -95,8 +97,12 @@ export function serializeRelationship(
     notifying: following?.notify === true,
     languages: following == null ? null : following.languages,
     followed_by: followedBy?.approved != null,
-    blocking: false, // TODO
-    blocked_by: false, // TODO
+    blocking: account.blockedBy.some(
+      (b) => b.accountId === currentAccountOwner.id,
+    ),
+    blocked_by: account.blocks.some(
+      (b) => b.blockedAccountId === currentAccountOwner.id,
+    ),
     muting: muting != null,
     muting_notifications: muting?.notifications === true,
     requested: following != null && following.approved == null,

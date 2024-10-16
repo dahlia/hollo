@@ -20,6 +20,7 @@ import { getPostRelations, serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import {
   accountOwners,
+  blocks,
   follows,
   listMembers,
   lists,
@@ -99,6 +100,20 @@ app.get(
                 ),
               ),
             ),
+        ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.blockedAccountId })
+            .from(blocks)
+            .where(eq(blocks.accountId, owner.id)),
+        ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.accountId })
+            .from(blocks)
+            .where(eq(blocks.blockedAccountId, owner.id)),
         ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
@@ -215,6 +230,20 @@ app.get(
               ),
             ),
         ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.blockedAccountId })
+            .from(blocks)
+            .where(eq(blocks.accountId, owner.id)),
+        ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.accountId })
+            .from(blocks)
+            .where(eq(blocks.blockedAccountId, owner.id)),
+        ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
@@ -314,6 +343,20 @@ app.get(
               ),
             ),
         ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.blockedAccountId })
+            .from(blocks)
+            .where(eq(blocks.accountId, owner.id)),
+        ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.accountId })
+            .from(blocks)
+            .where(eq(blocks.blockedAccountId, owner.id)),
+        ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
       ),
@@ -403,6 +446,20 @@ app.get(
                 ),
               ),
             ),
+        ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.blockedAccountId })
+            .from(blocks)
+            .where(eq(blocks.accountId, owner.id)),
+        ),
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.accountId })
+            .from(blocks)
+            .where(eq(blocks.blockedAccountId, owner.id)),
         ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),

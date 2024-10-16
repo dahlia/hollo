@@ -1,23 +1,136 @@
 import {
   Article,
+  Block,
   ChatMessage,
   Emoji,
   EmojiReact,
+  Follow,
   Image,
   type InboxContext,
   Like,
   Link,
   Note,
-  type Undo,
+  Reject,
+  Undo,
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { and, eq } from "drizzle-orm";
 import { db } from "../db";
-import { type NewLike, likes, reactions } from "../schema";
+import {
+  type NewLike,
+  accountOwners,
+  blocks,
+  follows,
+  likes,
+  reactions,
+} from "../schema";
 import { persistAccount } from "./account";
 import { updatePostStats } from "./post";
 
 const inboxLogger = getLogger(["hollo", "inbox"]);
+
+export async function onBlocked(ctx: InboxContext<void>, block: Block) {
+  const blocker = await block.getActor();
+  if (blocker == null) return;
+  const object = ctx.parseUri(block.objectId);
+  if (block.objectId == null || object?.type !== "actor") return;
+  const blocked = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.handle, object.identifier),
+  });
+  if (blocked == null) return;
+  const blockerAccount = await persistAccount(db, blocker, ctx);
+  if (blockerAccount == null) return;
+  const result = await db
+    .insert(blocks)
+    .values({
+      accountId: blockerAccount.id,
+      blockedAccountId: blocked.id,
+    })
+    .onConflictDoNothing()
+    .returning();
+  if (result.length < 1) return;
+  const following = await db
+    .delete(follows)
+    .where(
+      and(
+        eq(follows.followingId, blockerAccount.id),
+        eq(follows.followerId, blocked.id),
+      ),
+    )
+    .returning();
+  if (following.length > 0) {
+    await ctx.sendActivity(
+      object,
+      blocker,
+      new Undo({
+        id: new URL(`#unfollows/${crypto.randomUUID()}`, block.objectId),
+        actor: block.objectId,
+        object: new Follow({
+          id: new URL(following[0].iri),
+          actor: block.objectId,
+          object: blocker.id,
+        }),
+      }),
+    );
+  }
+  const follower = await db
+    .delete(follows)
+    .where(
+      and(
+        eq(follows.followingId, blockerAccount.id),
+        eq(follows.followerId, blocked.id),
+      ),
+    )
+    .returning();
+  if (follower.length > 0) {
+    await ctx.sendActivity(
+      object,
+      blocker,
+      new Reject({
+        id: new URL(`#reject/${crypto.randomUUID()}`, block.objectId),
+        actor: block.objectId,
+        object: new Follow({
+          id: new URL(follower[0].iri),
+          actor: blocker.id,
+          object: block.objectId,
+        }),
+      }),
+    );
+  }
+}
+
+export async function onUnblocked(
+  ctx: InboxContext<void>,
+  undo: Undo,
+): Promise<void> {
+  const object = await undo.getObject();
+  if (
+    !(object instanceof Block) ||
+    undo.actorId?.href !== object.actorId?.href
+  ) {
+    return;
+  }
+  const actor = await undo.getActor();
+  if (actor == null) return;
+  const blocker = await persistAccount(db, actor, ctx);
+  if (blocker == null) return;
+  const target = ctx.parseUri(object.objectId);
+  if (target?.type !== "actor") return;
+  await db
+    .delete(blocks)
+    .where(
+      and(
+        eq(blocks.accountId, blocker.id),
+        eq(
+          blocks.blockedAccountId,
+          db
+            .select({ accountId: accountOwners.id })
+            .from(accountOwners)
+            .where(eq(accountOwners.handle, target.identifier)),
+        ),
+      ),
+    );
+}
 
 export async function onLiked(
   ctx: InboxContext<void>,

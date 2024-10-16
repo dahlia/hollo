@@ -25,6 +25,7 @@ import { getPostRelations, serializePost } from "../../entities/status";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import {
   accounts,
+  blocks,
   follows,
   likes,
   mentions,
@@ -121,6 +122,20 @@ app.get(
                   ),
                 ),
             ),
+            notInArray(
+              posts.accountId,
+              db
+                .select({ accountId: blocks.blockedAccountId })
+                .from(blocks)
+                .where(eq(blocks.accountId, owner.id)),
+            ),
+            notInArray(
+              posts.accountId,
+              db
+                .select({ accountId: blocks.accountId })
+                .from(blocks)
+                .where(eq(blocks.blockedAccountId, owner.id)),
+            ),
           ),
         )
         .orderBy(desc(posts.published))
@@ -158,6 +173,20 @@ app.get(
                     ),
                   ),
                 ),
+            ),
+            notInArray(
+              posts.accountId,
+              db
+                .select({ accountId: blocks.blockedAccountId })
+                .from(blocks)
+                .where(eq(blocks.accountId, owner.id)),
+            ),
+            notInArray(
+              posts.accountId,
+              db
+                .select({ accountId: blocks.accountId })
+                .from(blocks)
+                .where(eq(blocks.blockedAccountId, owner.id)),
             ),
           ),
         )
@@ -197,6 +226,20 @@ app.get(
                   ),
                 ),
             ),
+            notInArray(
+              follows.followerId,
+              db
+                .select({ accountId: blocks.blockedAccountId })
+                .from(blocks)
+                .where(eq(blocks.accountId, owner.id)),
+            ),
+            notInArray(
+              follows.followerId,
+              db
+                .select({ accountId: blocks.accountId })
+                .from(blocks)
+                .where(eq(blocks.blockedAccountId, owner.id)),
+            ),
           ),
         )
         .orderBy(desc(follows.approved))
@@ -234,6 +277,20 @@ app.get(
                     ),
                   ),
                 ),
+            ),
+            notInArray(
+              follows.followerId,
+              db
+                .select({ accountId: blocks.blockedAccountId })
+                .from(blocks)
+                .where(eq(blocks.accountId, owner.id)),
+            ),
+            notInArray(
+              follows.followerId,
+              db
+                .select({ accountId: blocks.accountId })
+                .from(blocks)
+                .where(eq(blocks.blockedAccountId, owner.id)),
             ),
           ),
         )
@@ -273,6 +330,20 @@ app.get(
                   ),
                 ),
             ),
+            notInArray(
+              likes.accountId,
+              db
+                .select({ accountId: blocks.blockedAccountId })
+                .from(blocks)
+                .where(eq(blocks.accountId, owner.id)),
+            ),
+            notInArray(
+              likes.accountId,
+              db
+                .select({ accountId: blocks.accountId })
+                .from(blocks)
+                .where(eq(blocks.blockedAccountId, owner.id)),
+            ),
           ),
         )
         .orderBy(desc(likes.created))
@@ -310,6 +381,20 @@ app.get(
                     ),
                   ),
                 ),
+            ),
+            notInArray(
+              reactions.accountId,
+              db
+                .select({ accountId: blocks.blockedAccountId })
+                .from(blocks)
+                .where(eq(blocks.accountId, owner.id)),
+            ),
+            notInArray(
+              reactions.accountId,
+              db
+                .select({ accountId: blocks.accountId })
+                .from(blocks)
+                .where(eq(blocks.blockedAccountId, owner.id)),
             ),
           ),
         )
@@ -364,6 +449,20 @@ app.get(
                     ),
                   ),
                 ),
+            ),
+            notInArray(
+              posts.accountId,
+              db
+                .select({ accountId: blocks.blockedAccountId })
+                .from(blocks)
+                .where(eq(blocks.accountId, owner.id)),
+            ),
+            notInArray(
+              posts.accountId,
+              db
+                .select({ accountId: blocks.accountId })
+                .from(blocks)
+                .where(eq(blocks.blockedAccountId, owner.id)),
             ),
           ),
         )

@@ -10,7 +10,16 @@ import {
 } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
-import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
+import {
+  and,
+  eq,
+  gt,
+  isNotNull,
+  isNull,
+  notInArray,
+  or,
+  sql,
+} from "drizzle-orm";
 import { Hono } from "hono";
 import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
@@ -41,11 +50,13 @@ import {
   type NewPollOption,
   type NewPost,
   type Poll,
+  blocks,
   bookmarks,
   customEmojis,
   likes,
   media,
   mentions,
+  mutes,
   pinnedPosts,
   pollOptions,
   polls,
@@ -438,7 +449,41 @@ app.get(
     let p: typeof post | undefined = post;
     while (p.replyTargetId != null) {
       p = await db.query.posts.findFirst({
-        where: eq(posts.id, p.replyTargetId),
+        where: and(
+          eq(posts.id, p.replyTargetId),
+          notInArray(
+            posts.accountId,
+            db
+              .select({ accountId: mutes.mutedAccountId })
+              .from(mutes)
+              .where(
+                and(
+                  eq(mutes.accountId, owner.id),
+                  or(
+                    isNull(mutes.duration),
+                    gt(
+                      sql`${mutes.created} + ${mutes.duration}`,
+                      sql`CURRENT_TIMESTAMP`,
+                    ),
+                  ),
+                ),
+              ),
+          ),
+          notInArray(
+            posts.accountId,
+            db
+              .select({ accountId: blocks.blockedAccountId })
+              .from(blocks)
+              .where(eq(blocks.accountId, owner.id)),
+          ),
+          notInArray(
+            posts.accountId,
+            db
+              .select({ accountId: blocks.accountId })
+              .from(blocks)
+              .where(eq(blocks.blockedAccountId, owner.id)),
+          ),
+        ),
         with: getPostRelations(owner.id),
       });
       if (p == null) break;
@@ -450,7 +495,41 @@ app.get(
       const p = ps.shift();
       if (p == null) break;
       const replies = await db.query.posts.findMany({
-        where: eq(posts.replyTargetId, p.id),
+        where: and(
+          eq(posts.replyTargetId, p.id),
+          notInArray(
+            posts.accountId,
+            db
+              .select({ accountId: mutes.mutedAccountId })
+              .from(mutes)
+              .where(
+                and(
+                  eq(mutes.accountId, owner.id),
+                  or(
+                    isNull(mutes.duration),
+                    gt(
+                      sql`${mutes.created} + ${mutes.duration}`,
+                      sql`CURRENT_TIMESTAMP`,
+                    ),
+                  ),
+                ),
+              ),
+          ),
+          notInArray(
+            posts.accountId,
+            db
+              .select({ accountId: blocks.blockedAccountId })
+              .from(blocks)
+              .where(eq(blocks.accountId, owner.id)),
+          ),
+          notInArray(
+            posts.accountId,
+            db
+              .select({ accountId: blocks.accountId })
+              .from(blocks)
+              .where(eq(blocks.blockedAccountId, owner.id)),
+          ),
+        ),
         with: getPostRelations(owner.id),
       });
       descendants.push(...replies);

@@ -187,7 +187,6 @@ function AuthorizationPage(props: AuthorizationPageProps) {
             Bun.escapeHTML(accountOwner.account.name),
             accountOwner.account.emojis,
           );
-          console.debug(accountName);
           return (
             <label>
               <input

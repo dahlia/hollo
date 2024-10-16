@@ -81,6 +81,8 @@ export const accountRelations = relations(accounts, ({ one, many }) => ({
   pinnedPosts: many(pinnedPosts),
   mutes: many(mutes, { relationName: "muter" }),
   mutedBy: many(mutes, { relationName: "muted" }),
+  blocks: many(blocks, { relationName: "blocker" }),
+  blockedBy: many(blocks, { relationName: "blocked" }),
 }));
 
 export type Account = typeof accounts.$inferSelect;
@@ -815,6 +817,36 @@ export const muteRelations = relations(mutes, ({ one }) => ({
     fields: [mutes.mutedAccountId],
     references: [accounts.id],
     relationName: "muted",
+  }),
+}));
+
+export const blocks = pgTable(
+  "blocks",
+  {
+    accountId: uuid("account_id").notNull(),
+    blockedAccountId: uuid("blocked_account_id").notNull(),
+    created: timestamp("created", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.accountId, table.blockedAccountId] }),
+  }),
+);
+
+export type Block = typeof blocks.$inferSelect;
+export type NewBlock = typeof blocks.$inferInsert;
+
+export const blockRelations = relations(blocks, ({ one }) => ({
+  account: one(accounts, {
+    fields: [blocks.accountId],
+    references: [accounts.id],
+    relationName: "blocker",
+  }),
+  blockedAccount: one(accounts, {
+    fields: [blocks.blockedAccountId],
+    references: [accounts.id],
+    relationName: "blocked",
   }),
 }));
 

@@ -4,6 +4,7 @@ import {
   Add,
   Announce,
   Article,
+  Block,
   Create,
   Delete,
   Emoji,
@@ -49,6 +50,7 @@ import {
   type NewPinnedPost,
   accountOwners,
   accounts,
+  blocks,
   customEmojis,
   follows,
   likes,
@@ -59,9 +61,11 @@ import {
 import { persistAccount, updateAccountStats } from "./account";
 import { toTemporalInstant } from "./date";
 import {
+  onBlocked,
   onEmojiReactionAdded,
   onEmojiReactionRemoved,
   onLiked,
+  onUnblocked,
   onUnliked,
 } from "./inbox";
 import {
@@ -447,16 +451,26 @@ federation
     }
     const follower = await persistAccount(db, actor, ctx);
     if (follower == null) return;
+    let approves = !following.protected;
+    if (approves) {
+      const block = await db.query.blocks.findFirst({
+        where: and(
+          eq(blocks.accountId, following.id),
+          eq(blocks.blockedAccountId, follower.id),
+        ),
+      });
+      approves = block == null;
+    }
     await db
       .insert(follows)
       .values({
         iri: follow.id.href,
         followingId: following.id,
         followerId: follower.id,
-        approved: following.protected ? null : new Date(),
+        approved: approves ? new Date() : null,
       })
       .onConflictDoNothing();
-    if (!following.protected) {
+    if (approves) {
       await ctx.sendActivity(
         { username: following.owner.handle },
         actor,
@@ -734,6 +748,7 @@ federation
       });
     }
   })
+  .on(Block, onBlocked)
   .on(Undo, async (ctx, undo) => {
     const object = await undo.getObject();
     if (
@@ -763,6 +778,8 @@ federation
       if (deleted.length > 0) {
         await updateAccountStats(db, { id: deleted[0].followingId });
       }
+    } else if (object instanceof Block) {
+      await onUnblocked(ctx, undo);
     } else if (object instanceof Like) {
       await onUnliked(ctx, undo);
     } else if (object instanceof EmojiReact) {

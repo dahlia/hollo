@@ -1,5 +1,13 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { isActor, lookupObject } from "@fedify/fedify";
+import {
+  Block,
+  Follow,
+  type Recipient,
+  Reject,
+  Undo,
+  isActor,
+  lookupObject,
+} from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import {
@@ -35,6 +43,7 @@ import {
   type NewMute,
   accountOwners,
   accounts,
+  blocks,
   follows,
   listMembers,
   lists,
@@ -241,6 +250,12 @@ app.get(
         },
         mutedBy: {
           where: eq(mutes.accountId, owner.id),
+        },
+        blocks: {
+          where: eq(blocks.blockedAccountId, owner.id),
+        },
+        blockedBy: {
+          where: eq(blocks.accountId, owner.id),
         },
       },
     });
@@ -452,18 +467,26 @@ app.get(
     ),
   ),
   async (c) => {
-    const id = c.req.param("id");
-    const account = await db.query.accounts.findFirst({
-      where: eq(accounts.id, id),
-      with: { owner: true },
-    });
-    if (account == null) return c.json({ error: "Record not found" }, 404);
     const tokenOwner = c.get("token").accountOwner;
     if (tokenOwner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
         422,
       );
+    }
+    const id = c.req.param("id");
+    const account = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: {
+        owner: true,
+        blocks: {
+          where: eq(blocks.blockedAccountId, tokenOwner.id),
+        },
+      },
+    });
+    if (account == null) return c.json({ error: "Record not found" }, 404);
+    if (account.blocks.some((b) => b.blockedAccountId === tokenOwner.id)) {
+      return c.json([]);
     }
     const query = c.req.valid("query");
     if (query.only_media) {
@@ -583,6 +606,12 @@ app.post(
         mutedBy: {
           where: eq(mutes.accountId, owner.id),
         },
+        blocks: {
+          where: eq(blocks.blockedAccountId, owner.id),
+        },
+        blockedBy: {
+          where: eq(blocks.accountId, owner.id),
+        },
       },
     });
     if (account == null) return c.json({ error: "Record not found" }, 404);
@@ -628,10 +657,10 @@ app.post(
               inboxId: new URL(following.inboxUrl),
             },
           ],
-          new vocab.Undo({
+          new Undo({
             id: new URL(`#unfollows/${crypto.randomUUID()}`, owner.account.iri),
             actor: new URL(owner.account.iri),
-            object: new vocab.Follow({
+            object: new Follow({
               id: new URL(result[0].iri),
               actor: new URL(owner.account.iri),
               object: new URL(following.iri),
@@ -665,6 +694,12 @@ app.post(
         },
         mutedBy: {
           where: eq(mutes.accountId, owner.id),
+        },
+        blocks: {
+          where: eq(blocks.blockedAccountId, owner.id),
+        },
+        blockedBy: {
+          where: eq(blocks.accountId, owner.id),
         },
       },
     });
@@ -854,6 +889,12 @@ app.post(
         mutedBy: {
           where: eq(mutes.accountId, owner.id),
         },
+        blocks: {
+          where: eq(blocks.blockedAccountId, owner.id),
+        },
+        blockedBy: {
+          where: eq(blocks.accountId, owner.id),
+        },
       },
     });
     if (result == null) return c.json({ error: "Record not found" }, 404);
@@ -889,10 +930,188 @@ app.post(
         mutedBy: {
           where: eq(mutes.accountId, owner.id),
         },
+        blocks: {
+          where: eq(blocks.blockedAccountId, owner.id),
+        },
+        blockedBy: {
+          where: eq(blocks.accountId, owner.id),
+        },
       },
     });
     if (account == null) return c.json({ error: "Record not found" }, 404);
     return c.json(serializeRelationship(account, owner));
+  },
+);
+
+app.post(
+  "/:id/block",
+  tokenRequired,
+  scopeRequired(["read:blocks"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const id = c.req.param("id");
+    const acct = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: { owner: true },
+    });
+    if (acct == null) return c.json({ error: "Record not found" }, 404);
+    await db.insert(blocks).values({
+      accountId: owner.id,
+      blockedAccountId: id,
+    });
+    if (acct.owner == null) {
+      const fedCtx = federation.createContext(c.req.raw, undefined);
+      const recipient: Recipient = {
+        id: new URL(acct.iri),
+        inboxId: new URL(acct.inboxUrl),
+      };
+      const following = await db
+        .delete(follows)
+        .where(
+          and(eq(follows.followingId, id), eq(follows.followerId, owner.id)),
+        )
+        .returning();
+      if (following.length > 0) {
+        await fedCtx.sendActivity(
+          { username: owner.handle },
+          recipient,
+          new Undo({
+            id: new URL(`#unfollows/${crypto.randomUUID()}`, owner.account.iri),
+            actor: new URL(owner.account.iri),
+            object: new Follow({
+              id: new URL(following[0].iri),
+              actor: new URL(owner.account.iri),
+              object: new URL(acct.iri),
+            }),
+          }),
+        );
+      }
+      const follower = await db
+        .delete(follows)
+        .where(
+          and(eq(follows.followerId, id), eq(follows.followingId, owner.id)),
+        )
+        .returning();
+      if (follower.length > 0) {
+        await fedCtx.sendActivity(
+          { username: owner.handle },
+          recipient,
+          new Reject({
+            id: new URL(`#reject/${crypto.randomUUID()}`, owner.account.iri),
+            actor: new URL(owner.account.iri),
+            object: new Follow({
+              id: new URL(follower[0].iri),
+              actor: new URL(acct.iri),
+              object: new URL(owner.account.iri),
+            }),
+          }),
+        );
+      }
+      await fedCtx.sendActivity(
+        { username: owner.handle },
+        recipient,
+        new Block({
+          id: new URL(`#block/${acct.id}`, owner.account.iri),
+          actor: new URL(owner.account.iri),
+          object: new URL(acct.iri),
+        }),
+      );
+    }
+    const result = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: {
+        following: {
+          where: eq(follows.followingId, owner.id),
+        },
+        followers: {
+          where: eq(follows.followerId, owner.id),
+        },
+        mutedBy: {
+          where: eq(mutes.accountId, owner.id),
+        },
+        blocks: {
+          where: eq(blocks.blockedAccountId, owner.id),
+        },
+        blockedBy: {
+          where: eq(blocks.accountId, owner.id),
+        },
+      },
+    });
+    if (result == null) return c.json({ error: "Record not found" }, 404);
+    return c.json(serializeRelationship(result, owner));
+  },
+);
+
+app.post(
+  "/:id/unblock",
+  tokenRequired,
+  scopeRequired(["read:blocks"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const id = c.req.param("id");
+    const acct = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: { owner: true },
+    });
+    if (acct == null) return c.json({ error: "Record not found" }, 404);
+    await db
+      .delete(blocks)
+      .where(
+        and(eq(blocks.accountId, owner.id), eq(blocks.blockedAccountId, id)),
+      );
+    if (acct.owner == null) {
+      const fedCtx = federation.createContext(c.req.raw, undefined);
+      await fedCtx.sendActivity(
+        { username: owner.handle },
+        {
+          id: new URL(acct.iri),
+          inboxId: new URL(acct.inboxUrl),
+        },
+        new Undo({
+          id: new URL(`#unblock/${crypto.randomUUID()}`, owner.account.iri),
+          actor: new URL(owner.account.iri),
+          object: new Block({
+            id: new URL(`#block/${acct.id}`, owner.account.iri),
+            actor: new URL(owner.account.iri),
+            object: new URL(acct.iri),
+          }),
+        }),
+      );
+    }
+    const result = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: {
+        following: {
+          where: eq(follows.followingId, owner.id),
+        },
+        followers: {
+          where: eq(follows.followerId, owner.id),
+        },
+        mutedBy: {
+          where: eq(mutes.accountId, owner.id),
+        },
+        blocks: {
+          where: eq(blocks.blockedAccountId, owner.id),
+        },
+        blockedBy: {
+          where: eq(blocks.accountId, owner.id),
+        },
+      },
+    });
+    if (result == null) return c.json({ error: "Record not found" }, 404);
+    return c.json(serializeRelationship(result, owner));
   },
 );
 
