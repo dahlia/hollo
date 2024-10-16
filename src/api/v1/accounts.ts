@@ -47,6 +47,7 @@ import {
   follows,
   listMembers,
   lists,
+  media,
   mentions,
   mutes,
   pinnedPosts,
@@ -489,9 +490,6 @@ app.get(
       return c.json([]);
     }
     const query = c.req.valid("query");
-    if (query.only_media) {
-      return c.json([]); // FIXME
-    }
     const following = await db
       .select({ id: follows.followingId })
       .from(follows)
@@ -528,6 +526,9 @@ app.get(
           : undefined,
         query.exclude_replies === "true"
           ? isNull(posts.replyTargetId)
+          : undefined,
+        query.only_media === "true"
+          ? inArray(posts.id, db.select({ id: media.postId }).from(media))
           : undefined,
         query.max_id == null ? undefined : lte(posts.id, query.max_id),
         query.min_id == null ? undefined : gte(posts.id, query.min_id),
