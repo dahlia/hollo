@@ -114,7 +114,8 @@ app.patch(
           ACL: "public-read",
         }),
       );
-      avatarUrl = new URL(`avatars/${account.id}`, S3_URL_BASE).href;
+      avatarUrl = new URL(`avatars/${account.id}?${Date.now()}`, S3_URL_BASE)
+        .href;
     }
     let coverUrl = undefined;
     if (form.header instanceof File) {
@@ -127,7 +128,8 @@ app.patch(
           ACL: "public-read",
         }),
       );
-      coverUrl = new URL(`covers/${account.id}`, S3_URL_BASE).href;
+      coverUrl = new URL(`covers/${account.id}?${Date.now()}`, S3_URL_BASE)
+        .href;
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const fmtOpts = {
