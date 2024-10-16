@@ -5,7 +5,7 @@ import sharp from "sharp";
 import { uuidv7 } from "uuidv7-js";
 import { db } from "../../db";
 import { serializeMedium } from "../../entities/medium";
-import { uploadThumbnail } from "../../media";
+import { makeVideoScreenshot, uploadThumbnail } from "../../media";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
 import { media } from "../../schema";
@@ -25,7 +25,11 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
   const description = form.get("description")?.toString();
   const id = uuidv7();
   const fileBuffer = await file.arrayBuffer();
-  const image = sharp(fileBuffer);
+  let imageBytes: ArrayBuffer = fileBuffer;
+  if (file.type.startsWith("video/")) {
+    imageBytes = await makeVideoScreenshot(fileBuffer);
+  }
+  const image = sharp(imageBytes);
   const fileMetadata = await image.metadata();
   await s3.send(
     new PutObjectCommand({

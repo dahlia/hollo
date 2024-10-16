@@ -60,13 +60,15 @@ app.get("/", async (c) => {
           "image/png",
           "image/gif",
           "image/webp",
+          "video/mp4",
+          "video/webm",
         ],
         image_size_limit: 1024 * 1024 * 32, // 32MiB
         image_matrix_limit: 16_777_216,
         // TODO
-        video_size_limit: 0,
-        video_frame_rate_limit: 0,
-        video_matrix_limit: 0,
+        video_size_limit: 1024 * 1024 * 128, // 128MiB
+        video_frame_rate_limit: 120,
+        video_matrix_limit: 16_777_216,
       },
       polls: {
         max_options: 10,

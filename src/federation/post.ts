@@ -4,6 +4,7 @@ import {
   Collection,
   type Context,
   Create,
+  Document,
   type DocumentLoader,
   Emoji,
   Hashtag,
@@ -18,6 +19,7 @@ import {
   Source,
   Tombstone,
   Update,
+  Video,
   isActor,
   lookupObject,
 } from "@fedify/fedify";
@@ -39,7 +41,7 @@ import sharp from "sharp";
 // @ts-ignore: No type definitions available
 import { isSSRFSafeURL } from "ssrfcheck";
 import { uuidv7 } from "uuidv7-js";
-import { type Thumbnail, uploadThumbnail } from "../media";
+import { type Thumbnail, makeVideoScreenshot, uploadThumbnail } from "../media";
 import { fetchPreviewCard } from "../previewcard";
 import {
   type Account,
@@ -346,8 +348,9 @@ export async function persistPost(
   for await (const attachment of object.getAttachments(options)) {
     if (
       !(
-        attachment instanceof vocab.Image ||
-        attachment instanceof vocab.Document
+        attachment instanceof Image ||
+        attachment instanceof Video ||
+        attachment instanceof Document
       )
     ) {
       continue;
@@ -365,10 +368,15 @@ export async function persistPost(
     let thumbnail: Thumbnail;
     let metadata: { width?: number; height?: number };
     try {
-      const image = sharp(await response.arrayBuffer());
+      const fileBuffer = await response.arrayBuffer();
+      let imageBuffer: ArrayBuffer = fileBuffer;
+      if (mediaType.startsWith("video/")) {
+        imageBuffer = await makeVideoScreenshot(fileBuffer);
+      }
+      const image = sharp(imageBuffer);
       metadata = await image.metadata();
       thumbnail = await uploadThumbnail(id, image);
-    } catch (_) {
+    } catch {
       metadata = {
         width: attachment.width ?? 512,
         height: attachment.height ?? 512,
@@ -707,15 +715,22 @@ export function toObject(
       totalItems: post.replies.length,
       items: post.replies.map((r) => new URL(r.iri)),
     }),
-    attachments: post.media.map(
-      (medium) =>
-        new vocab.Image({
-          mediaType: medium.type,
-          url: new URL(medium.url),
-          name: medium.description,
-          width: medium.width,
-          height: medium.height,
-        }),
+    attachments: post.media.map((medium) =>
+      medium.type.startsWith("video/")
+        ? new Video({
+            mediaType: medium.type,
+            url: new URL(medium.url),
+            name: medium.description,
+            width: medium.width,
+            height: medium.height,
+          })
+        : new Image({
+            mediaType: medium.type,
+            url: new URL(medium.url),
+            name: medium.description,
+            width: medium.width,
+            height: medium.height,
+          }),
     ),
     quoteUrl: post.quoteTarget == null ? null : new URL(post.quoteTarget.iri),
     published: toTemporalInstant(post.published),

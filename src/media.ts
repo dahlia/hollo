@@ -1,4 +1,8 @@
+import { mkdtemp } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import ffmpeg from "fluent-ffmpeg";
 import type { Sharp } from "sharp";
 import { S3_BUCKET, S3_URL_BASE, s3 } from "./s3";
 
@@ -50,4 +54,23 @@ export function calculateThumbnailSize(
   const newHeight = Math.sqrt(maxArea / ratio);
   const newWidth = ratio * newHeight;
   return { width: Math.round(newWidth), height: Math.round(newHeight) };
+}
+
+export async function makeVideoScreenshot(
+  fileBuffer: ArrayBuffer,
+): Promise<ArrayBuffer> {
+  const tmpDir = await mkdtemp(join(tmpdir(), "hollo-"));
+  const inFile = join(tmpDir, "video");
+  await Bun.write(inFile, fileBuffer);
+  await new Promise((resolve) =>
+    ffmpeg(inFile)
+      .on("end", resolve)
+      .screenshots({
+        timestamps: [0],
+        filename: "screenshot.png",
+        folder: tmpDir,
+      }),
+  );
+  const screenshot = Bun.file(join(tmpDir, "screenshot.png"));
+  return await screenshot.arrayBuffer();
 }

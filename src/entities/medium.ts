@@ -4,7 +4,7 @@ import type { Medium } from "../schema";
 export function serializeMedium(medium: Medium): Record<string, any> {
   return {
     id: medium.id,
-    type: "image",
+    type: medium.type.replace(/\/.*$/, ""),
     url: medium.url,
     preview_url: medium.thumbnailUrl,
     remote_url: null,
