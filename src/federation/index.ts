@@ -898,12 +898,12 @@ federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
     .leftJoin(posts, eq(accountOwners.id, posts.accountId))
     .where(gt(posts.updated, sql`CURRENT_TIMESTAMP - INTERVAL '6 months'`));
   const [{ localPosts }] = await db
-    .select({ localPosts: count() })
+    .select({ localPosts: countDistinct(posts.id) })
     .from(posts)
     .leftJoin(accountOwners, eq(posts.accountId, accountOwners.id))
     .where(isNull(posts.replyTargetId));
   const [{ localComments }] = await db
-    .select({ localComments: count() })
+    .select({ localComments: countDistinct(posts.id) })
     .from(posts)
     .leftJoin(accountOwners, eq(posts.accountId, accountOwners.id))
     .where(isNotNull(posts.replyTargetId));
