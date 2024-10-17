@@ -890,22 +890,22 @@ federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
   const [{ activeMonth }] = await db
     .select({ activeMonth: countDistinct(accountOwners.id) })
     .from(accountOwners)
-    .leftJoin(posts, eq(accountOwners.id, posts.accountId))
+    .rightJoin(posts, eq(accountOwners.id, posts.accountId))
     .where(gt(posts.updated, sql`CURRENT_TIMESTAMP - INTERVAL '1 month'`));
   const [{ activeHalfyear }] = await db
     .select({ activeHalfyear: countDistinct(accountOwners.id) })
     .from(accountOwners)
-    .leftJoin(posts, eq(accountOwners.id, posts.accountId))
+    .rightJoin(posts, eq(accountOwners.id, posts.accountId))
     .where(gt(posts.updated, sql`CURRENT_TIMESTAMP - INTERVAL '6 months'`));
   const [{ localPosts }] = await db
     .select({ localPosts: countDistinct(posts.id) })
     .from(posts)
-    .leftJoin(accountOwners, eq(posts.accountId, accountOwners.id))
+    .rightJoin(accountOwners, eq(posts.accountId, accountOwners.id))
     .where(isNull(posts.replyTargetId));
   const [{ localComments }] = await db
     .select({ localComments: countDistinct(posts.id) })
     .from(posts)
-    .leftJoin(accountOwners, eq(posts.accountId, accountOwners.id))
+    .rightJoin(accountOwners, eq(posts.accountId, accountOwners.id))
     .where(isNotNull(posts.replyTargetId));
   return {
     software: {
