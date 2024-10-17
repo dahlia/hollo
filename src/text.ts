@@ -1,11 +1,4 @@
-import {
-  Article,
-  type DocumentLoader,
-  Note,
-  Question,
-  isActor,
-  lookupObject,
-} from "@fedify/fedify";
+import { type DocumentLoader, isActor, lookupObject } from "@fedify/fedify";
 import { hashtag } from "@fedify/markdown-it-hashtag";
 import { mention } from "@fedify/markdown-it-mention";
 import { getLogger } from "@logtape/logtape";
@@ -16,6 +9,7 @@ import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import MarkdownIt from "markdown-it";
 import replaceLink from "markdown-it-replace-link";
 import { persistAccount } from "./federation/account";
+import { type ASPost, isPost } from "./federation/post";
 import * as schema from "./schema";
 
 export interface FormatResult {
@@ -24,7 +18,7 @@ export interface FormatResult {
   hashtags: string[];
   emojis: Record<string, string>;
   previewLink: string | null;
-  quoteTarget: Article | Note | Question | null;
+  quoteTarget: ASPost | null;
 }
 
 interface Env {
@@ -153,14 +147,10 @@ export async function formatText(
   };
   const html = md.render(text, env);
   getLogger(["hollo", "text"]).debug("Markdown-It environment: {env}", { env });
-  let quoteTarget: Article | Note | Question | null = null;
+  let quoteTarget: ASPost | null = null;
   for (const link of env.links) {
     const object = await lookupObject(link, options);
-    if (
-      object instanceof Note ||
-      object instanceof Article ||
-      object instanceof Question
-    ) {
+    if (isPost(object)) {
       quoteTarget = object;
       break;
     }

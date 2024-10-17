@@ -19,7 +19,6 @@ import {
   Note,
   ParallelMessageQueue,
   PropertyValue,
-  Question,
   Reject,
   Remove,
   Undo,
@@ -69,6 +68,7 @@ import {
   onUnliked,
 } from "./inbox";
 import {
+  isPost,
   persistPollVote,
   persistPost,
   persistSharingPost,
@@ -618,11 +618,7 @@ federation
         })),
         toUpdate(post, ctx),
       );
-    } else if (
-      object instanceof Article ||
-      object instanceof Note ||
-      object instanceof Question
-    ) {
+    } else if (isPost(object)) {
       const post = await db.transaction(async (tx) => {
         const post = await persistPost(tx, object, ctx);
         if (post?.replyTargetId != null) {

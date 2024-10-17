@@ -1,10 +1,9 @@
 import {
   type Actor,
-  Article,
+  Create,
   type DocumentLoader,
   Emoji,
   Link,
-  Note,
   PropertyValue,
   getActorHandle,
   getActorTypeName,
@@ -27,7 +26,7 @@ import * as schema from "../schema";
 import type { NewPinnedPost, Post } from "../schema";
 import { iterateCollection } from "./collection";
 import { toDate } from "./date";
-import { persistPost } from "./post";
+import { isPost, persistPost } from "./post";
 
 export async function persistAccount(
   db: PgDatabase<
@@ -134,15 +133,14 @@ export async function persistAccount(
   if (featuredCollection != null) {
     const posts: Post[] = [];
     for await (const item of iterateCollection(featuredCollection, opts)) {
-      if (item instanceof Note || item instanceof Article) {
-        const post = await persistPost(db, item, {
-          ...options,
-          account,
-          skipUpdate: true,
-        });
-        if (post == null) continue;
-        posts.unshift(post);
-      }
+      if (!isPost(item)) continue;
+      const post = await persistPost(db, item, {
+        ...options,
+        account,
+        skipUpdate: true,
+      });
+      if (post == null) continue;
+      posts.unshift(post);
     }
     for (const post of posts) {
       await db
@@ -152,6 +150,28 @@ export async function persistAccount(
           accountId: post.accountId,
         } satisfies NewPinnedPost)
         .onConflictDoNothing();
+    }
+  }
+  const fetchPosts = Number.parseInt(
+    // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
+    process.env["REMOTE_ACTOR_FETCH_POSTS"] ?? "10",
+  );
+  if (fetchPosts > 0) {
+    const outboxCollection = await actor.getOutbox(opts);
+    if (outboxCollection != null) {
+      let i = 0;
+      for await (const activity of iterateCollection(outboxCollection, opts)) {
+        if (!(activity instanceof Create)) continue;
+        const item = await activity.getObject(opts);
+        if (!isPost(item)) continue;
+        await persistPost(db, item, {
+          ...options,
+          account,
+          skipUpdate: true,
+        });
+        i++;
+        if (i >= fetchPosts) break;
+      }
     }
   }
   return account;

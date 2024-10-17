@@ -534,7 +534,7 @@ app.get(
         query.min_id == null ? undefined : gte(posts.id, query.min_id),
       ),
       with: getPostRelations(tokenOwner.id),
-      orderBy: [desc(posts.id)],
+      orderBy: [desc(posts.published), desc(posts.id)],
       limit: query.limit ?? 20,
     });
     return c.json(postList.map((p) => serializePost(p, tokenOwner, c.req.url)));

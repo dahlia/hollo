@@ -70,13 +70,23 @@ import { toDate, toTemporalInstant } from "./date";
 
 const logger = getLogger(["hollo", "federation", "post"]);
 
+export type ASPost = Article | Note | Question;
+
+export function isPost(object?: vocab.Object | Link | null): object is ASPost {
+  return (
+    object instanceof Article ||
+    object instanceof Note ||
+    object instanceof Question
+  );
+}
+
 export async function persistPost(
   db: PgDatabase<
     PostgresJsQueryResultHKT,
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
-  object: Article | Note | Question,
+  object: ASPost,
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
@@ -117,11 +127,7 @@ export async function persistPost(
     } else {
       logger.debug("Persisting the reply target...");
       const replyTarget = await object.getReplyTarget(options);
-      if (
-        replyTarget instanceof Note ||
-        replyTarget instanceof Article ||
-        replyTarget instanceof Question
-      ) {
+      if (isPost(replyTarget)) {
         const replyTargetObj = await persistPost(db, replyTarget, {
           ...options,
           skipUpdate: true,
@@ -178,11 +184,7 @@ export async function persistPost(
     } else {
       logger.debug("Persisting the quote target...");
       const quoteTarget = await lookupObject(objectLink, options);
-      if (
-        quoteTarget instanceof Note ||
-        quoteTarget instanceof Article ||
-        quoteTarget instanceof Question
-      ) {
+      if (isPost(quoteTarget)) {
         const quoteTargetObj = await persistPost(db, quoteTarget, {
           ...options,
           skipUpdate: true,
@@ -406,11 +408,7 @@ export async function persistPost(
   });
   if (post != null && replies != null) {
     for await (const item of replies.getItems()) {
-      if (
-        item instanceof Article ||
-        item instanceof Note ||
-        item instanceof Question
-      ) {
+      if (isPost(item)) {
         await persistPost(db, item, { ...options, skipUpdate: true });
       }
     }
@@ -618,7 +616,7 @@ export function toObject(
     replies: Post[];
   },
   ctx: Context<unknown>,
-): Note | Article | Question {
+): ASPost {
   const cls =
     post.type === "Question"
       ? Question
