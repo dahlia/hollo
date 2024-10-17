@@ -35,12 +35,16 @@ import { parse } from "@std/semver";
 import {
   and,
   count,
+  countDistinct,
   desc,
   eq,
+  gt,
   ilike,
   inArray,
   isNotNull,
+  isNull,
   like,
+  sql,
 } from "drizzle-orm";
 import metadata from "../../package.json" with { type: "json" };
 import { db, postgres } from "../db";
@@ -882,6 +886,27 @@ federation.setObjectDispatcher(
 );
 
 federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
+  const [{ total }] = await db.select({ total: count() }).from(accountOwners);
+  const [{ activeMonth }] = await db
+    .select({ activeMonth: countDistinct(accountOwners.id) })
+    .from(accountOwners)
+    .leftJoin(posts, eq(accountOwners.id, posts.accountId))
+    .where(gt(posts.updated, sql`CURRENT_TIMESTAMP - INTERVAL '1 month'`));
+  const [{ activeHalfyear }] = await db
+    .select({ activeHalfyear: countDistinct(accountOwners.id) })
+    .from(accountOwners)
+    .leftJoin(posts, eq(accountOwners.id, posts.accountId))
+    .where(gt(posts.updated, sql`CURRENT_TIMESTAMP - INTERVAL '6 months'`));
+  const [{ localPosts }] = await db
+    .select({ localPosts: count() })
+    .from(posts)
+    .leftJoin(accountOwners, eq(posts.accountId, accountOwners.id))
+    .where(isNull(posts.replyTargetId));
+  const [{ localComments }] = await db
+    .select({ localComments: count() })
+    .from(posts)
+    .leftJoin(accountOwners, eq(posts.accountId, accountOwners.id))
+    .where(isNotNull(posts.replyTargetId));
   return {
     software: {
       name: "hollo",
@@ -891,13 +916,12 @@ federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
     protocols: ["activitypub"],
     usage: {
       users: {
-        //TODO
-        total: 1,
-        activeMonth: 1,
-        activeHalfyear: 1,
+        total,
+        activeMonth,
+        activeHalfyear,
       },
-      localComments: 0,
-      localPosts: 0,
+      localComments,
+      localPosts,
     },
   };
 });
