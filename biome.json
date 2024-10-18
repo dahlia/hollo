@@ -20,6 +20,7 @@
     "enabled": true,
     "rules": {
       "a11y": {
+        "noRedundantRoles": "off",
         "useSemanticElements": "off"
       },
       "recommended": true,
