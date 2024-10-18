@@ -35,7 +35,7 @@ import {
 import { serializeList } from "../../entities/list";
 import { getPostRelations, serializePost } from "../../entities/status";
 import { federation } from "../../federation";
-import { persistAccount } from "../../federation/account";
+import { persistAccount, persistAccountPosts } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
 import {
@@ -488,6 +488,25 @@ app.get(
     if (account == null) return c.json({ error: "Record not found" }, 404);
     if (account.blocks.some((b) => b.blockedAccountId === tokenOwner.id)) {
       return c.json([]);
+    }
+    const [{ cnt }] = await db
+      .select({ cnt: count() })
+      .from(posts)
+      .where(eq(posts.accountId, account.id));
+    const fetchPosts = Number.parseInt(
+      // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
+      process.env["REMOTE_ACTOR_FETCH_POSTS"] ?? "10",
+    );
+    console.debug({ cnt, fetchPosts });
+    if (cnt < fetchPosts) {
+      const fedCtx = federation.createContext(c.req.raw, undefined);
+      await persistAccountPosts(db, account, fetchPosts, {
+        documentLoader: await fedCtx.getDocumentLoader({
+          username: tokenOwner.handle,
+        }),
+        contextLoader: fedCtx.contextLoader,
+        suppressError: true,
+      });
     }
     const query = c.req.valid("query");
     const following = await db

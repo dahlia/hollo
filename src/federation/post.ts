@@ -66,6 +66,7 @@ import {
 import type * as schema from "../schema";
 import { extractPreviewLink } from "../text";
 import { persistAccount, persistAccountByIri } from "./account";
+import { iterateCollection } from "./collection";
 import { toDate, toTemporalInstant } from "./date";
 
 const logger = getLogger(["hollo", "federation", "post"]);
@@ -91,9 +92,10 @@ export async function persistPost(
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
     account?: Account;
+    replyTarget?: Post;
     skipUpdate?: boolean;
   } = {},
-): Promise<schema.Post | null> {
+): Promise<Post | null> {
   if (object.id == null) return null;
   const existingPost = await db.query.posts.findFirst({
     with: { account: { with: { owner: true } } },
@@ -114,28 +116,35 @@ export async function persistPost(
   if (account == null) return null;
   let replyTargetId: string | null = null;
   if (object.replyTargetId != null) {
-    const result = await db
-      .select({ id: posts.id })
-      .from(posts)
-      .where(eq(posts.iri, object.replyTargetId.href))
-      .limit(1);
-    if (result != null && result.length > 0) {
-      replyTargetId = result[0].id;
-      logger.debug("The reply target is already persisted: {replyTargetId}", {
-        replyTargetId,
-      });
+    if (
+      options.replyTarget != null &&
+      options.replyTarget.iri === object.replyTargetId?.href
+    ) {
+      replyTargetId = options.replyTarget.id;
     } else {
-      logger.debug("Persisting the reply target...");
-      const replyTarget = await object.getReplyTarget(options);
-      if (isPost(replyTarget)) {
-        const replyTargetObj = await persistPost(db, replyTarget, {
-          ...options,
-          skipUpdate: true,
+      const result = await db
+        .select({ id: posts.id })
+        .from(posts)
+        .where(eq(posts.iri, object.replyTargetId.href))
+        .limit(1);
+      if (result != null && result.length > 0) {
+        replyTargetId = result[0].id;
+        logger.debug("The reply target is already persisted: {replyTargetId}", {
+          replyTargetId,
         });
-        logger.debug("Persisted the reply target: {replyTarget}", {
-          replyTarget: replyTargetObj,
-        });
-        replyTargetId = replyTargetObj?.id ?? null;
+      } else {
+        logger.debug("Persisting the reply target...");
+        const replyTarget = await object.getReplyTarget(options);
+        if (isPost(replyTarget)) {
+          const replyTargetObj = await persistPost(db, replyTarget, {
+            ...options,
+            skipUpdate: true,
+          });
+          logger.debug("Persisted the reply target: {replyTarget}", {
+            replyTarget: replyTargetObj,
+          });
+          replyTargetId = replyTargetObj?.id ?? null;
+        }
       }
     }
   }
@@ -406,14 +415,18 @@ export async function persistPost(
     where: eq(posts.iri, object.id.href),
     with: { account: true, media: true },
   });
-  if (post != null && replies != null) {
-    for await (const item of replies.getItems()) {
-      if (isPost(item)) {
-        await persistPost(db, item, { ...options, skipUpdate: true });
-      }
+  if (post == null) return null;
+  if (replies != null) {
+    for await (const item of iterateCollection(replies, options)) {
+      if (!isPost(item)) continue;
+      await persistPost(db, item, {
+        ...options,
+        skipUpdate: true,
+        replyTarget: post,
+      });
     }
   }
-  return post!;
+  return post;
 }
 
 export async function persistSharingPost(
@@ -423,18 +436,30 @@ export async function persistSharingPost(
     ExtractTablesWithRelations<typeof schema>
   >,
   announce: Announce,
-  object: Article | Note,
+  object: ASPost,
   options: {
+    account?: Account;
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
   } = {},
 ): Promise<Post | null> {
   if (announce.id == null) return null;
+  const existingPost = await db.query.posts.findFirst({
+    with: { account: { with: { owner: true } } },
+    where: eq(posts.iri, announce.id.href),
+  });
+  if (existingPost != null) return existingPost;
   const actor = await announce.getActor(options);
   if (actor == null) return null;
-  const account = await persistAccount(db, actor, options);
+  const account =
+    options.account?.iri != null && options.account.iri === actor.id?.href
+      ? options.account
+      : await persistAccount(db, actor, { ...options, skipUpdate: true });
   if (account == null) return null;
-  const originalPost = await persistPost(db, object, options);
+  const originalPost = await persistPost(db, object, {
+    ...options,
+    skipUpdate: true,
+  });
   if (originalPost == null) return null;
   const id = uuidv7();
   const updated = new Date();

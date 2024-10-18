@@ -1,5 +1,6 @@
 import {
   type Actor,
+  Announce,
   Create,
   type DocumentLoader,
   Emoji,
@@ -26,7 +27,12 @@ import * as schema from "../schema";
 import type { NewPinnedPost, Post } from "../schema";
 import { iterateCollection } from "./collection";
 import { toDate } from "./date";
-import { isPost, persistPost } from "./post";
+import {
+  isPost,
+  persistPost,
+  persistSharingPost,
+  updatePostStats,
+} from "./post";
 
 export async function persistAccount(
   db: PgDatabase<
@@ -129,6 +135,11 @@ export async function persistAccount(
     where: eq(schema.accounts.iri, actor.id.href),
   });
   if (account == null) return null;
+  const [{ posts }] = await db
+    .select({ posts: count() })
+    .from(schema.posts)
+    .where(eq(schema.posts.accountId, account.id));
+  if (posts > 0) return account;
   const featuredCollection = await actor.getFeatured(opts);
   if (featuredCollection != null) {
     const posts: Post[] = [];
@@ -152,29 +163,56 @@ export async function persistAccount(
         .onConflictDoNothing();
     }
   }
-  const fetchPosts = Number.parseInt(
-    // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
-    process.env["REMOTE_ACTOR_FETCH_POSTS"] ?? "10",
-  );
-  if (fetchPosts > 0) {
-    const outboxCollection = await actor.getOutbox(opts);
-    if (outboxCollection != null) {
-      let i = 0;
-      for await (const activity of iterateCollection(outboxCollection, opts)) {
-        if (!(activity instanceof Create)) continue;
-        const item = await activity.getObject(opts);
+  return account;
+}
+
+export async function persistAccountPosts(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  account: schema.Account,
+  fetchPosts: number,
+  options: {
+    contextLoader?: DocumentLoader;
+    documentLoader?: DocumentLoader;
+    suppressError?: boolean;
+  } = {},
+): Promise<void> {
+  if (fetchPosts < 1) return;
+  const actor = await lookupObject(account.iri, options);
+  if (!isActor(actor)) return;
+  const outboxCollection = await actor.getOutbox(options);
+  if (outboxCollection != null) {
+    let i = 0;
+    for await (const activity of iterateCollection(outboxCollection, options)) {
+      if (activity instanceof Create) {
+        const item = await activity.getObject(options);
         if (!isPost(item)) continue;
-        await persistPost(db, item, {
+        const post = await persistPost(db, item, {
           ...options,
           account,
           skipUpdate: true,
         });
-        i++;
-        if (i >= fetchPosts) break;
+        if (post?.replyTargetId != null) i++;
+      } else if (activity instanceof Announce) {
+        const item = await activity.getObject(options);
+        if (!isPost(item)) continue;
+        await db.transaction(async (tx) => {
+          const post = await persistSharingPost(tx, activity, item, {
+            ...options,
+            account,
+          });
+          if (post?.sharingId != null) {
+            await updatePostStats(tx, { id: post.sharingId });
+          }
+          if (post != null) i++;
+        });
       }
+      if (i >= fetchPosts) break;
     }
   }
-  return account;
 }
 
 export async function persistAccountByIri(
