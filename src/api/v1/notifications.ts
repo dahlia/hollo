@@ -519,7 +519,7 @@ app.get(
       (accountIds.length > 0
         ? await db.query.accounts.findMany({
             where: inArray(accounts.id, accountIds),
-            with: { owner: true },
+            with: { owner: true, successor: true },
           })
         : []
       ).map((a) => [a.id, a]),

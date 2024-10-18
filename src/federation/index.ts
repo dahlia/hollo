@@ -110,7 +110,7 @@ federation
   .setActorDispatcher("/@{identifier}", async (ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
       where: eq(accountOwners.handle, identifier),
-      with: { account: true },
+      with: { account: { with: { successor: true } } },
     });
     if (owner == null) return null;
     const account = owner.account;
@@ -145,6 +145,8 @@ federation
       endpoints: new Endpoints({
         sharedInbox: ctx.getInboxUri(),
       }),
+      successor:
+        account.successor == null ? null : new URL(account.successor.iri),
       attachments: Object.entries(account.fieldHtmls).map(
         ([name, value]) =>
           new PropertyValue({

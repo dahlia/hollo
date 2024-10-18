@@ -2,7 +2,10 @@ import xss from "xss";
 import type { Account, AccountOwner, Block, Follow, Mute } from "../schema";
 import { serializeEmojis } from "./emoji";
 
-export function serializeAccount(account: Account, baseUrl: URL | string) {
+export function serializeAccount(
+  account: Account & { successor: Account | null },
+  baseUrl: URL | string,
+): Record<string, unknown> {
   // biome-ignore lint/style/noParameterAssign: make sure the URL is a URL
   baseUrl = new URL(baseUrl);
   const username = account.handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
@@ -35,6 +38,10 @@ export function serializeAccount(account: Account, baseUrl: URL | string) {
     followers_count: account.followersCount,
     following_count: account.followingCount,
     statuses_count: account.postsCount,
+    moved:
+      account.successor == null
+        ? null
+        : serializeAccount({ ...account.successor, successor: null }, baseUrl),
     last_status_at: null,
     emojis: serializeEmojis(account.emojis),
     fields: Object.entries(account.fieldHtmls).map(([name, value]) => ({
@@ -46,9 +53,11 @@ export function serializeAccount(account: Account, baseUrl: URL | string) {
 }
 
 export function serializeAccountOwner(
-  accountOwner: AccountOwner & { account: Account },
+  accountOwner: AccountOwner & {
+    account: Account & { successor: Account | null };
+  },
   baseUrl: URL | string,
-) {
+): Record<string, unknown> {
   return {
     ...serializeAccount(accountOwner.account, baseUrl),
     source: accountOwner && {
@@ -75,7 +84,7 @@ export function serializeRelationship(
     blockedBy: Block[];
   },
   currentAccountOwner: { id: string },
-) {
+): Record<string, unknown> {
   const following = account.followers.find(
     (f) => f.followerId === currentAccountOwner.id,
   );

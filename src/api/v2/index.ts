@@ -61,6 +61,7 @@ app.get(
     const users =
       query.offset < 1
         ? await db.query.accounts.findMany({
+            with: { successor: true },
             where: or(
               eq(accounts.iri, q),
               eq(accounts.url, q),
@@ -108,7 +109,15 @@ app.get(
       for (const hit of hits) {
         const a = hit as unknown as Account;
         if (users.some((u) => u.id === a.id)) continue;
-        users.push(a);
+        users.push({
+          ...a,
+          successor:
+            a.successorId == null
+              ? null
+              : ((await db.query.accounts.findFirst({
+                  where: eq(accounts.id, a.successorId),
+                })) ?? null),
+        });
       }
     }
     if (query.type == null || query.type === "statuses") {

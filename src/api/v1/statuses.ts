@@ -664,7 +664,7 @@ app.get(
     const id = c.req.param("id");
     const likeList = await db.query.likes.findMany({
       where: eq(likes.postId, id),
-      with: { account: { with: { owner: true } } },
+      with: { account: { with: { owner: true, successor: true } } },
     });
     return c.json(
       likeList.map((l) =>

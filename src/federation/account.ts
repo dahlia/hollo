@@ -71,6 +71,12 @@ export async function persistAccount(
   const avatar = await actor.getIcon(opts);
   const cover = await actor.getImage(opts);
   const followers = await actor.getFollowers(opts);
+  const successor = await actor.getSuccessor(opts);
+  const successorId =
+    successor == null
+      ? null
+      : ((await persistAccount(db, successor, { ...options, skipUpdate: true }))
+          ?.id ?? null);
   const fieldHtmls: Record<string, string> = {};
   for await (const attachment of actor.getAttachments(opts)) {
     if (
@@ -112,6 +118,7 @@ export async function persistAccount(
     followingCount: (await actor.getFollowing(opts))?.totalItems ?? 0,
     followersCount: followers?.totalItems ?? 0,
     postsCount: (await actor.getOutbox(opts))?.totalItems ?? 0,
+    successorId,
     fieldHtmls,
     published: toDate(actor.published),
   };

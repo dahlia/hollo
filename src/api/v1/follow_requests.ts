@@ -20,7 +20,7 @@ app.get("/", tokenRequired, scopeRequired(["read:follows"]), async (c) => {
   }
   const followers = await db.query.follows.findMany({
     where: and(eq(follows.followingId, owner.id), isNull(follows.approved)),
-    with: { follower: { with: { owner: true } } },
+    with: { follower: { with: { owner: true, successor: true } } },
   });
   return c.json(
     followers.map((f) =>

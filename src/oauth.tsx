@@ -23,7 +23,9 @@ import { renderCustomEmojis } from "./text";
 export type Variables = {
   token: AccessToken & {
     application: Application;
-    accountOwner: (AccountOwner & { account: Account }) | null;
+    accountOwner:
+      | (AccountOwner & { account: Account & { successor: Account | null } })
+      | null;
   };
 };
 
@@ -66,7 +68,10 @@ export const tokenRequired = createMiddleware(async (c, next) => {
   }
   const accessToken = await db.query.accessTokens.findFirst({
     where: eq(accessTokens.code, tokenCode),
-    with: { accountOwner: { with: { account: true } }, application: true },
+    with: {
+      accountOwner: { with: { account: { with: { successor: true } } } },
+      application: true,
+    },
   });
   if (accessToken == null) return c.json({ error: "invalid_token" }, 401);
   c.set("token", accessToken);

@@ -39,6 +39,8 @@ import { persistAccount, persistAccountPosts } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
 import {
+  type Account,
+  type AccountOwner,
   type NewFollow,
   type NewMute,
   accountOwners,
@@ -215,11 +217,17 @@ app.patch(
       }),
       { preferSharedInbox: true },
     );
+    const successor =
+      updatedAccounts[0].successorId == null
+        ? null
+        : ((await db.query.accounts.findFirst({
+            where: eq(accounts.id, updatedAccounts[0].successorId),
+          })) ?? null);
     return c.json(
       serializeAccountOwner(
         {
           ...updatedOwners[0],
-          account: updatedAccounts[0],
+          account: { ...updatedAccounts[0], successor },
         },
         c.req.url,
       ),
@@ -280,13 +288,21 @@ app.get(
     const owner = c.get("token")?.accountOwner;
     const query = c.req.valid("query");
     const acct = query.acct;
-    const account = await db.query.accounts.findFirst({
-      where: eq(
-        accounts.handle,
-        acct.includes("@") ? `@${acct}` : `@${acct}@${new URL(c.req.url).host}`,
-      ),
-      with: { owner: true },
-    });
+    let account:
+      | (Account & {
+          owner: AccountOwner | null;
+          successor: Account | null;
+        })
+      | null =
+      (await db.query.accounts.findFirst({
+        where: eq(
+          accounts.handle,
+          acct.includes("@")
+            ? `@${acct}`
+            : `@${acct}@${new URL(c.req.url).host}`,
+        ),
+        with: { owner: true, successor: true },
+      })) ?? null;
     if (account == null) {
       if (query.skip_webfinger !== "false") {
         return c.json({ error: "Record not found" }, 404);
@@ -301,11 +317,20 @@ app.get(
             };
       const actor = await lookupObject(acct, options);
       if (!isActor(actor)) return c.json({ error: "Record not found" }, 404);
-      const loadedAccount = await persistAccount(db, actor, options);
-      if (loadedAccount == null) {
-        return c.json({ error: "Record not found" }, 404);
+      const loaded = await persistAccount(db, actor, options);
+      if (loaded != null) {
+        account = {
+          ...loaded,
+          owner: null,
+          successor:
+            (await db.query.accounts.findFirst({
+              where: eq(accounts.successorId, loaded.id),
+            })) ?? null,
+        };
       }
-      return c.json(serializeAccount(loadedAccount, c.req.url));
+    }
+    if (account == null) {
+      return c.json({ error: "Record not found" }, 404);
     }
     if (account.owner == null) {
       return c.json(serializeAccount(account, c.req.url));
@@ -366,7 +391,7 @@ app.get(
         ilike(accounts.handle, `%${query.q}%`),
         ilike(accounts.name, `%${query.q}%`),
       ),
-      with: { owner: true },
+      with: { owner: true, successor: true },
       orderBy: [
         desc(ilike(accounts.handle, `@${query.q.replace(/^@/, "")}`)),
         desc(ilike(accounts.name, query.q)),
@@ -421,7 +446,7 @@ app.get(
               .where(eq(follows.followerId, owner.id)),
           ),
         ),
-        with: { owner: true },
+        with: { owner: true, successor: true },
       });
       result.push({
         id,
@@ -440,7 +465,7 @@ app.get("/:id", async (c) => {
   const id = c.req.param("id");
   const account = await db.query.accounts.findFirst({
     where: eq(accounts.id, id),
-    with: { owner: true },
+    with: { owner: true, successor: true },
   });
   if (account == null) return c.json({ error: "Record not found" }, 404);
   if (account.owner != null) {
@@ -732,7 +757,7 @@ app.get("/:id/followers", async (c) => {
   const accountId = c.req.param("id");
   const followers = await db.query.follows.findMany({
     where: eq(follows.followingId, accountId),
-    with: { follower: { with: { owner: true } } },
+    with: { follower: { with: { owner: true, successor: true } } },
   });
   return c.json(
     followers.map((f) =>
@@ -750,7 +775,7 @@ app.get("/:id/following", async (c) => {
   const accountId = c.req.param("id");
   const followers = await db.query.follows.findMany({
     where: eq(follows.followerId, accountId),
-    with: { following: { with: { owner: true } } },
+    with: { following: { with: { owner: true, successor: true } } },
   });
   return c.json(
     followers.map((f) =>
@@ -834,7 +859,7 @@ app.get(
         query.max_id == null ? undefined : lte(accounts.id, query.max_id),
         query.since_id == null ? undefined : gte(accounts.id, query.since_id),
       ),
-      with: { owner: true },
+      with: { owner: true, successor: true },
       orderBy: [desc(accounts.id)],
       limit: query.limit ?? 40,
     });

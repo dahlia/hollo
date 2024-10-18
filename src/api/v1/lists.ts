@@ -132,7 +132,7 @@ app.get(
     if (list == null) return c.json({ error: "Record not found" }, 404);
     // TODO: pagination
     const members = await db.query.listMembers.findMany({
-      with: { account: true },
+      with: { account: { with: { successor: true } } },
       where: eq(listMembers.listId, list.id),
       orderBy: listMembers.accountId,
     });

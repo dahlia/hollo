@@ -12,7 +12,7 @@ app.get("/", async (c) => {
   const credential = await db.query.credentials.findFirst();
   if (credential == null) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    with: { account: true },
+    with: { account: { with: { successor: true } } },
     orderBy: accountOwners.id,
   });
   if (accountOwner == null) return c.notFound();

@@ -27,17 +27,17 @@ import { serializePoll } from "./poll";
 
 export function getPostRelations(ownerId: string) {
   return {
-    account: { with: { owner: true } },
+    account: { with: { owner: true, successor: true } },
     application: true,
     replyTarget: true,
     sharing: {
       with: {
-        account: true,
+        account: { with: { successor: true } },
         application: true,
         replyTarget: true,
         quoteTarget: {
           with: {
-            account: true,
+            account: { with: { successor: true } },
             application: true,
             replyTarget: true,
             media: true,
@@ -47,9 +47,11 @@ export function getPostRelations(ownerId: string) {
                 votes: { where: eq(pollVotes.accountId, ownerId) },
               },
             },
-            mentions: { with: { account: { with: { owner: true } } } },
+            mentions: {
+              with: { account: { with: { owner: true, successor: true } } },
+            },
             likes: { where: eq(likes.accountId, ownerId) },
-            reactions: { with: { account: true } },
+            reactions: { with: { account: { with: { successor: true } } } },
             shares: { where: eq(posts.accountId, ownerId) },
             bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
             pin: true,
@@ -62,9 +64,11 @@ export function getPostRelations(ownerId: string) {
             votes: { where: eq(pollVotes.accountId, ownerId) },
           },
         },
-        mentions: { with: { account: { with: { owner: true } } } },
+        mentions: {
+          with: { account: { with: { owner: true, successor: true } } },
+        },
         likes: { where: eq(likes.accountId, ownerId) },
-        reactions: { with: { account: true } },
+        reactions: { with: { account: { with: { successor: true } } } },
         shares: { where: eq(posts.accountId, ownerId) },
         bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
         pin: true,
@@ -72,7 +76,7 @@ export function getPostRelations(ownerId: string) {
     },
     quoteTarget: {
       with: {
-        account: true,
+        account: { with: { successor: true } },
         application: true,
         replyTarget: true,
         media: true,
@@ -82,9 +86,11 @@ export function getPostRelations(ownerId: string) {
             votes: { where: eq(pollVotes.accountId, ownerId) },
           },
         },
-        mentions: { with: { account: { with: { owner: true } } } },
+        mentions: {
+          with: { account: { with: { owner: true, successor: true } } },
+        },
         likes: { where: eq(likes.accountId, ownerId) },
-        reactions: { with: { account: true } },
+        reactions: { with: { account: { with: { successor: true } } } },
         shares: { where: eq(posts.accountId, ownerId) },
         bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
         pin: true,
@@ -97,9 +103,9 @@ export function getPostRelations(ownerId: string) {
         votes: { where: eq(pollVotes.accountId, ownerId) },
       },
     },
-    mentions: { with: { account: { with: { owner: true } } } },
+    mentions: { with: { account: { with: { owner: true, successor: true } } } },
     likes: { where: eq(likes.accountId, ownerId) },
-    reactions: { with: { account: true } },
+    reactions: { with: { account: { with: { successor: true } } } },
     shares: { where: eq(posts.accountId, ownerId) },
     bookmarks: { where: eq(bookmarks.accountOwnerId, ownerId) },
     pin: true,
@@ -109,17 +115,17 @@ export function getPostRelations(ownerId: string) {
 
 export function serializePost(
   post: Post & {
-    account: Account;
+    account: Account & { successor: Account | null };
     application: Application | null;
     replyTarget: Post | null;
     sharing:
       | (Post & {
-          account: Account;
+          account: Account & { successor: Account | null };
           application: Application | null;
           replyTarget: Post | null;
           quoteTarget:
             | (Post & {
-                account: Account;
+                account: Account & { successor: Account | null };
                 application: Application | null;
                 replyTarget: Post | null;
                 media: Medium[];
@@ -127,10 +133,15 @@ export function serializePost(
                   | (Poll & { options: PollOption[]; votes: PollVote[] })
                   | null;
                 mentions: (Mention & {
-                  account: Account & { owner: AccountOwner | null };
+                  account: Account & {
+                    owner: AccountOwner | null;
+                    successor: Account | null;
+                  };
                 })[];
                 likes: Like[];
-                reactions: (Reaction & { account: Account })[];
+                reactions: (Reaction & {
+                  account: Account & { successor: Account | null };
+                })[];
                 shares: Post[];
                 bookmarks: Bookmark[];
                 pin: PinnedPost | null;
@@ -139,10 +150,15 @@ export function serializePost(
           media: Medium[];
           poll: (Poll & { options: PollOption[]; votes: PollVote[] }) | null;
           mentions: (Mention & {
-            account: Account & { owner: AccountOwner | null };
+            account: Account & {
+              owner: AccountOwner | null;
+              successor: Account | null;
+            };
           })[];
           likes: Like[];
-          reactions: (Reaction & { account: Account })[];
+          reactions: (Reaction & {
+            account: Account & { successor: Account | null };
+          })[];
           shares: Post[];
           bookmarks: Bookmark[];
           pin: PinnedPost | null;
@@ -150,16 +166,21 @@ export function serializePost(
       | null;
     quoteTarget:
       | (Post & {
-          account: Account;
+          account: Account & { successor: Account | null };
           application: Application | null;
           replyTarget: Post | null;
           media: Medium[];
           poll: (Poll & { options: PollOption[]; votes: PollVote[] }) | null;
           mentions: (Mention & {
-            account: Account & { owner: AccountOwner | null };
+            account: Account & {
+              owner: AccountOwner | null;
+              successor: Account | null;
+            };
           })[];
           likes: Like[];
-          reactions: (Reaction & { account: Account })[];
+          reactions: (Reaction & {
+            account: Account & { successor: Account | null };
+          })[];
           shares: Post[];
           bookmarks: Bookmark[];
           pin: PinnedPost | null;
@@ -168,10 +189,15 @@ export function serializePost(
     media: Medium[];
     poll: (Poll & { options: PollOption[]; votes: PollVote[] }) | null;
     mentions: (Mention & {
-      account: Account & { owner: AccountOwner | null };
+      account: Account & {
+        owner: AccountOwner | null;
+        successor: Account | null;
+      };
     })[];
     likes: Like[];
-    reactions: (Reaction & { account: Account })[];
+    reactions: (Reaction & {
+      account: Account & { successor: Account | null };
+    })[];
     shares: Post[];
     bookmarks: Bookmark[];
     pin: PinnedPost | null;

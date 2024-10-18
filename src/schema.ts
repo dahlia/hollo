@@ -64,6 +64,9 @@ export const accounts = pgTable("accounts", {
     .$type<Record<string, string>>(),
   emojis: jsonb("emojis").notNull().default({}).$type<Record<string, string>>(),
   sensitive: boolean("sensitive").notNull().default(false),
+  successorId: uuid("successor_id").references((): AnyPgColumn => accounts.id, {
+    onDelete: "cascade",
+  }),
   published: timestamp("published", { withTimezone: true }),
   updated: timestamp("updated", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -73,6 +76,12 @@ export const accountRelations = relations(accounts, ({ one, many }) => ({
     fields: [accounts.id],
     references: [accountOwners.id],
   }),
+  successor: one(accounts, {
+    fields: [accounts.successorId],
+    references: [accounts.id],
+    relationName: "successor",
+  }),
+  predecessors: many(accounts, { relationName: "successor" }),
   following: many(follows, { relationName: "following" }),
   followers: many(follows, { relationName: "follower" }),
   posts: many(posts),
