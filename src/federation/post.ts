@@ -663,14 +663,14 @@ export function toObject(
   return new cls({
     id: new URL(post.iri),
     attribution: new URL(post.account.iri),
-    tos:
-      post.visibility === "public"
+    tos: [
+      ...(post.visibility === "public"
         ? [PUBLIC_COLLECTION]
-        : post.visibility === "direct"
-          ? post.mentions.map((m) => new URL(m.account.iri))
-          : post.account.owner == null
-            ? []
-            : [ctx.getFollowersUri(post.account.owner.handle)],
+        : post.visibility === "private" && post.account.owner != null
+          ? [ctx.getFollowersUri(post.account.owner.handle)]
+          : []),
+      ...post.mentions.map((m) => new URL(m.account.iri)),
+    ],
     cc: post.visibility === "unlisted" ? PUBLIC_COLLECTION : null,
     summaries:
       post.summary == null
