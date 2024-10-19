@@ -51,7 +51,7 @@ await configure({
     { category: "hollo", level: LOG_LEVEL, sinks: ["console"] },
     {
       category: "drizzle-orm",
-      level: LOG_QUERY ? LOG_LEVEL : "fatal",
+      level: LOG_QUERY ? "debug" : "fatal",
       sinks: ["console"],
     },
     { category: ["logtape", "meta"], level: "warning", sinks: ["console"] },

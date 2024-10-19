@@ -82,7 +82,7 @@ export function scopeRequired(scopes: Scope[]) {
   return createMiddleware(async (c, next) => {
     const token = c.get("token");
     if (
-      !scopes.every(
+      !scopes.some(
         (s) =>
           token.scopes.includes(s) ||
           token.scopes.includes(s.replace(/:[^:]+$/, "")) ||
