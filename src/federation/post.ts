@@ -214,6 +214,8 @@ export async function persistPost(
       : extractPreviewLink(object.content.toString());
   const previewCard =
     previewLink == null ? null : await fetchPreviewCard(previewLink);
+  const published = toDate(object.published);
+  const updated = toDate(object.updated) ?? published ?? new Date();
   const values = {
     type:
       object instanceof Question
@@ -250,14 +252,14 @@ export async function persistPost(
     repliesCount: replies?.totalItems ?? 0,
     sharesCount: 0, // TODO
     likesCount: 0, // TODO
-    published: toDate(object.published),
-    updated: toDate(object.published) ?? new Date(),
+    published,
+    updated,
   } as const;
   await db
     .insert(posts)
     .values({
       ...values,
-      id: uuidv7(),
+      id: uuidv7(+(published ?? updated)),
       iri: object.id.href,
     })
     .onConflictDoUpdate({

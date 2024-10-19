@@ -522,7 +522,6 @@ app.get(
       // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
       process.env["REMOTE_ACTOR_FETCH_POSTS"] ?? "10",
     );
-    console.debug({ cnt, fetchPosts });
     if (cnt < fetchPosts) {
       const fedCtx = federation.createContext(c.req.raw, undefined);
       await persistAccountPosts(db, account, fetchPosts, {
