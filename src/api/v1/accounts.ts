@@ -534,6 +534,7 @@ app.get(
       });
     }
     const query = c.req.valid("query");
+    const limit = query.limit ?? 20;
     const following = await db
       .select({ id: follows.followingId })
       .from(follows)
@@ -579,9 +580,21 @@ app.get(
       ),
       with: getPostRelations(tokenOwner.id),
       orderBy: [desc(posts.published), desc(posts.id)],
-      limit: query.limit ?? 20,
+      limit: limit + 1,
     });
-    return c.json(postList.map((p) => serializePost(p, tokenOwner, c.req.url)));
+    let next: URL | undefined;
+    if (postList.length > limit) {
+      next = new URL(c.req.url);
+      next.searchParams.set("max_id", postList[limit].id);
+    }
+    return c.json(
+      postList
+        .slice(0, limit)
+        .map((p) => serializePost(p, tokenOwner, c.req.url)),
+      {
+        headers: next == null ? undefined : { Link: `<${next}>; rel="next"` },
+      },
+    );
   },
 );
 
