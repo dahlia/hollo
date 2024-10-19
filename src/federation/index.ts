@@ -825,6 +825,7 @@ federation.setObjectDispatcher(
   Note,
   "/@{username}/{id}",
   async (ctx, values) => {
+    if (!values.id.match(/^[-a-f0-9]+$/)) return null;
     const owner = await db.query.accountOwners.findFirst({
       where: like(accountOwners.handle, values.username),
       with: { account: true },

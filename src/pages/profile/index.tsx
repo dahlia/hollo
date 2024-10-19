@@ -1,5 +1,6 @@
 import { and, desc, eq, or } from "drizzle-orm";
 import { Hono } from "hono";
+import xss from "xss";
 import { Layout } from "../../components/Layout.tsx";
 import { Post as PostView } from "../../components/Post.tsx";
 import { Profile } from "../../components/Profile.tsx";
@@ -22,7 +23,7 @@ import profilePost from "./profilePost.tsx";
 
 const profile = new Hono();
 
-profile.route("/:id", profilePost);
+profile.route("/:id{[-a-f0-9]+}", profilePost);
 
 profile.get<"/:handle">(async (c) => {
   let handle = c.req.param("handle");
@@ -118,7 +119,9 @@ profile.get<"/:handle">(async (c) => {
   const featuredTagList = await db.query.featuredTags.findMany({
     where: eq(featuredTags.accountOwnerId, owner.id),
   });
-
+  const atomUrl = new URL(c.req.url);
+  atomUrl.pathname += "/atom.xml";
+  atomUrl.search = "";
   return c.html(
     <ProfilePage
       accountOwner={owner}
@@ -129,6 +132,7 @@ profile.get<"/:handle">(async (c) => {
           (p) => p.visibility === "public" || p.visibility === "unlisted",
         )}
       featuredTags={featuredTagList}
+      atomUrl={atomUrl.href}
     />,
   );
 });
@@ -204,6 +208,7 @@ interface ProfilePageProps {
     reactions: Reaction[];
   })[];
   readonly featuredTags: FeaturedTag[];
+  readonly atomUrl: string;
 }
 
 function ProfilePage({
@@ -211,6 +216,7 @@ function ProfilePage({
   posts,
   pinnedPosts,
   featuredTags,
+  atomUrl,
 }: ProfilePageProps) {
   return (
     <Layout
@@ -218,6 +224,9 @@ function ProfilePage({
       url={accountOwner.account.url ?? accountOwner.account.iri}
       description={accountOwner.bio}
       imageUrl={accountOwner.account.avatarUrl}
+      links={[
+        { rel: "alternate", type: "application/atom+xml", href: atomUrl },
+      ]}
     >
       <Profile accountOwner={accountOwner} />
       {featuredTags.length > 0 && (
@@ -245,5 +254,86 @@ function ProfilePage({
     </Layout>
   );
 }
+
+profile.get("/atom.xml", async (c) => {
+  let handle = c.req.param("handle");
+  if (handle == null) return c.notFound();
+  if (handle.startsWith("@")) handle = handle.substring(1);
+  const owner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.handle, handle),
+    with: { account: true },
+  });
+  if (owner == null) return c.notFound();
+  const postList = await db.query.posts.findMany({
+    with: { account: true },
+    where: eq(posts.accountId, owner.id),
+    orderBy: desc(posts.published),
+    limit: 100,
+  });
+  const canonicalUrl = new URL(c.req.url);
+  canonicalUrl.search = "";
+  const response = await c.html(
+    <feed xmlns="http://www.w3.org/2005/Atom">
+      <id>urn:uuid:{owner.id}</id>
+      <title>{owner.account.name}</title>
+      <link rel="self" type="application/atom+xml" href={canonicalUrl.href} />
+      <link
+        rel="alternate"
+        type="text/html"
+        href={owner.account.url ?? owner.account.iri}
+      />
+      <link
+        rel="alternate"
+        type="application/activity+json"
+        href={owner.account.iri}
+      />
+      <author>
+        <name>{owner.account.name}</name>
+        <uri>{owner.account.url ?? owner.account.iri}</uri>
+      </author>
+      <updated>
+        {(postList[0]?.updated ?? owner.account.updated).toISOString()}
+      </updated>
+      {postList.map((post) => {
+        const title = xss(post.contentHtml ?? "", {
+          allowCommentTag: false,
+          whiteList: {},
+          stripIgnoreTag: true,
+          stripBlankChar: false,
+        })
+          .trimStart()
+          .replace(/\r?\n.*$/, "");
+        return (
+          <entry>
+            <id>urn:uuid:{post.id}</id>
+            {/* biome-ignore lint/security/noDangerouslySetInnerHtml: xss protected */}
+            <title dangerouslySetInnerHTML={{ __html: title }} />
+            <link
+              rel="alternate"
+              type="text/html"
+              href={post.url ?? post.iri}
+            />
+            <link
+              rel="alternate"
+              type="application/activity+json"
+              href={post.iri}
+            />
+            <author>
+              <name>{post.account.name}</name>
+              <uri>{post.account.url ?? post.account.iri}</uri>
+            </author>
+            <content type="html">{post.contentHtml}</content>
+            {post.published && (
+              <published>{post.published.toISOString()}</published>
+            )}
+            <updated>{post.updated.toISOString()}</updated>
+          </entry>
+        );
+      })}
+    </feed>,
+  );
+  response.headers.set("Content-Type", "application/atom+xml");
+  return response;
+});
 
 export default profile;

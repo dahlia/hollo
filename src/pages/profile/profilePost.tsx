@@ -16,7 +16,7 @@ import {
 
 const profilePost = new Hono();
 
-profilePost.get<"/:handle{@[^/]+}/:id">(async (c) => {
+profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
   let handle = c.req.param("handle");
   const postId = c.req.param("id");
   if (handle.startsWith("@")) handle = handle.substring(1);

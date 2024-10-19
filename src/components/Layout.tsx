@@ -6,6 +6,7 @@ export interface LayoutProps {
   url?: string | null;
   description?: string | null;
   imageUrl?: string | null;
+  links?: { href: string | URL; rel: string; type?: string }[];
 }
 
 export function Layout(props: PropsWithChildren<LayoutProps>) {
@@ -31,6 +32,13 @@ export function Layout(props: PropsWithChildren<LayoutProps>) {
         {props.imageUrl && (
           <meta property="og:image" content={props.imageUrl} />
         )}
+        {props.links?.map((link) => (
+          <link
+            rel={link.rel}
+            href={link.href instanceof URL ? link.href.href : link.href}
+            type={link.type}
+          />
+        ))}
         <link
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
