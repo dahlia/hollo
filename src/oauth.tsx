@@ -133,6 +133,7 @@ app.get(
       client_id: z.string(),
       redirect_uri: z.string().url(),
       scope: scopesSchema.optional(),
+      state: z.string().optional(),
     }),
   ),
   loginRequired,
@@ -158,6 +159,7 @@ app.get(
         application={application}
         redirectUri={data.redirect_uri}
         scopes={scopes}
+        state={data.state}
       />,
     );
   },
@@ -168,6 +170,7 @@ interface AuthorizationPageProps {
   application: Application;
   redirectUri: string;
   scopes: Scope[];
+  state?: string;
 }
 
 function AuthorizationPage(props: AuthorizationPageProps) {
@@ -215,6 +218,9 @@ function AuthorizationPage(props: AuthorizationPageProps) {
         />
         <input type="hidden" name="redirect_uri" value={props.redirectUri} />
         <input type="hidden" name="scopes" value={props.scopes.join(" ")} />
+        {props.state != null && (
+          <input type="hidden" name="state" value={props.state} />
+        )}
         <div role="group">
           {props.redirectUri !== "urn:ietf:wg:oauth:2.0:oob" && (
             <button
@@ -245,6 +251,7 @@ app.post(
       application_id: z.string().uuid(),
       redirect_uri: z.string().url(),
       scopes: scopesSchema,
+      state: z.string().optional(),
       decision: z.enum(["allow", "deny"]),
     }),
   ),
@@ -281,6 +288,7 @@ app.post(
         );
       }
       url.searchParams.set("code", code);
+      if (form.state != null) url.searchParams.set("state", form.state);
     }
     return c.redirect(url.href);
   },

@@ -1206,5 +1206,3 @@ app.post(
 );
 
 export default app;
-
-// cSpell:ignore setex
