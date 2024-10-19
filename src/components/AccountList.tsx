@@ -29,12 +29,15 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
     xss(account.bioHtml ?? ""),
     account.emojis,
   );
+  const href = account.url ?? account.iri;
   return (
     <article>
       <header>
         <hgroup>
-          {/* biome-ignore lint/security/noDangerouslySetInnerHtml: xss protected */}
-          <h2 dangerouslySetInnerHTML={{ __html: nameHtml }} />
+          <h2>
+            {/* biome-ignore lint/security/noDangerouslySetInnerHtml: xss protected */}
+            <a dangerouslySetInnerHTML={{ __html: nameHtml }} href={href} />
+          </h2>
           <p style="user-select: all;">{account.handle}</p>
         </hgroup>
       </header>
@@ -66,19 +69,26 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
           method="post"
           onsubmit="return confirm('Are you sure you want to delete this account?')"
         >
-          <div>
+          <div role="group">
             <a
               href={`/accounts/${account.id}`}
               role="button"
-              className="contrast"
               style="display: block;"
             >
               Edit
             </a>
+            <a
+              href={`/accounts/${account.id}/migrate`}
+              role="button"
+              className="contrast"
+              style="display: block;"
+            >
+              Migrate from/to
+            </a>
+            <button type="submit" className="secondary">
+              Delete
+            </button>
           </div>
-          <button type="submit" className="contrast">
-            Delete
-          </button>
         </form>
       </footer>
     </article>

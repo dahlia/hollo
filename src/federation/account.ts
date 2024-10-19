@@ -119,6 +119,7 @@ export async function persistAccount(
     followersCount: followers?.totalItems ?? 0,
     postsCount: (await actor.getOutbox(opts))?.totalItems ?? 0,
     successorId,
+    aliases: actor?.aliasIds?.map((alias) => alias.href) ?? [],
     fieldHtmls,
     published: toDate(actor.published),
   };

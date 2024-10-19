@@ -147,6 +147,7 @@ federation
       }),
       successor:
         account.successor == null ? null : new URL(account.successor.iri),
+      aliases: account.aliases.map((a) => new URL(a)),
       attachments: Object.entries(account.fieldHtmls).map(
         ([name, value]) =>
           new PropertyValue({

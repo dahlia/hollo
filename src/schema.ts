@@ -71,6 +71,7 @@ export const accounts = pgTable("accounts", {
   successorId: uuid("successor_id").references((): AnyPgColumn => accounts.id, {
     onDelete: "cascade",
   }),
+  aliases: text("aliases").array().notNull().default(sql`(ARRAY[]::text[])`),
   published: timestamp("published", { withTimezone: true }),
   updated: timestamp("updated", { withTimezone: true })
     .notNull()
