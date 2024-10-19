@@ -1,0 +1,19 @@
+ALTER TABLE "access_tokens" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "accounts" ALTER COLUMN "updated" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "applications" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "blocks" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "bookmarks" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "credentials" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "custom_emojis" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "follows" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "likes" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "list_members" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "lists" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "markers" ALTER COLUMN "updated" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "media" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "mutes" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "pinned_posts" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "poll_votes" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "polls" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "posts" ALTER COLUMN "updated" SET DEFAULT CURRENT_TIMESTAMP;--> statement-breakpoint
+ALTER TABLE "reactions" ALTER COLUMN "created" SET DEFAULT CURRENT_TIMESTAMP;

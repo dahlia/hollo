@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
@@ -21,10 +21,14 @@ import {
 } from "drizzle-orm/pg-core";
 import type { PreviewCard } from "./previewcard";
 
+const currentTimestamp = sql`CURRENT_TIMESTAMP`;
+
 export const credentials = pgTable("credentials", {
   email: varchar("email", { length: 254 }).primaryKey(),
   passwordHash: text("password_hash").notNull(),
-  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
 });
 
 export type Credential = typeof credentials.$inferSelect;
@@ -68,7 +72,9 @@ export const accounts = pgTable("accounts", {
     onDelete: "cascade",
   }),
   published: timestamp("published", { withTimezone: true }),
-  updated: timestamp("updated", { withTimezone: true }).notNull().defaultNow(),
+  updated: timestamp("updated", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
 });
 
 export const accountRelations = relations(accounts, ({ one, many }) => ({
@@ -159,7 +165,7 @@ export const follows = pgTable(
     languages: text("languages").array(),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
     approved: timestamp("approved", { withTimezone: true }),
   },
   (table) => ({
@@ -224,7 +230,9 @@ export const applications = pgTable("applications", {
   website: text("website"),
   clientId: text("client_id").notNull().unique(),
   clientSecret: text("client_secret").notNull(),
-  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
 });
 
 export type Application = typeof applications.$inferSelect;
@@ -253,7 +261,9 @@ export const accessTokens = pgTable("access_tokens", {
     .notNull()
     .default("authorization_code"),
   scopes: scopeEnum("scopes").array().notNull(),
-  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
 });
 
 export type AccessToken = typeof accessTokens.$inferSelect;
@@ -323,7 +333,7 @@ export const posts = pgTable(
     published: timestamp("published", { withTimezone: true }),
     updated: timestamp("updated", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     uniqueIdAccountId: unique("posts_id_actor_id_unique").on(
@@ -398,7 +408,7 @@ export const media = pgTable(
     thumbnailHeight: integer("thumbnail_height").notNull(),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     postIdIdx: index().on(table.postId),
@@ -420,7 +430,9 @@ export const polls = pgTable("polls", {
   multiple: boolean("multiple").notNull().default(false),
   votersCount: bigint("voters_count", { mode: "number" }).notNull().default(0),
   expires: timestamp("expires", { withTimezone: true }).notNull(),
-  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
 });
 
 export type Poll = typeof polls.$inferSelect;
@@ -472,7 +484,7 @@ export const pollVotes = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     pk: primaryKey({
@@ -543,7 +555,7 @@ export const pinnedPosts = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     uniquePostIdAccountId: unique().on(table.postId, table.accountId),
@@ -579,7 +591,7 @@ export const likes = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.accountId] }),
@@ -614,7 +626,7 @@ export const reactions = pgTable(
     emojiIri: text("emoji_iri"),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.accountId, table.emoji] }),
@@ -646,7 +658,7 @@ export const bookmarks = pgTable(
       .references(() => accountOwners.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.accountOwnerId] }),
@@ -683,7 +695,7 @@ export const markers = pgTable(
     version: bigint("version", { mode: "number" }).notNull().default(1),
     updated: timestamp("updated", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.accountOwnerId, table.type] }),
@@ -744,7 +756,9 @@ export const lists = pgTable("lists", {
     .notNull()
     .default("list"),
   exclusive: boolean("exclusive").notNull().default(false),
-  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
 });
 
 export type List = typeof lists.$inferSelect;
@@ -769,7 +783,7 @@ export const listMembers = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.listId, table.accountId] }),
@@ -804,7 +818,7 @@ export const mutes = pgTable(
     duration: interval("duration"),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     uniqueAccountIdMutedAccountId: unique(
@@ -836,7 +850,7 @@ export const blocks = pgTable(
     blockedAccountId: uuid("blocked_account_id").notNull(),
     created: timestamp("created", { withTimezone: true })
       .notNull()
-      .defaultNow(),
+      .default(currentTimestamp),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.accountId, table.blockedAccountId] }),
@@ -863,7 +877,9 @@ export const customEmojis = pgTable("custom_emojis", {
   shortcode: text("shortcode").primaryKey(),
   url: text("url").notNull(),
   category: text("category"),
-  created: timestamp("created", { withTimezone: true }).notNull().defaultNow(),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
 });
 
 export type CustomEmoji = typeof customEmojis.$inferSelect;

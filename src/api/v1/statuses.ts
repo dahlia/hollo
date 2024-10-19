@@ -137,7 +137,6 @@ app.post(
     const handle = owner.handle;
     const id = uuidv7();
     const url = fedCtx.getObjectUri(Note, { username: handle, id });
-    const published = new Date();
     const content =
       data.status == null ? null : await formatText(db, data.status, fmtOpts);
     const summary =
@@ -210,7 +209,7 @@ app.post(
         sensitive: data.sensitive,
         url: url.href,
         previewCard,
-        published,
+        published: sql`CURRENT_TIMESTAMP`,
       });
       if (data.media_ids != null && data.media_ids.length > 0) {
         for (const mediaId of data.media_ids) {
