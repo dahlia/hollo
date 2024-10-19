@@ -16,6 +16,7 @@ import {
   type KvStore,
   Like,
   type MessageQueue,
+  Move,
   Note,
   ParallelMessageQueue,
   PropertyValue,
@@ -68,6 +69,7 @@ import {
   onEmojiReactionAdded,
   onEmojiReactionRemoved,
   onLiked,
+  onMove,
   onUnblocked,
   onUnliked,
 } from "./inbox";
@@ -752,6 +754,7 @@ federation
     }
   })
   .on(Block, onBlocked)
+  .on(Move, onMove)
   .on(Undo, async (ctx, undo) => {
     const object = await undo.getObject();
     if (

@@ -9,9 +9,11 @@ import {
   type InboxContext,
   Like,
   Link,
+  type Move,
   Note,
   Reject,
   Undo,
+  isActor,
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { and, eq } from "drizzle-orm";
@@ -318,4 +320,61 @@ export async function onEmojiReactionRemoved(
   await ctx.forwardActivity({ username }, "followers", {
     skipIfUnsigned: true,
   });
+}
+
+export async function onMove(
+  ctx: InboxContext<void>,
+  move: Move,
+): Promise<void> {
+  if (
+    move.objectId == null ||
+    move.targetId == null ||
+    move.actorId?.href !== move.objectId.href
+  ) {
+    return;
+  }
+  const object = await move.getObject();
+  if (!isActor(object)) return;
+  const obj = await persistAccount(db, object, ctx);
+  if (obj == null) return;
+  const target = await move.getTarget();
+  if (
+    !isActor(target) ||
+    target.aliasIds.every((a) => a.href !== object.id?.href)
+  ) {
+    return;
+  }
+  const tgt = await persistAccount(db, target, ctx);
+  if (tgt == null) return;
+  const followers = await db.query.follows.findMany({
+    with: { follower: { with: { owner: true } } },
+    where: eq(follows.followingId, obj.id),
+  });
+  for (const follower of followers) {
+    if (follower.follower.owner == null) continue;
+    const result = await db
+      .insert(follows)
+      .values({
+        iri: new URL(`#follows/${crypto.randomUUID()}`, follower.follower.iri)
+          .href,
+        followingId: tgt.id,
+        followerId: follower.followerId,
+        shares: follower.shares,
+        notify: follower.notify,
+        languages: follower.languages,
+        approved: tgt.owner == null || tgt.protected ? null : new Date(),
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (tgt.owner != null || result.length < 1) continue;
+    await ctx.sendActivity(
+      { username: follower.follower.owner.handle },
+      target,
+      new Follow({
+        id: new URL(result[0].iri),
+        actor: new URL(follower.follower.iri),
+        object: new URL(tgt.iri),
+      }),
+    );
+  }
 }

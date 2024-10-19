@@ -9,6 +9,8 @@ import type { FileSink } from "bun";
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const LOG_LEVEL: LogLevel = parseLogLevel(process.env["LOG_LEVEL"] ?? "info");
+// biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+const LOG_QUERY: boolean = process.env["LOG_QUERY"] === "true";
 
 let writer: FileSink | undefined = undefined;
 const stdout = new WritableStream({
@@ -41,8 +43,17 @@ await configure({
   filters: {},
   loggers: [
     { category: "fedify", level: LOG_LEVEL, sinks: ["console"] },
+    {
+      category: ["fedify", "runtime", "docloader"],
+      level: "warning",
+      sinks: ["console"],
+    },
     { category: "hollo", level: LOG_LEVEL, sinks: ["console"] },
-    { category: "drizzle-orm", level: LOG_LEVEL, sinks: ["console"] },
+    {
+      category: "drizzle-orm",
+      level: LOG_QUERY ? LOG_LEVEL : "fatal",
+      sinks: ["console"],
+    },
     { category: ["logtape", "meta"], level: "warning", sinks: ["console"] },
   ],
 });

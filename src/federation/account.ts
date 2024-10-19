@@ -46,7 +46,7 @@ export async function persistAccount(
     documentLoader?: DocumentLoader;
     skipUpdate?: boolean;
   } = {},
-): Promise<schema.Account | null> {
+): Promise<(schema.Account & { owner: schema.AccountOwner | null }) | null> {
   const opts = { ...options, suppressError: true };
   if (
     actor.id == null ||
@@ -140,6 +140,7 @@ export async function persistAccount(
       setWhere: eq(schema.accounts.iri, actor.id.href),
     });
   const account = await db.query.accounts.findFirst({
+    with: { owner: true },
     where: eq(schema.accounts.iri, actor.id.href),
   });
   if (account == null) return null;

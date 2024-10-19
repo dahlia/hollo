@@ -637,7 +637,7 @@ app.post(
     if (following.owner == null) {
       const fedCtx = federation.createContext(c.req.raw, undefined);
       await fedCtx.sendActivity(
-        owner,
+        { username: owner.handle },
         [
           {
             id: new URL(following.iri),
@@ -707,7 +707,7 @@ app.post(
       });
       if (following != null && following.owner == null) {
         await fedCtx.sendActivity(
-          owner,
+          { username: owner.handle },
           [
             {
               id: new URL(following.iri),
