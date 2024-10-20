@@ -847,8 +847,12 @@ export const muteRelations = relations(mutes, ({ one }) => ({
 export const blocks = pgTable(
   "blocks",
   {
-    accountId: uuid("account_id").notNull(),
-    blockedAccountId: uuid("blocked_account_id").notNull(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    blockedAccountId: uuid("blocked_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
       .notNull()
       .default(currentTimestamp),
