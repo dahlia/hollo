@@ -1,7 +1,6 @@
 import {
   Article,
   Note,
-  // biome-ignore lint/suspicious/noShadowRestrictedNames: Activity Vocabulary
   type Object,
   isActor,
   lookupObject,

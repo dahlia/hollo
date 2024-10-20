@@ -1,5 +1,7 @@
 import {
   Delete,
+  Move,
+  type Object,
   PUBLIC_COLLECTION,
   Update,
   exportJwk,
@@ -7,6 +9,7 @@ import {
   getActorHandle,
   isActor,
 } from "@fedify/fedify";
+import { getLogger } from "@logtape/logtape";
 import { eq, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { AccountForm } from "../components/AccountForm.tsx";
@@ -18,6 +21,7 @@ import {
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
 import db from "../db.ts";
 import federation from "../federation";
+import { persistAccount } from "../federation/account.ts";
 import { loginRequired } from "../login.ts";
 import {
   type Account,
@@ -27,6 +31,8 @@ import {
   accounts as accountsTable,
 } from "../schema.ts";
 import { extractCustomEmojis, formatText } from "../text.ts";
+
+const logger = getLogger(["hollo", "pages", "accounts"]);
 
 const accounts = new Hono();
 
@@ -284,7 +290,7 @@ accounts.post("/:id/delete", async (c) => {
 accounts.get("/:id/migrate", async (c) => {
   const accountOwner = await db.query.accountOwners.findFirst({
     where: eq(accountOwners.id, c.req.param("id")),
-    with: { account: true },
+    with: { account: { with: { successor: true } } },
   });
   if (accountOwner == null) return c.notFound();
   const username = `@${accountOwner.handle}`;
@@ -294,6 +300,8 @@ accounts.get("/:id/migrate", async (c) => {
       handle: await getActorHandle(new URL(alias)),
     })),
   );
+  const error = c.req.query("error");
+  const handle = c.req.query("handle");
   return c.html(
     <DashboardLayout
       title={`Hollo: Migrate ${username} from/to`}
@@ -313,7 +321,7 @@ accounts.get("/:id/migrate", async (c) => {
             <h2>Aliases</h2>
             <p>
               Configure aliases for your account. This purposes to migrate your
-              old account to {accountOwner.account.handle}.
+              old account to <tt>{accountOwner.account.handle}</tt>.
             </p>
           </hgroup>
         </header>
@@ -326,13 +334,16 @@ accounts.get("/:id/migrate", async (c) => {
             ))}
           </ul>
         )}
-        <form method="post">
+        <form method="post" action="migrate/from">
           <fieldset role="group">
             <input
               type="text"
               name="handle"
               placeholder="@hollo@hollo.social"
               required
+              {...(error === "from"
+                ? { "aria-invalid": "true", value: handle }
+                : {})}
             />
             <button type="submit">Add</button>
           </fieldset>
@@ -342,11 +353,53 @@ accounts.get("/:id/migrate", async (c) => {
           </small>
         </form>
       </article>
+
+      <article>
+        <header>
+          <hgroup>
+            <h2>Migrating {username} to new account</h2>
+            <p>
+              Migrate <tt>{accountOwner.account.handle}</tt> to your new
+              account. Note that this action is <strong>irreversible</strong>.
+            </p>
+          </hgroup>
+          <form method="post" action="migrate/to">
+            <fieldset role="group">
+              <input
+                type="text"
+                name="handle"
+                placeholder="@hollo@hollo.social"
+                required
+                {...(error === "to"
+                  ? { "aria-invalid": "true", value: handle }
+                  : { value: accountOwner.account.successor?.handle })}
+                {...(accountOwner.account.successorId == null
+                  ? {}
+                  : { disabled: true })}
+              />
+              {accountOwner.account.successorId == null ? (
+                <button type="submit">Migrate</button>
+              ) : (
+                <button type="submit" disabled>
+                  Migrated
+                </button>
+              )}
+            </fieldset>
+            <small>
+              A fediverse handle (e.g., <tt>@hollo@hollo.social</tt>) or an
+              actor URI (e.g., <tt>https://hollo.social/@hollo</tt>) is allowed.{" "}
+              <strong>
+                The new account must have an alias to this old account.
+              </strong>
+            </small>
+          </form>
+        </header>
+      </article>
     </DashboardLayout>,
   );
 });
 
-accounts.post("/:id/migrate", async (c) => {
+accounts.post("/:id/migrate/from", async (c) => {
   const accountOwner = await db.query.accountOwners.findFirst({
     where: eq(accountOwners.id, c.req.param("id")),
     with: { account: true },
@@ -355,23 +408,90 @@ accounts.post("/:id/migrate", async (c) => {
   const fedCtx = federation.createContext(c.req.raw, undefined);
   const form = await c.req.formData();
   const handle = form.get("handle");
-  if (typeof handle !== "string") return c.redirect(c.req.url);
+  if (typeof handle !== "string") {
+    return c.redirect(`/accounts/${accountOwner.id}/migrate?error=from`);
+  }
+  const errorPage = `/accounts/${accountOwner.id}/migrate?error=from&handle=${encodeURIComponent(handle)}`;
   const documentLoader = await fedCtx.getDocumentLoader({
     username: accountOwner.handle,
   });
-  const actor = await fedCtx.lookupObject(handle, { documentLoader });
-  if (isActor(actor) && actor.id != null) {
-    const aliases = [
-      ...accountOwner.account.aliases,
-      actor.id.href,
-      ...actor.aliasIds.map((u) => u.href),
-    ];
-    await db
-      .update(accountsTable)
-      .set({ aliases })
-      .where(eq(accountsTable.id, accountOwner.id));
+  let actor: Object | null = null;
+  try {
+    actor = await fedCtx.lookupObject(handle, { documentLoader });
+  } catch {
+    return c.redirect(errorPage);
   }
-  return c.redirect(c.req.url);
+  if (!isActor(actor) || actor.id == null) {
+    return c.redirect(errorPage);
+  }
+  const aliases = [
+    ...accountOwner.account.aliases,
+    actor.id.href,
+    ...actor.aliasIds.map((u) => u.href),
+  ];
+  await db
+    .update(accountsTable)
+    .set({ aliases })
+    .where(eq(accountsTable.id, accountOwner.id));
+  return c.redirect(`/accounts/${accountOwner.id}/migrate`);
+});
+
+accounts.post("/:id/migrate/to", async (c) => {
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, c.req.param("id")),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+  const fedCtx = federation.createContext(c.req.raw, undefined);
+  const form = await c.req.formData();
+  const handle = form.get("handle");
+  if (typeof handle !== "string") {
+    logger.error("The handle is not a string: {handle}", { handle });
+    return c.redirect(`/accounts/${accountOwner.id}/migrate?error=to`);
+  }
+  const errorPage = `/accounts/${accountOwner.id}/migrate?error=to&handle=${encodeURIComponent(handle)}`;
+  const documentLoader = await fedCtx.getDocumentLoader({
+    username: accountOwner.handle,
+  });
+  let target: Object | null = null;
+  try {
+    target = await fedCtx.lookupObject(handle, { documentLoader });
+  } catch (error) {
+    logger.error("Failed to lookup actor: {error}", { error });
+    return c.redirect(errorPage);
+  }
+  if (
+    !isActor(target) ||
+    target.id == null ||
+    !target.aliasIds.some((a) => a.href === accountOwner.account.iri)
+  ) {
+    logger.error(
+      "The looked up object is either not an actor or does not have an alias to " +
+        "the account: {object}",
+      { object: target },
+    );
+    return c.redirect(errorPage);
+  }
+  const targetAccount = await persistAccount(db, target);
+  if (targetAccount == null) {
+    logger.error("Failed to persist the account: {actor}", { actor: target });
+    return c.redirect(errorPage);
+  }
+  await db
+    .update(accountsTable)
+    .set({ successorId: targetAccount.id })
+    .where(eq(accountsTable.id, accountOwner.id));
+  await fedCtx.sendActivity(
+    { username: accountOwner.handle },
+    "followers",
+    new Move({
+      id: new URL("#move", accountOwner.account.iri),
+      actor: new URL(accountOwner.account.iri),
+      object: new URL(accountOwner.account.iri),
+      target: target.id,
+    }),
+  );
+  return c.redirect(`/accounts/${accountOwner.id}/migrate`);
 });
 
 export default accounts;

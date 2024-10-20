@@ -29,6 +29,9 @@
       },
       "style": {
         "noNonNullAssertion": "off"
+      },
+      "suspicious": {
+        "noShadowRestrictedNames": "off"
       }
     }
   }
