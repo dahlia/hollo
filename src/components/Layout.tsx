@@ -43,6 +43,10 @@ export function Layout(props: PropsWithChildren<LayoutProps>) {
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
         />
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css"
+        />
       </head>
       <body>
         <main className="container">{props.children}</main>
