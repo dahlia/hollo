@@ -679,16 +679,14 @@ app.get(
   },
 );
 
+const reblogSchema = z.object({
+  visibility: z.enum(["public", "unlisted", "private"]).default("public"),
+});
+
 app.post(
   "/:id/reblog",
   tokenRequired,
   scopeRequired(["write:statuses"]),
-  zValidator(
-    "form",
-    z.object({
-      visibility: z.enum(["public", "unlisted", "private"]).default("public"),
-    }),
-  ),
   async (c) => {
     const token = c.get("token");
     const owner = token.accountOwner;
@@ -699,7 +697,18 @@ app.post(
       );
     }
     const originalPostId = c.req.param("id");
-    const visibility = c.req.valid("form").visibility;
+    const contentType = c.req.header("Content-Type");
+    let data: z.infer<typeof reblogSchema>;
+    if (contentType?.match(/^application\/json(\s*;|$)/)) {
+      data = reblogSchema.parse(await c.req.json());
+    } else if (contentType === "application/x-www-form-urlencoded") {
+      data = reblogSchema.parse(await c.req.formData());
+    } else if (contentType == null) {
+      data = { visibility: "public" };
+    } else {
+      return c.json({ error: "Unsupported Media Type" }, 415);
+    }
+    const visibility = data.visibility;
     const originalPost = await db.query.posts.findFirst({
       where: eq(posts.id, originalPostId),
       with: { account: true },
