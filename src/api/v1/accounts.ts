@@ -248,26 +248,29 @@ app.get(
       );
     }
     const ids = c.req.queries("id[]") ?? [];
-    const accountList = await db.query.accounts.findMany({
-      where: inArray(accounts.id, ids),
-      with: {
-        following: {
-          where: eq(follows.followingId, owner.id),
-        },
-        followers: {
-          where: eq(follows.followerId, owner.id),
-        },
-        mutedBy: {
-          where: eq(mutes.accountId, owner.id),
-        },
-        blocks: {
-          where: eq(blocks.blockedAccountId, owner.id),
-        },
-        blockedBy: {
-          where: eq(blocks.accountId, owner.id),
-        },
-      },
-    });
+    const accountList =
+      ids.length > 0
+        ? await db.query.accounts.findMany({
+            where: inArray(accounts.id, ids),
+            with: {
+              following: {
+                where: eq(follows.followingId, owner.id),
+              },
+              followers: {
+                where: eq(follows.followerId, owner.id),
+              },
+              mutedBy: {
+                where: eq(mutes.accountId, owner.id),
+              },
+              blocks: {
+                where: eq(blocks.blockedAccountId, owner.id),
+              },
+              blockedBy: {
+                where: eq(blocks.accountId, owner.id),
+              },
+            },
+          })
+        : [];
     accountList.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id));
     return c.json(
       accountList.map((account) => serializeRelationship(account, owner)),
@@ -859,6 +862,8 @@ app.get(
     const muteList = await db.query.mutes.findMany({
       where: eq(mutes.accountId, owner.id),
     });
+
+    if (muteList.length < 1) return c.json([]);
 
     const query = c.req.valid("query");
 
