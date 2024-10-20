@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { trimTrailingSlash } from "hono/trailing-slash";
 import accounts from "./accounts";
 import data from "./data";
 import emojis from "./emojis";
@@ -10,6 +11,7 @@ import tags from "./tags";
 
 const page = new Hono();
 
+page.use(trimTrailingSlash());
 page.route("/", home);
 page.route("/:handle{@[^/]+}", profile);
 page.route("/login", login);
