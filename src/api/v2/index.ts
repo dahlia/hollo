@@ -6,11 +6,11 @@ import {
   lookupObject,
 } from "@fedify/fedify";
 import { zValidator } from "@hono/zod-validator";
+import { exportActorProfile } from "@interop/wallet-export-ts";
 import { getLogger } from "@logtape/logtape";
 import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { exportActorProfile } from "@interop/wallet-export-ts";
 import { db } from "../../db";
 import { serializeAccount } from "../../entities/account";
 import { getPostRelations, serializePost } from "../../entities/status";
@@ -28,14 +28,30 @@ app.route("/instance", instance);
 
 app.post("/media", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
-export async function loadAccount (actorId) {
+export async function loadAccount(actorId: string) {
   return db.query.accounts.findFirst({
     where: eq(accounts.id, actorId),
     with: { owner: true },
   });
 }
 
-app.post("/:actorId/accountExport",
+async function loadOutbox(accountId: string) {
+  const items = await db.query.posts.findMany({
+    where: eq(posts.accountId, accountId),
+    orderBy: desc(posts.published),
+    limit: 100,
+  });
+
+  return {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    type: "OrderedCollection",
+    totalItems: items.length,
+    orderedItems: items,
+  };
+}
+
+app.post(
+  "/:actorId/accountExport",
   tokenRequired,
   scopeRequired(["read:accounts"]),
   async (c) => {
@@ -52,7 +68,9 @@ app.post("/:actorId/accountExport",
       return c.json({ error: "Forbidden" }, 403);
     }
 
-    logger.info("Received account export request for actor: {actor}", { actor: actorId });
+    logger.info("Received account export request for actor: {actor}", {
+      actor: actorId,
+    });
 
     try {
       // Load the Actor account object
@@ -64,20 +82,25 @@ app.post("/:actorId/accountExport",
       const actorProfile = serializeAccount(account, c.req.url);
 
       // Load the actor's Content (Notes etc) Collection
-      // const outbox = await loadOutbox(owner.id)
+      const outbox = await loadOutbox("c27e7b75-7fb5-4513-8e58-effa4a876e84");
+      // console.log("🚀 ~ outbox:", outbox);
 
       const exportTarballStream = exportActorProfile({
-        actorProfile, /* outbox */ });
+        actorProfile,
+        outbox,
+      });
+      // console.log("🚀 ~ exportTarballStream:", exportTarballStream);
 
       return c.body(exportTarballStream, 200, {
         "Content-Type": "application/x-tar",
-        "Content-Disposition": `attachment; filename="account_export_${actorId}.tar"`
+        "Content-Disposition": `attachment; filename="account_export_${actorId}.tar"`,
       });
     } catch (error) {
       logger.error("Account export failed: {error}", { error });
       return c.json({ error: "Export failed" }, 500);
     }
-  });
+  },
+);
 
 app.get(
   "/search",
