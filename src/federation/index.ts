@@ -47,6 +47,7 @@ import {
   like,
   sql,
 } from "drizzle-orm";
+import { uniq } from "es-toolkit";
 import metadata from "../../package.json" with { type: "json" };
 import { db, postgres } from "../db";
 import { createRedis, getRedisUrl } from "../redis";
@@ -149,7 +150,7 @@ federation
       }),
       successor:
         account.successor == null ? null : new URL(account.successor.iri),
-      aliases: account.aliases.map((a) => new URL(a)),
+      aliases: uniq(account.aliases).map((a) => new URL(a)),
       attachments: Object.entries(account.fieldHtmls).map(
         ([name, value]) =>
           new PropertyValue({

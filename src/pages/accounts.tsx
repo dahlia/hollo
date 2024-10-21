@@ -11,6 +11,7 @@ import {
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { eq, sql } from "drizzle-orm";
+import { uniq } from "es-toolkit";
 import { Hono } from "hono";
 import { AccountForm } from "../components/AccountForm.tsx";
 import { AccountList } from "../components/AccountList.tsx";
@@ -295,7 +296,7 @@ accounts.get("/:id/migrate", async (c) => {
   if (accountOwner == null) return c.notFound();
   const username = `@${accountOwner.handle}`;
   const aliases = await Promise.all(
-    accountOwner.account.aliases.map(async (alias) => ({
+    uniq(accountOwner.account.aliases).map(async (alias) => ({
       iri: alias,
       handle: await getActorHandle(new URL(alias)),
     })),
@@ -424,11 +425,11 @@ accounts.post("/:id/migrate/from", async (c) => {
   if (!isActor(actor) || actor.id == null) {
     return c.redirect(errorPage);
   }
-  const aliases = [
+  const aliases = uniq([
     ...accountOwner.account.aliases,
     actor.id.href,
     ...actor.aliasIds.map((u) => u.href),
-  ];
+  ]);
   await db
     .update(accountsTable)
     .set({ aliases })
