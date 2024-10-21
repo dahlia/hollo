@@ -5,11 +5,12 @@ import db from "../../db";
 import {
   serializeAccount,
   serializeAccountOwner,
+  serializeRelationship,
 } from "../../entities/account";
 import { federation } from "../../federation";
 import { updateAccountStats } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { accounts, follows } from "../../schema";
+import { accounts, blocks, follows, mutes } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -82,29 +83,28 @@ app.post(
       );
     }
     await updateAccountStats(db, { id: owner.id });
-    const follow = await db.query.follows.findFirst({
-      where: and(
-        eq(follows.followingId, followerId),
-        eq(follows.followerId, owner.id),
-      ),
+    const follower2 = await db.query.accounts.findFirst({
+      where: eq(accounts.id, followerId),
+      with: {
+        followers: {
+          where: eq(follows.followerId, owner.id),
+        },
+        following: {
+          where: eq(follows.followingId, owner.id),
+        },
+        mutedBy: {
+          where: eq(mutes.accountId, owner.id),
+        },
+        blocks: {
+          where: eq(blocks.blockedAccountId, owner.id),
+        },
+        blockedBy: {
+          where: eq(blocks.accountId, owner.id),
+        },
+      },
     });
-    return c.json({
-      id: followerId,
-      following: follow?.approved != null,
-      showing_reblogs: follow?.shares ?? false,
-      notifying: follow?.notify ?? false,
-      languages: follow?.languages ?? null,
-      followed_by: true,
-      blocking: false, // TODO
-      blocked_by: false, // TODO
-      muting: false, // TODO
-      muting_notifications: false, // TODO
-      requested: follow != null && follow.approved == null,
-      requested_by: false,
-      domain_blocking: false, // TODO
-      endorsed: false, // TODO
-      note: "", // TODO
-    });
+    if (follower2 == null) return c.json({ error: "Record not found" }, 404);
+    return c.json(serializeRelationship(follower2, owner));
   },
 );
 
@@ -154,29 +154,28 @@ app.post(
         { excludeBaseUris: [new URL(c.req.url)] },
       );
     }
-    const follow = await db.query.follows.findFirst({
-      where: and(
-        eq(follows.followingId, followerId),
-        eq(follows.followerId, owner.id),
-      ),
+    const follower2 = await db.query.accounts.findFirst({
+      where: eq(accounts.id, followerId),
+      with: {
+        followers: {
+          where: eq(follows.followerId, owner.id),
+        },
+        following: {
+          where: eq(follows.followingId, owner.id),
+        },
+        mutedBy: {
+          where: eq(mutes.accountId, owner.id),
+        },
+        blocks: {
+          where: eq(blocks.blockedAccountId, owner.id),
+        },
+        blockedBy: {
+          where: eq(blocks.accountId, owner.id),
+        },
+      },
     });
-    return c.json({
-      id: followerId,
-      following: follow?.approved != null,
-      showing_reblogs: follow?.shares ?? false,
-      notifying: follow?.notify ?? false,
-      languages: follow?.languages ?? null,
-      followed_by: false,
-      blocking: false, // TODO
-      blocked_by: false, // TODO
-      muting: false, // TODO
-      muting_notifications: false, // TODO
-      requested: follow != null && follow.approved == null,
-      requested_by: false,
-      domain_blocking: false, // TODO
-      endorsed: false, // TODO
-      note: "", // TODO
-    });
+    if (follower2 == null) return c.json({ error: "Record not found" }, 404);
+    return c.json(serializeRelationship(follower2, owner));
   },
 );
 
