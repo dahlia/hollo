@@ -49,7 +49,7 @@ jobs:
         tags: |
           ghcr.io/${{ github.repository }}:git-${{ github.sha }}
           ghcr.io/${{ github.repository }}:${{ steps.version.outputs.value }}-dev.${{ github.run_number }}
-          ghcr.io/${{ github.repository }}:latest
+          ghcr.io/${{ github.repository }}:canary
         labels:
           org.opencontainers.image.revision=${{ github.sha }}
         annotations: |
@@ -74,13 +74,14 @@ jobs:
         tags: |
           ghcr.io/${{ github.repository }}:git-${{ github.sha }}
           ghcr.io/${{ github.repository }}:${{ steps.version.outputs.value }}
+          ghcr.io/${{ github.repository }}:canary
           ghcr.io/${{ github.repository }}:latest
         labels:
           org.opencontainers.image.revision=${{ github.sha }}
-        annotations:
+        annotations: |
           org.opencontainers.image.title=Hollo
           org.opencontainers.image.description=Federated single-user microblogging software
-          org.opencontainers.image.url=https://github.com/dahlia/hollo
+          org.opencontainers.image.url=https://docs.hollo.social/
           org.opencontainers.image.source=https://github.com/dahlia/hollo
           org.opencontainers.image.revision=${{ github.sha }}
           org.opencontainers.image.licenses=AGPL-3.0-only
