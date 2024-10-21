@@ -6,7 +6,6 @@ import {
   lookupObject,
 } from "@fedify/fedify";
 import { zValidator } from "@hono/zod-validator";
-import { exportActorProfile } from "@interop/wallet-export-ts";
 import { getLogger } from "@logtape/logtape";
 import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { Hono } from "hono";
@@ -20,6 +19,7 @@ import { persistPost } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type Account, accounts, posts } from "../../schema";
 import { postMedia } from "../v1/media";
+import { exportController } from "./controllers/accountExport";
 import instance from "./instance";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -28,76 +28,11 @@ app.route("/instance", instance);
 
 app.post("/media", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
-export async function loadAccount(actorId: string) {
-  return db.query.accounts.findFirst({
-    where: eq(accounts.id, actorId),
-    with: { owner: true },
-  });
-}
-
-async function loadOutbox(accountId: string) {
-  const items = await db.query.posts.findMany({
-    where: eq(posts.accountId, accountId),
-    orderBy: desc(posts.published),
-    limit: 100,
-  });
-
-  return {
-    totalPosts: items.length,
-    posts: items,
-  };
-}
-
 app.post(
   "/:actorId/accountExport",
-  tokenRequired,
-  scopeRequired(["read:accounts"]),
-  async (c) => {
-    const logger = getLogger(["hollo", "api", "v2", "accountExport"]);
-    logger.info("Received account export request");
-
-    const actorId = c.req.param("actorId");
-    const owner = c.get("token").accountOwner;
-
-    if (owner == null) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
-    if (owner.handle !== actorId) {
-      return c.json({ error: "Forbidden" }, 403);
-    }
-
-    logger.info("Received account export request for actor: {actor}", {
-      actor: actorId,
-    });
-
-    try {
-      // Load the Actor account object
-      const account = await loadAccount(actorId);
-      if (!account) {
-        return c.json({ error: "Actor not found" }, 404);
-      }
-      // Load the Actor profile JSON
-      const actorProfile = serializeAccount(account, c.req.url);
-
-      // Load the actor's Content (Notes etc) Collection
-      const outbox = await loadOutbox("c27e7b75-7fb5-4513-8e58-effa4a876e84");
-      // console.log("🚀 ~ outbox:", outbox);
-
-      const exportTarballStream = exportActorProfile({
-        actorProfile,
-        outbox,
-      });
-      // console.log("🚀 ~ exportTarballStream:", exportTarballStream);
-
-      return c.body(exportTarballStream, 200, {
-        "Content-Type": "application/x-tar",
-        "Content-Disposition": `attachment; filename="account_export_${actorId}.tar"`,
-      });
-    } catch (error) {
-      logger.error("Account export failed: {error}", { error });
-      return c.json({ error: "Export failed" }, 500);
-    }
-  },
+  // tokenRequired,
+  // scopeRequired(["read:accounts"]),
+  exportController,
 );
 
 app.get(
