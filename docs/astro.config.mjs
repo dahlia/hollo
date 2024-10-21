@@ -100,6 +100,15 @@ export default defineConfig({
             },
           ],
         },
+        {
+          slug: "clients",
+          label: "Tested clients",
+          translations: {
+            ko: "테스트된 클라이언트",
+            ja: "テスト済みクライアント",
+            "zh-CN": "已测试客户端",
+          },
+        },
       ],
       head: [
         {

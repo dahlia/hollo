@@ -1,0 +1,69 @@
+---
+title: テスト済みクライアント
+description: >-
+  HolloはMastodon APIを実装したヘッドレスマイクロブログソフトウェアです。
+  これは理論的にはHolloと相互作用できるMastodon互換クライアントであれば何でも使用できることを意味します。Holloでテストされたクライアントをここに列挙します。
+---
+
+import { Badge } from '@astrojs/starlight/components';
+
+HolloはMastodon APIを実装したヘッドレスマイクロブログソフトウェアです。
+これは理論的にはHolloと相互作用できるMastodon互換クライアントであれば何でも使用できることを意味します。
+しかし、実際にはMastodon APIを実装する方法の違いにより、一部のクライアントが予想どおりに動作しないことがあります。Holloでテストされたクライアントをここに列挙します。
+
+
+ウェブ
+------
+
+### [Elk](https://elk.zone/)
+ 
+ -  引用は書き込みのみ。[^1]
+ -  絵文字リアクション未対応。
+
+[^1]: 新しい投稿を書く時、引用する投稿のリンクをペーストする事で引用可能。
+
+### [Phanpy](https://phanpy.social/) <Badge text="お勧め" />
+
+ -  絵文字リアクションは見るだけ。
+
+
+Android
+-------
+
+### [Moshidon](https://lucasggamerm.github.io/moshidon/) <Badge text="お勧め" />
+ 
+ -  絵文字リアクションを使うには、*設定* → *インスタンス* →
+    *絵文字リアクションを有効にする* オプションをオンにする必要が有る。
+ -  CommonMarkを使うには、*設定* → *インスタンス* →
+    *投稿フォーマットを有効化* オプションをオンにし、
+    *デフォルトのコンテンツタイプ* を *Markdown* に設定する必要が有る。
+
+### [Subway Tooter](https://play.google.com/store/apps/details?id=jp.juggler.subwaytooter)
+
+ -  引用は書き込みのみ。[^1]
+
+
+iOS
+---
+
+### [Mona](https://getmona.app/)
+
+ -  絵文字リアクション未対応。
+
+### [Nightfox DAWN](https://noppe.dev/dawn) <Badge text="お勧め" />
+
+ -  引用するには、引用する投稿のリンクをペーストする必要が有る。[^1]
+
+### [Tusker](https://vaccor.space/tusker/)
+
+ -  引用は書き込みのみ。[^1]
+ -  絵文字リアクション未対応。
+ -  日本語未対応。
+
+### [Woolly](https://apps.apple.com/app/woolly-for-mastodon/id6444360628)
+
+ -  引用は書き込みのみ。[^1]
+ -  絵文字リアクション未対応。
+ -  日本語未対応。
+
+----

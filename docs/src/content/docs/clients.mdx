@@ -1,0 +1,71 @@
+---
+title: Tested clients
+description: >-
+  Hollo is a headless microblogging software that implements
+  the Mastodon API.  This means that you can use any
+  Mastodon-compatible client to interact with it.  Here are some of
+  the clients that have been tested with Hollo.
+---
+
+import { Badge } from '@astrojs/starlight/components';
+
+Hollo is a headless microblogging software that implements the Mastodon
+API.  This means that you can use any Mastodon-compatible client to interact
+with it.  However, in practice, some clients may not work as expected due to
+differences in the way they implement the Mastodon API.  Here are some of the
+clients that have been tested with Hollo:
+
+
+Web
+---
+
+### [Elk](https://elk.zone/)
+ 
+ -  Quotes are write-only.[^1]
+ -  Emoji reactions are not supported.
+
+[^1]: You can quote a post by pasting a link to the post when you compose
+      a new post.
+
+### [Phanpy](https://phanpy.social/) <Badge text="Recommended" />
+
+ -  Emoji reactions are read-only.
+
+
+Android
+-------
+
+### [Moshidon](https://lucasggamerm.github.io/moshidon/) <Badge text="Recommended" />
+ 
+ -  You need to turn on *Settings* → *Instance* → *Enable emoji
+    reactions* to use emoji reactions.
+ -  You need to turn on *Settings* → *Instance* → *Enable post formatting*
+    and set *Default content type* to *Markdown* to use CommonMark.
+
+### [Subway Tooter](https://play.google.com/store/apps/details?id=jp.juggler.subwaytooter)
+
+ -  Quotes are write-only.[^1]
+
+
+iOS
+---
+
+### [Mona](https://getmona.app/)
+
+ -  Emoji reactions are not supported.
+
+### [Nightfox DAWN](https://noppe.dev/dawn) <Badge text="Recommended" />
+
+ -  To quote you need to manually paste the link to the post.[^1]
+
+### [Tusker](https://vaccor.space/tusker/)
+
+ -  Quotes are write-only.[^1]
+ -  Emoji reactions are not supported.
+
+### [Woolly](https://apps.apple.com/app/woolly-for-mastodon/id6444360628)
+
+ -  Quotes are write-only.[^1]
+ -  Emoji reactions are not supported.
+
+----

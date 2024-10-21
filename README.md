@@ -11,10 +11,6 @@ Hollo
 [![Discord][Discord badge]][Discord]
 [![Official Hollo][Official Hollo badge]][Official Hollo]
 
-> [!NOTE]
-> This project is still in the early stage of development.  It is not ready for
-> production use yet.
-
 Hollo is a federated single-user microblogging software powered by [Fedify].
 Although it is for single-user, it is designed to be federated through
 [ActivityPub], which means that you can follow and be followed by other users
@@ -23,7 +19,7 @@ Mastodon, Misskey, and so on.
 
 Hollo does not have its own web interface.  Instead, it implements
 Mastodon-compatible APIs so that you can integrate it with the most of
-the [existing Mastodon clients](#tested-clients).
+the [existing Mastodon clients](https://docs.hollo.social/clients/).
 
 [Matrix badge]: https://img.shields.io/matrix/hollo-users%3Amatrix.org?logo=matrix
 [Matrix]: https://matrix.to/#/%23hollo-users:matrix.org
@@ -45,3 +41,4 @@ Docs
      -  [Manual installation](https://docs.hollo.social/install/manual/)
      -  [Environment variables](https://docs.hollo.social/install/env/)
      -  [Setting up](https://docs.hollo.social/install/setup/)
+ -  [Tested clients](https://docs.hollo.social/clients/)
