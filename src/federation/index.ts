@@ -92,7 +92,7 @@ let queue: MessageQueue;
 
 if (getRedisUrl() == null) {
   kv = new PostgresKvStore(postgres);
-  queue = new PostgresMessageQueue(postgres);
+  queue = new ParallelMessageQueue(new PostgresMessageQueue(postgres), 10);
   logger.info(
     "No REDIS_URL is defined, using PostgresKvStore and PostgresMessageQueue.",
   );
@@ -105,7 +105,7 @@ if (getRedisUrl() == null) {
 
 export const federation = createFederation<void>({
   kv,
-  queue: new ParallelMessageQueue(queue, 10),
+  queue,
 });
 
 federation
