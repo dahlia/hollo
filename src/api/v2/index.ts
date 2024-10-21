@@ -43,10 +43,8 @@ async function loadOutbox(accountId: string) {
   });
 
   return {
-    "@context": "https://www.w3.org/ns/activitystreams",
-    type: "OrderedCollection",
-    totalItems: items.length,
-    orderedItems: items,
+    totalPosts: items.length,
+    posts: items,
   };
 }
 
