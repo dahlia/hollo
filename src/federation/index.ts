@@ -492,6 +492,7 @@ federation
           actor: object.id,
           object: follow,
         }),
+        { excludeBaseUris: [new URL(ctx.origin)] },
       );
       await updateAccountStats(db, { id: following.id });
     }
@@ -627,6 +628,7 @@ federation
                 },
         })),
         toUpdate(post, ctx),
+        { preferSharedInbox: true, excludeBaseUris: [new URL(ctx.origin)] },
       );
     } else if (isPost(object)) {
       const post = await db.transaction(async (tx) => {
@@ -637,8 +639,6 @@ federation
         return post;
       });
       if (post?.replyTargetId != null) {
-        // TODO: Forward activity to the followers
-        // https://github.com/dahlia/fedify/issues/137
         const replyTarget = await db.query.posts.findFirst({
           where: eq(posts.id, post.replyTargetId),
           with: {
@@ -652,10 +652,20 @@ federation
           },
         });
         if (replyTarget?.account.owner != null) {
+          await ctx.forwardActivity(
+            { username: replyTarget.account.owner.handle },
+            "followers",
+            {
+              skipIfUnsigned: true,
+              preferSharedInbox: true,
+              excludeBaseUris: [new URL(ctx.origin)],
+            },
+          );
           await ctx.sendActivity(
             { username: replyTarget.account.owner.handle },
             "followers",
             toUpdate(replyTarget, ctx),
+            { preferSharedInbox: true, excludeBaseUris: [new URL(ctx.origin)] },
           );
         }
       }

@@ -73,6 +73,7 @@ export async function onBlocked(ctx: InboxContext<void>, block: Block) {
           object: blocker.id,
         }),
       }),
+      { excludeBaseUris: [new URL(ctx.origin)] },
     );
   }
   const follower = await db
@@ -97,6 +98,7 @@ export async function onBlocked(ctx: InboxContext<void>, block: Block) {
           object: block.objectId,
         }),
       }),
+      { excludeBaseUris: [new URL(ctx.origin)] },
     );
   }
 }
@@ -375,6 +377,7 @@ export async function onMove(
         actor: new URL(follower.follower.iri),
         object: new URL(tgt.iri),
       }),
+      { excludeBaseUris: [new URL(ctx.origin)] },
     );
   }
 }

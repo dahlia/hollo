@@ -215,7 +215,7 @@ app.patch(
         actor: fedCtx.getActorUri(updatedOwners[0].handle),
         object: await fedCtx.getActor(updatedOwners[0].handle),
       }),
-      { preferSharedInbox: true },
+      { preferSharedInbox: true, excludeBaseUris: [new URL(fedCtx.url)] },
     );
     const successor =
       updatedAccounts[0].successorId == null
@@ -652,6 +652,7 @@ app.post(
           actor: new URL(owner.account.iri),
           object: new URL(following.iri),
         }),
+        { excludeBaseUris: [new URL(fedCtx.url)] },
       );
     }
     const account = await db.query.accounts.findFirst({
@@ -726,6 +727,7 @@ app.post(
               object: new URL(following.iri),
             }),
           }),
+          { excludeBaseUris: [new URL(fedCtx.url)] },
         );
       }
       await db
@@ -1052,6 +1054,7 @@ app.post(
               object: new URL(acct.iri),
             }),
           }),
+          { excludeBaseUris: [new URL(fedCtx.url)] },
         );
       }
       const follower = await db
@@ -1073,6 +1076,7 @@ app.post(
               object: new URL(owner.account.iri),
             }),
           }),
+          { excludeBaseUris: [new URL(fedCtx.url)] },
         );
       }
       await fedCtx.sendActivity(
@@ -1083,6 +1087,7 @@ app.post(
           actor: new URL(owner.account.iri),
           object: new URL(acct.iri),
         }),
+        { excludeBaseUris: [new URL(fedCtx.url)] },
       );
     }
     const result = await db.query.accounts.findFirst({
@@ -1150,6 +1155,7 @@ app.post(
             object: new URL(acct.iri),
           }),
         }),
+        { excludeBaseUris: [new URL(fedCtx.url)] },
       );
     }
     const result = await db.query.accounts.findFirst({

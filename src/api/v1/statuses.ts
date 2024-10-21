@@ -1090,6 +1090,7 @@ async function addEmojiReaction(
   });
   await fedCtx.sendActivity({ username: owner.handle }, "followers", activity, {
     preferSharedInbox: true,
+    excludeBaseUris: [new URL(c.req.url)],
   });
   await fedCtx.sendActivity(
     { username: owner.handle },
@@ -1104,7 +1105,7 @@ async function addEmojiReaction(
             },
     },
     activity,
-    { preferSharedInbox: true },
+    { preferSharedInbox: true, excludeBaseUris: [new URL(c.req.url)] },
   );
   return c.json(serializePost(post, owner, c.req.url));
 }
@@ -1181,6 +1182,7 @@ async function removeEmojiReaction(
   });
   await fedCtx.sendActivity({ username: owner.handle }, "followers", activity, {
     preferSharedInbox: true,
+    excludeBaseUris: [new URL(c.req.url)],
   });
   await fedCtx.sendActivity(
     { username: owner.handle },
@@ -1195,7 +1197,7 @@ async function removeEmojiReaction(
             },
     },
     activity,
-    { preferSharedInbox: true },
+    { preferSharedInbox: true, excludeBaseUris: [new URL(c.req.url)] },
   );
   return c.json(serializePost(post, owner, c.req.url));
 }

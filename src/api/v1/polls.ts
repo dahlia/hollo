@@ -187,6 +187,7 @@ app.post(
                 },
         })),
         toUpdate({ ...poll.post, poll }, fedCtx),
+        { excludeBaseUris: [new URL(c.req.url)] },
       );
     }
     return c.json(serializePoll(poll, owner));

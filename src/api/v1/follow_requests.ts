@@ -78,6 +78,7 @@ app.post(
             object: new URL(owner.account.iri),
           }),
         }),
+        { excludeBaseUris: [new URL(c.req.url)] },
       );
     }
     await updateAccountStats(db, { id: owner.id });
@@ -150,6 +151,7 @@ app.post(
             object: new URL(owner.account.iri),
           }),
         }),
+        { excludeBaseUris: [new URL(c.req.url)] },
       );
     }
     const follow = await db.query.follows.findFirst({

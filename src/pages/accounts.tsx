@@ -256,7 +256,7 @@ accounts.post("/:id", async (c) => {
       actor: fedCtx.getActorUri(accountOwner.handle),
       object: await fedCtx.getActor(accountOwner.handle),
     }),
-    { preferSharedInbox: true },
+    { preferSharedInbox: true, excludeBaseUris: [fedCtx.url] },
   );
   return c.redirect("/accounts");
 });
@@ -276,7 +276,7 @@ accounts.post("/:id/delete", async (c) => {
       to: PUBLIC_COLLECTION,
       object: await fedCtx.getActor(accountOwner.handle),
     }),
-    { preferSharedInbox: true },
+    { preferSharedInbox: true, excludeBaseUris: [fedCtx.url] },
   );
   await db.transaction(async (tx) => {
     await tx.delete(accountOwners).where(eq(accountOwners.id, accountId));
@@ -490,6 +490,7 @@ accounts.post("/:id/migrate/to", async (c) => {
       object: new URL(accountOwner.account.iri),
       target: target.id,
     }),
+    { preferSharedInbox: true, excludeBaseUris: [fedCtx.url] },
   );
   return c.redirect(`/accounts/${accountOwner.id}/migrate`);
 });
