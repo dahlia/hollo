@@ -6,11 +6,11 @@ import {
   lookupObject,
 } from "@fedify/fedify";
 import { zValidator } from "@hono/zod-validator";
+import { exportActorProfile } from "@interop/wallet-export-ts";
 import { getLogger } from "@logtape/logtape";
 import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { Hono } from "hono";
 import { z } from "zod";
-import { exportActorProfile } from "@interop/wallet-export-ts";
 import { db } from "../../db";
 import { serializeAccount } from "../../entities/account";
 import { getPostRelations, serializePost } from "../../entities/status";
