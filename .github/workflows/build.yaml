@@ -15,6 +15,7 @@ jobs:
         bun-version: latest
     - run: bun install
     - run: bun check
+
   build-image:
     needs: [check]
     permissions:
@@ -92,7 +93,9 @@ jobs:
           type=registry,ref=ghcr.io/${{ github.repository }}:build-cache,mode=max
 
   publish-docs:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: |
+      github.event_name == 'push' &&
+      (github.ref == 'refs/heads/main' || github.ref_type == 'tag')
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -112,6 +115,19 @@ jobs:
     - uses: actions/upload-pages-artifact@v3
       with:
         path: docs/dist
-    - uses: actions/deploy-pages@v4
+    - if: github.ref_type == 'branch'
+      uses: nwtgck/actions-netlify@v3.0
+      with:
+        publish-dir: docs/dist
+        production-branch: main
+        github-token: ${{ github.token }}
+        enable-pull-request-comment: false
+        enable-commit-comment: false
+      env:
+        NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      timeout-minutes: 2
+    - if: github.ref_type == 'tag'
+      uses: actions/deploy-pages@v4
 
 # cSpell: ignore buildx sergeysova
