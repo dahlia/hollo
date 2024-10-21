@@ -167,6 +167,7 @@ federation
       ),
     });
   })
+  .mapHandle((_, handle) => handle)
   .setKeyPairsDispatcher(async (_ctx, identifier) => {
     const owner = await db.query.accountOwners.findFirst({
       where: eq(accountOwners.handle, identifier),

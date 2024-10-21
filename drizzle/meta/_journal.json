@@ -337,6 +337,13 @@
       "when": 1729438923354,
       "tag": "0047_cascade",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1729478388624,
+      "tag": "0048_accounts.software",
+      "breakpoints": true
     }
   ]
 }

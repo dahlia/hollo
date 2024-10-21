@@ -6,6 +6,7 @@ import {
   Emoji,
   Link,
   PropertyValue,
+  type ResourceDescriptor,
   getActorHandle,
   getActorTypeName,
   isActor,
@@ -100,6 +101,7 @@ export async function persistAccount(
       emojis[tag.name.toString()] = href;
     }
   }
+  const nodeInfo = await getNodeInfo(actor.id);
   const values: Omit<schema.NewAccount, "id" | "iri"> = {
     type: getActorTypeName(actor),
     name: actor?.name?.toString() ?? actor?.preferredUsername?.toString() ?? "",
@@ -120,6 +122,8 @@ export async function persistAccount(
     postsCount: (await actor.getOutbox(opts))?.totalItems ?? 0,
     successorId,
     aliases: actor?.aliasIds?.map((alias) => alias.href) ?? [],
+    software: nodeInfo?.software?.name ?? null,
+    softwareVersion: nodeInfo?.software?.version ?? null,
     fieldHtmls,
     published: toDate(actor.published),
   };
@@ -300,4 +304,29 @@ export async function updateAccountStats(
         ),
       ),
     );
+}
+
+interface NodeInfo {
+  software?: {
+    name?: string;
+    version?: string;
+  };
+}
+
+// TODO: Turn this logic into a utility function in Fedify:
+async function getNodeInfo(url: URL): Promise<NodeInfo | null> {
+  try {
+    const wellKnownUrl = new URL("/.well-known/nodeinfo", url);
+    const wkResponse = await fetch(wellKnownUrl);
+    const rd: ResourceDescriptor = await wkResponse.json();
+    const link = rd.links?.find(
+      (link) => link.rel === "http://nodeinfo.diaspora.software/ns/schema/2.0",
+    );
+    if (link == null) return null;
+    const nodeInfoUrl = link.href;
+    const niResponse = await fetch(nodeInfoUrl);
+    return await niResponse.json();
+  } catch {
+    return null;
+  }
 }

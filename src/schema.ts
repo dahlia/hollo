@@ -72,6 +72,8 @@ export const accounts = pgTable("accounts", {
     onDelete: "cascade",
   }),
   aliases: text("aliases").array().notNull().default(sql`(ARRAY[]::text[])`),
+  software: text("software"),
+  softwareVersion: text("software_version"),
   published: timestamp("published", { withTimezone: true }),
   updated: timestamp("updated", { withTimezone: true })
     .notNull()
