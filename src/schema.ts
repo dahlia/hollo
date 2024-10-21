@@ -4,6 +4,7 @@ import {
   bigint,
   bigserial,
   boolean,
+  check,
   foreignKey,
   index,
   integer,
@@ -173,6 +174,10 @@ export const follows = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.followingId, table.followerId] }),
+    selfCheck: check(
+      "ck_follows_self",
+      sql`${table.followingId} != ${table.followerId}`,
+    ),
   }),
 );
 

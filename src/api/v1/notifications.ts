@@ -9,6 +9,7 @@ import {
   isNull,
   lt,
   lte,
+  ne,
   notInArray,
   or,
   sql,
@@ -104,6 +105,7 @@ app.get(
           and(
             eq(mentions.accountId, owner.id),
             olderThan == null ? undefined : lt(posts.published, olderThan),
+            ne(posts.accountId, owner.id),
             notInArray(
               posts.accountId,
               db
@@ -156,6 +158,7 @@ app.get(
           and(
             eq(sharingPosts.accountId, owner.id),
             olderThan == null ? undefined : lt(posts.published, olderThan),
+            ne(posts.accountId, owner.id),
             notInArray(
               posts.accountId,
               db
@@ -312,6 +315,7 @@ app.get(
           and(
             eq(posts.accountId, owner.id),
             olderThan == null ? undefined : lt(likes.created, olderThan),
+            ne(likes.accountId, owner.id),
             notInArray(
               likes.accountId,
               db
@@ -364,6 +368,7 @@ app.get(
           and(
             eq(posts.accountId, owner.id),
             olderThan == null ? undefined : lt(reactions.created, olderThan),
+            ne(reactions.accountId, owner.id),
             notInArray(
               reactions.accountId,
               db
@@ -432,6 +437,7 @@ app.get(
             ),
             lte(polls.expires, sql`current_timestamp`),
             olderThan == null ? undefined : lt(polls.expires, olderThan),
+            ne(posts.accountId, owner.id),
             notInArray(
               posts.accountId,
               db
