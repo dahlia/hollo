@@ -7,10 +7,10 @@ import { zValidator } from "@hono/zod-validator";
 
 import federation from "../../federation";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { accounts, posts, reports, type Post, type Report } from "../../schema";
+import { accountOwners, accounts, posts, reports, type Post, type Report } from "../../schema";
 import { uuidv7 } from "uuidv7-js";
 import { serializeReport } from "../../entities/report";
-import { eq, inArray, and } from "drizzle-orm";
+import { eq, inArray, and, notInArray } from "drizzle-orm";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -51,7 +51,10 @@ app.post(
 
     // Check we actually have the account we want to report:
     const targetAccount = await db.query.accounts.findFirst({
-      where: eq(accounts.id, data.account_id),
+      where: and(
+        eq(accounts.id, data.account_id),
+        notInArray(accounts.id, db.select({ id: accountOwners.id }).from(accountOwners))
+      ),
       with: { owner: true, successor: true }
     });
 
