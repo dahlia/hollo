@@ -1,4 +1,3 @@
-import { verify } from "argon2";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { setSignedCookie } from "hono/cookie";
@@ -41,7 +40,11 @@ login
     });
     if (
       credential == null ||
-      !(await verify(credential.passwordHash, password))
+      !(await Bun.password.verify(
+        password,
+        credential.passwordHash,
+        "argon2id",
+      ))
     ) {
       return c.html(
         <LoginPage
