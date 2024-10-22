@@ -15,7 +15,7 @@ import { eq, inArray, and, notInArray } from "drizzle-orm";
 const app = new Hono<{ Variables: Variables }>();
 
 const reportSchema = z.object({
-  comment: z.string().trim().min(1).max(1000).optional(),
+  comment: z.string().trim().min(1).max(1000).optional().default(""),
   account_id: z.string().uuid(),
   status_ids: z.array(z.string().uuid()).min(1).optional(),
   // discarded by defined by the Mastodon API:
@@ -93,7 +93,7 @@ app.post(
           iri,
           accountId: accountOwner.id,
           targetAccountId: targetAccount.id,
-          comment: data.comment ?? "",
+          comment: data.comment,
           posts: targetPosts.map((post) => post.id)
         })
         .returning();
