@@ -1,4 +1,4 @@
-import { verify } from "@stdext/crypto/hash";
+import { verify } from "argon2";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { setSignedCookie } from "hono/cookie";
@@ -41,7 +41,7 @@ login
     });
     if (
       credential == null ||
-      !verify("argon2", password, credential.passwordHash)
+      !(await verify(credential.passwordHash, password))
     ) {
       return c.html(
         <LoginPage

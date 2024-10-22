@@ -32,7 +32,6 @@ import {
 import { PostgresKvStore, PostgresMessageQueue } from "@fedify/postgres";
 import { RedisKvStore, RedisMessageQueue } from "@fedify/redis";
 import { getLogger } from "@logtape/logtape";
-import { parse } from "@std/semver";
 import {
   and,
   count,
@@ -48,6 +47,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { uniq } from "es-toolkit";
+import { parse } from "semver";
 import metadata from "../../package.json" with { type: "json" };
 import { db, postgres } from "../db";
 import { createRedis, getRedisUrl } from "../redis";
@@ -905,6 +905,7 @@ federation.setObjectDispatcher(
 );
 
 federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
+  const version = parse(metadata.version)!;
   const [{ total }] = await db.select({ total: count() }).from(accountOwners);
   const [{ activeMonth }] = await db
     .select({ activeMonth: countDistinct(accountOwners.id) })
@@ -929,7 +930,14 @@ federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
   return {
     software: {
       name: "hollo",
-      version: parse(metadata.version),
+      version: {
+        major: version.major,
+        minor: version.minor,
+        patch: version.patch,
+        build: version.build == null ? undefined : [...version.build],
+        prerelease:
+          version.prerelease == null ? undefined : [...version.prerelease],
+      },
       repository: new URL("https://github.com/dahlia/hollo"),
     },
     protocols: ["activitypub"],

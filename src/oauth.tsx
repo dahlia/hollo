@@ -1,5 +1,5 @@
+import { base64 } from "@hexagon/base64";
 import { zValidator } from "@hono/zod-validator";
-import { decodeBase64Url, encodeBase64Url } from "@std/encoding/base64url";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -46,7 +46,7 @@ export const tokenRequired = createMiddleware(async (c, next) => {
     if (values.length !== 3) return c.json({ error: "invalid_token" }, 401);
     const [signature, created, code] = values;
     const textEncoder = new TextEncoder();
-    const sig = decodeBase64Url(signature);
+    const sig = base64.toArrayBuffer(signature, true);
     const secretKey = await crypto.subtle.importKey(
       "raw",
       textEncoder.encode(SECRET_KEY),
@@ -275,7 +275,10 @@ app.post(
         "The resource owner or authorization server denied the request.",
       );
     } else {
-      const code = encodeBase64Url(crypto.getRandomValues(new Uint8Array(16)));
+      const code = base64.fromArrayBuffer(
+        crypto.getRandomValues(new Uint8Array(16)).buffer as ArrayBuffer,
+        true,
+      );
       await db.insert(accessTokens).values({
         accountOwnerId: form.account_id,
         code,
@@ -411,7 +414,7 @@ app.post("/token", cors(), async (c) => {
       secretKey,
       textEncoder.encode(message),
     );
-    const accessToken = `${encodeBase64Url(signature)}^${message}`;
+    const accessToken = `${base64.fromArrayBuffer(signature, true)}^${message}`;
     return c.json({
       access_token: accessToken,
       token_type: "Bearer",
@@ -420,7 +423,10 @@ app.post("/token", cors(), async (c) => {
     });
   }
 
-  const code = encodeBase64Url(crypto.getRandomValues(new Uint8Array(16)));
+  const code = base64.fromArrayBuffer(
+    crypto.getRandomValues(new Uint8Array(16)).buffer as ArrayBuffer,
+    true,
+  );
   const tokens = await db
     .insert(accessTokens)
     .values({

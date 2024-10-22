@@ -1,5 +1,5 @@
+import { base64 } from "@hexagon/base64";
 import { getLogger } from "@logtape/logtape";
-import { encodeBase64Url } from "@std/encoding/base64url";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
@@ -82,9 +82,11 @@ app.post("/", async (c) => {
   if (form == null) {
     return c.json({ error: "Invalid request" }, 400);
   }
-  const clientId = encodeBase64Url(crypto.getRandomValues(new Uint8Array(16)));
-  const clientSecret = encodeBase64Url(
-    crypto.getRandomValues(new Uint8Array(32)),
+  const clientId = base64.fromArrayBuffer(
+    crypto.getRandomValues(new Uint8Array(16)).buffer as ArrayBuffer,
+  );
+  const clientSecret = base64.fromArrayBuffer(
+    crypto.getRandomValues(new Uint8Array(32)).buffer as ArrayBuffer,
   );
   const apps = await db
     .insert(applications)

@@ -1,4 +1,4 @@
-import { hash } from "@stdext/crypto/hash";
+import { hash } from "argon2";
 import { count } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import { Layout } from "../../components/Layout.tsx";
@@ -60,7 +60,7 @@ setup.post("/", async (c) => {
   }
   await db.insert(credentials).values({
     email,
-    passwordHash: hash("argon2", password),
+    passwordHash: await hash(password),
   });
   return c.redirect("/accounts");
 });
