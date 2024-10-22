@@ -14,6 +14,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  smallint,
   text,
   timestamp,
   unique,
@@ -34,6 +35,21 @@ export const credentials = pgTable("credentials", {
 
 export type Credential = typeof credentials.$inferSelect;
 export type NewCredential = typeof credentials.$inferInsert;
+
+export const totps = pgTable("totps", {
+  issuer: text("issuer").notNull(),
+  label: text("label").notNull(),
+  algorithm: text("algorithm").notNull(),
+  digits: smallint("digits").notNull(),
+  period: smallint("period").notNull(),
+  secret: text("secret").notNull(),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
+});
+
+export type Totp = typeof totps.$inferSelect;
+export type NewTotp = typeof totps.$inferInsert;
 
 export const accountTypeEnum = pgEnum("account_type", [
   "Application",

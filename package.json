@@ -32,7 +32,9 @@
     "markdown-it": "^14.1.0",
     "markdown-it-replace-link": "^1.2.1",
     "open-graph-scraper": "^6.5.1",
+    "otpauth": "^9.3.4",
     "postgres": "^3.4.4",
+    "qrcode": "^1.5.4",
     "semver": "^7.6.3",
     "sharp": "^0.33.4",
     "ssrfcheck": "^1.1.1",
@@ -46,6 +48,7 @@
     "@types/bun": "latest",
     "@types/fluent-ffmpeg": "^2.1.26",
     "@types/markdown-it": "^14.1.1",
+    "@types/qrcode": "^1.5.5",
     "@types/semver": "^7.5.8",
     "drizzle-kit": "^0.21.0"
   },

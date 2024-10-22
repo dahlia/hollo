@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { trimTrailingSlash } from "hono/trailing-slash";
 import accounts from "./accounts";
+import auth from "./auth";
 import data from "./data";
 import emojis from "./emojis";
 import home from "./home";
@@ -16,6 +17,7 @@ page.route("/", home);
 page.route("/:handle{@[^/]+}", profile);
 page.route("/login", login);
 page.route("/setup", setup);
+page.route("/auth", auth);
 page.route("/accounts", accounts);
 page.route("/emojis", emojis);
 page.route("/data", data);
