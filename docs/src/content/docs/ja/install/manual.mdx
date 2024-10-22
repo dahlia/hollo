@@ -45,16 +45,11 @@ Holloは手動でインストールすることもできます。
 
 import { Steps } from "@astrojs/starlight/components";
 
-<Aside>
-  Holloは現時点ではまだ安定版がありません。
-  GitHubの`main`ブランチから最新のコードを取得できます。
-</Aside>
-
 <Steps>
  1. Hollonの最新コードを[GitHub]から取得します：
 
     ~~~~ sh frame="none"
-    git clone https://github.com/dahlia/hollo.git
+    git clone -b stable https://github.com/dahlia/hollo.git
     cd hollo/
     ~~~~
 

@@ -4,6 +4,8 @@ on:
   push:
     branches:
     - main
+    - stable
+    tags: "*.*.*"
 
 jobs:
   check:
@@ -15,6 +17,11 @@ jobs:
         bun-version: latest
     - run: bun install
     - run: bun check
+    - if: github.ref_type == 'tag'
+      run: |
+        set -ex
+        [[ "$(jq -r .version package.json)" = "$GITHUB_REF_NAME" ]]
+        ! grep -i "to be released" CHANGES.md
 
   build-image:
     needs: [check]
@@ -91,6 +98,31 @@ jobs:
           type=registry,ref=ghcr.io/${{ github.repository }}:build-cache
         cache-to:
           type=registry,ref=ghcr.io/${{ github.repository }}:build-cache,mode=max
+
+  release:
+    needs: [check]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+    - id: extract-changelog
+      uses: dahlia/submark@5a5ff0a58382fb812616a5801402f5aef00f90ce
+      with:
+        input-file: CHANGES.md
+        heading-level: 2
+        heading-title-text: version ${{ github.ref_name }}
+        ignore-case: true
+        omit-heading: true
+    - run: 'cat "$CHANGES_FILE"'
+      env:
+        CHANGES_FILE: ${{ steps.extract-changelog.outputs.output-file }}
+    - if: github.event_name == 'push' && github.ref_type == 'tag'
+      uses: softprops/action-gh-release@v1
+      with:
+        body_path: ${{ steps.extract-changelog.outputs.output-file }}
+        name: Hollo ${{ github.ref_name }}
+        generate_release_notes: false
 
   publish-docs:
     if: |
