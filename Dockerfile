@@ -1,4 +1,4 @@
-FROM docker.io/oven/bun:1.1.30-alpine
+FROM docker.io/oven/bun:1.1.32-alpine
 
 LABEL org.opencontainers.image.title="Hollo"
 LABEL org.opencontainers.image.description="Federated single-user \
