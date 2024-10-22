@@ -924,7 +924,7 @@ export const reports = pgTable("reports", {
   created: timestamp("created", { withTimezone: true })
       .notNull()
       .default(currentTimestamp),
-  comment: text("comment"),
+  comment: text("comment").notNull(),
   // No relationship, we're just storing a set of Post IDs in here:
   posts: uuid("posts").array().notNull().default(sql`'{}'::uuid[]`)
 })

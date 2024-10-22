@@ -10,7 +10,7 @@ import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { accounts, posts, reports, type Post, type Report } from "../../schema";
 import { uuidv7 } from "uuidv7-js";
 import { serializeReport } from "../../entities/report";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, and } from "drizzle-orm";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -44,6 +44,12 @@ app.post(
 
     const data = c.req.valid("json");
 
+    // Assert that we're not reporting ourselves:
+    if (accountOwner.account.id === data.account_id) {
+      return c.json({ error: "You cannot report yourself" }, 400);
+    }
+
+    // Check we actually have the account we want to report:
     const targetAccount = await db.query.accounts.findFirst({
       where: eq(accounts.id, data.account_id),
       with: { owner: true, successor: true }
@@ -53,12 +59,15 @@ app.post(
       return c.json({ error: "Record not found" }, 404);
     }
 
+    // Fetch the posts we want to report, and ensure they are all by the target
+    // account, if we don't find all posts with the given status_ids, then we
+    // fail the request:
     let targetPosts: Post[] = [];
     if (data.status_ids != null && data.status_ids.length > 0) {
       targetPosts = await db.query.posts.findMany({
         where: and(
           inArray(posts.id, data.status_ids),
-          eq(posts.account_id, targetAccount.id)
+          eq(posts.accountId, targetAccount.id)
         )
       })
 
@@ -75,8 +84,8 @@ app.post(
           id: uuidv7(),
           accountId: accountOwner.id,
           targetAccountId: targetAccount.id,
-          comment: data.comment,
-          posts: data.status_ids ?? []
+          comment: data.comment ?? "",
+          posts: targetPosts.map((post) => post.id)
         })
         .returning();
       report = result[0];
@@ -84,9 +93,9 @@ app.post(
       return c.json({ error: "Record not found" }, 404);
     }
 
+    // Finally send the Flag activity to the targetAccount's server:
     const fedCtx = federation.createContext(c.req.raw, undefined);
     await fedCtx.sendActivity(
-      // FIXME: This should really be an Instance actor:
       { handle: accountOwner.handle },
       {
         id: new URL(targetAccount.iri),
@@ -97,6 +106,7 @@ app.post(
         actor: new URL(accountOwner.account.iri),
         // For Mastodon compatibility, objects must include the target account IRI along with the posts:
         objects: targetPosts.map((post) => new URL(post.iri)).concat(new URL(targetAccount.iri)),
+        content: report.comment
       }),
       {
         preferSharedInbox: true,

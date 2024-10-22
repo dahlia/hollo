@@ -1,4 +1,4 @@
-import { type Post, type Report, type Account } from "../schema"; 
+import { type Report, type Account } from "../schema"; 
 import { serializeAccount } from "./account";
 
 // biome-ignore lint/suspicious/noExplicitAny: JSON
@@ -9,7 +9,7 @@ export function serializeReport(
 ): Record<string, any> {
   return {
     id: report.id,
-    comment: report.comment ?? "",
+    comment: report.comment,
     created_at: report.created,
     target_account: serializeAccount(targetAccount, baseUrl),
     status_ids: Array.isArray(report.posts) ? report.posts : [],
