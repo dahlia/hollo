@@ -9,10 +9,10 @@ export function serializeReport(
 ): Record<string, any> {
   return {
     id: report.id,
-    comment: report.comment,
+    comment: report.comment ?? "",
     created_at: report.created,
     target_account: serializeAccount(targetAccount, baseUrl),
-    status_ids: report.posts,
+    status_ids: Array.isArray(report.posts) ? report.posts : [],
     // Additional properties in the Mastodon API which don't make sense on Hollo
     // just yet as we're not receiving reports, but we always forward them
     forwarded: true,
