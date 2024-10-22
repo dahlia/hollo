@@ -20,6 +20,7 @@ import polls from "./polls";
 import statuses from "./statuses";
 import tags from "./tags";
 import timelines from "./timelines";
+import reports from "./reports";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -36,6 +37,7 @@ app.route("/polls", polls);
 app.route("/statuses", statuses);
 app.route("/tags", tags);
 app.route("/timelines", timelines);
+app.route("/reports", reports);
 
 app.get(
   "/preferences",

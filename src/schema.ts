@@ -912,3 +912,33 @@ export const customEmojis = pgTable("custom_emojis", {
 
 export type CustomEmoji = typeof customEmojis.$inferSelect;
 export type NewCustomEmoji = typeof customEmojis.$inferInsert;
+
+export const reports = pgTable("reports", {
+  id: uuid("id").primaryKey(),
+  accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+  targetAccountId: uuid("target_account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+  created: timestamp("created", { withTimezone: true })
+      .notNull()
+      .default(currentTimestamp),
+  comment: text("comment"),
+  // No relationship, we're just storing a set of Post IDs in here:
+  posts: uuid("posts").array().notNull().default(sql`'{}'::uuid[]`)
+})
+
+export type Report = typeof reports.$inferSelect;
+export type NewReport = typeof reports.$inferInsert;
+
+export const reportRelations = relations(reports, ({ one }) => ({
+  account: one(accounts, {
+    fields: [reports.accountId],
+    references: [accounts.id],
+  }),
+  targetAccount: one(accounts, {
+    fields: [reports.targetAccountId],
+    references: [accounts.id],
+  }),
+}));
