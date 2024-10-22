@@ -76,12 +76,18 @@ app.post(
       }
     }
 
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+
     let report: Report;
     try {
+      const id = uuidv7();
+      const iri = fedCtx.getObjectUri(vocab.Flag, { id }).href;
+
       const result = await db
         .insert(reports)
         .values({
-          id: uuidv7(),
+          id,
+          iri,
           accountId: accountOwner.id,
           targetAccountId: targetAccount.id,
           comment: data.comment ?? "",
@@ -94,7 +100,6 @@ app.post(
     }
 
     // Finally send the Flag activity to the targetAccount's server:
-    const fedCtx = federation.createContext(c.req.raw, undefined);
     await fedCtx.sendActivity(
       { handle: accountOwner.handle },
       {
@@ -102,7 +107,7 @@ app.post(
         inboxId: new URL(targetAccount.inboxUrl),
       },
       new vocab.Flag({
-        id: new URL(`#reports/${report.id}`, accountOwner.account.iri),
+        id: new URL(report.iri),
         actor: new URL(accountOwner.account.iri),
         // For Mastodon compatibility, objects must include the target account IRI along with the posts:
         objects: targetPosts.map((post) => new URL(post.iri)).concat(new URL(targetAccount.iri)),

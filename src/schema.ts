@@ -915,6 +915,7 @@ export type NewCustomEmoji = typeof customEmojis.$inferInsert;
 
 export const reports = pgTable("reports", {
   id: uuid("id").primaryKey(),
+  iri: text("iri").notNull().unique(),
   accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
