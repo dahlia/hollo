@@ -56,7 +56,10 @@ app.post(
     let targetPosts: Post[] = [];
     if (data.status_ids != null && data.status_ids.length > 0) {
       targetPosts = await db.query.posts.findMany({
-        where: inArray(posts.id, data.status_ids)
+        where: and(
+          inArray(posts.id, data.status_ids),
+          eq(posts.account_id, targetAccount.id)
+        )
       })
 
       if (targetPosts.length != data.status_ids.length) {
