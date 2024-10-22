@@ -3,6 +3,8 @@ import { getLogger } from "@logtape/logtape";
 import { eq } from "drizzle-orm";
 import db from "../../../db";
 import { serializeAccount } from "../../../entities/account";
+import { serializeList } from "../../../entities/list";
+import { getPostRelations, serializePost } from "../../../entities/status";
 import * as schema from "../../../schema";
 
 // Main controller for account export
@@ -27,23 +29,29 @@ export const exportController = async (c) => {
       return c.json({ error: "Actor not found" }, 404);
     }
 
-    const outbox = await loadOutbox(actorId);
+    const postsData = await loadPosts(account.owner.id);
+    const serializedPosts = postsData.map((post) =>
+      serializePost(post, { id: account.owner.id }, c.req.url),
+    );
+
+    const lists = await loadLists(actorId);
+    const serializeLists = lists.map((list) => serializeList(list));
+
     const followers = await loadFollowers(actorId);
     const followingAccounts = await loadFollowing(actorId);
     const likes = await loadLikes(actorId);
     const bookmarks = await loadBookmarks(actorId);
-    const lists = await loadLists(actorId);
     const mutedAccounts = await loadMutedAccounts(actorId);
 
     const exportTarballStream = exportActorProfile({
       actorProfile: serializeAccount(account, c.req.url),
-      outbox,
-      followers,
-      followingAccounts,
-      likes,
-      bookmarks,
-      lists,
-      mutedAccounts,
+      outbox: serializedPosts,
+      lists: serializeLists,
+      followers, //? serialize followers
+      followingAccounts, //? serialize following
+      likes, //? serialize likes
+      bookmarks, //? serialize bookmark
+      mutedAccounts, //? serialize muted accounts
     });
 
     return c.body(exportTarballStream, 200, {
@@ -63,15 +71,13 @@ async function loadAccount(actorId: string) {
   });
 }
 
-async function loadOutbox(accountId: string) {
+async function loadPosts(accountId: string) {
   const items = await db.query.posts.findMany({
     where: eq(schema.posts.accountId, accountId),
+    with: getPostRelations(accountId), // Fetch related data using getPostRelations
   });
 
-  return {
-    totalPosts: items.length,
-    posts: items,
-  };
+  return items;
 }
 
 async function loadFollowers(accountId: string) {
