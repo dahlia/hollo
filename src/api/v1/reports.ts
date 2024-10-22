@@ -21,7 +21,8 @@ const reportSchema = z.object({
   // discarded by defined by the Mastodon API:
   category: z.string().optional(),
   rule_ids: z.string().array().optional(),
-  forward: z.boolean().optional()
+  forward: z.boolean().optional(),
+  forward_to_domains: z.array(z.string()).optional()
 });
 
 app.post(
