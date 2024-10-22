@@ -20,7 +20,7 @@ const reportSchema = z.object({
   status_ids: z.array(z.string().uuid()).min(1).optional(),
   // discarded by defined by the Mastodon API:
   category: z.string().optional(),
-  rule_ids: z.string().array().optional(),
+  rule_ids: z.array(z.string()).optional(),
   forward: z.boolean().optional(),
   forward_to_domains: z.array(z.string()).optional()
 });
