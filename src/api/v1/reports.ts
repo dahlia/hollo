@@ -1,16 +1,23 @@
-import { Hono } from "hono";
 import * as vocab from "@fedify/fedify/vocab";
+import { Hono } from "hono";
 
+import { zValidator } from "@hono/zod-validator";
 import { z } from "zod";
 import { db } from "../../db";
-import { zValidator } from "@hono/zod-validator";
 
-import federation from "../../federation";
-import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { accountOwners, accounts, posts, reports, type Post, type Report } from "../../schema";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
 import { uuidv7 } from "uuidv7-js";
 import { serializeReport } from "../../entities/report";
-import { eq, inArray, and, notInArray } from "drizzle-orm";
+import federation from "../../federation";
+import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
+import {
+  type Post,
+  type Report,
+  accountOwners,
+  accounts,
+  posts,
+  reports,
+} from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -22,17 +29,14 @@ const reportSchema = z.object({
   category: z.string().optional(),
   rule_ids: z.array(z.string()).optional(),
   forward: z.boolean().optional(),
-  forward_to_domains: z.array(z.string()).optional()
+  forward_to_domains: z.array(z.string()).optional(),
 });
 
 app.post(
   "/",
   tokenRequired,
   scopeRequired(["write:reports"]),
-  zValidator(
-    "json",
-    reportSchema
-  ),
+  zValidator("json", reportSchema),
   async (c) => {
     const accountOwner = c.get("token").accountOwner;
     if (accountOwner == null) {
@@ -53,9 +57,12 @@ app.post(
     const targetAccount = await db.query.accounts.findFirst({
       where: and(
         eq(accounts.id, data.account_id),
-        notInArray(accounts.id, db.select({ id: accountOwners.id }).from(accountOwners))
+        notInArray(
+          accounts.id,
+          db.select({ id: accountOwners.id }).from(accountOwners),
+        ),
       ),
-      with: { owner: true, successor: true }
+      with: { owner: true, successor: true },
     });
 
     if (targetAccount == null) {
@@ -70,11 +77,11 @@ app.post(
       targetPosts = await db.query.posts.findMany({
         where: and(
           inArray(posts.id, data.status_ids),
-          eq(posts.accountId, targetAccount.id)
-        )
-      })
+          eq(posts.accountId, targetAccount.id),
+        ),
+      });
 
-      if (targetPosts.length != data.status_ids.length) {
+      if (targetPosts.length !== data.status_ids.length) {
         return c.json({ error: "Record not found" }, 404);
       }
     }
@@ -94,7 +101,7 @@ app.post(
           accountId: accountOwner.id,
           targetAccountId: targetAccount.id,
           comment: data.comment,
-          posts: targetPosts.map((post) => post.id)
+          posts: targetPosts.map((post) => post.id),
         })
         .returning();
       report = result[0];
@@ -113,8 +120,10 @@ app.post(
         id: new URL(report.iri),
         actor: new URL(accountOwner.account.iri),
         // For Mastodon compatibility, objects must include the target account IRI along with the posts:
-        objects: targetPosts.map((post) => new URL(post.iri)).concat(new URL(targetAccount.iri)),
-        content: report.comment
+        objects: targetPosts
+          .map((post) => new URL(post.iri))
+          .concat(new URL(targetAccount.iri)),
+        content: report.comment,
       }),
       {
         preferSharedInbox: true,

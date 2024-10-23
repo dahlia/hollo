@@ -917,18 +917,18 @@ export const reports = pgTable("reports", {
   id: uuid("id").primaryKey(),
   iri: text("iri").notNull().unique(),
   accountId: uuid("account_id")
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
   targetAccountId: uuid("target_account_id")
-      .notNull()
-      .references(() => accounts.id, { onDelete: "cascade" }),
+    .notNull()
+    .references(() => accounts.id, { onDelete: "cascade" }),
   created: timestamp("created", { withTimezone: true })
-      .notNull()
-      .default(currentTimestamp),
+    .notNull()
+    .default(currentTimestamp),
   comment: text("comment").notNull(),
   // No relationship, we're just storing a set of Post IDs in here:
-  posts: uuid("posts").array().notNull().default(sql`'{}'::uuid[]`)
-})
+  posts: uuid("posts").array().notNull().default(sql`'{}'::uuid[]`),
+});
 
 export type Report = typeof reports.$inferSelect;
 export type NewReport = typeof reports.$inferInsert;

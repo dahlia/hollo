@@ -1,11 +1,11 @@
-import { type Report, type Account } from "../schema"; 
+import type { Account, Report } from "../schema";
 import { serializeAccount } from "./account";
 
-// biome-ignore lint/suspicious/noExplicitAny: JSON
 export function serializeReport(
   report: Report,
   targetAccount: Account & { successor: Account | null },
-  baseUrl: URL | string
+  baseUrl: URL | string,
+  // biome-ignore lint/suspicious/noExplicitAny: JSON
 ): Record<string, any> {
   return {
     id: report.id,
@@ -18,5 +18,5 @@ export function serializeReport(
     forwarded: true,
     category: "other",
     rule_ids: null,
-  }
-};
+  };
+}

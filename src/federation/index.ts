@@ -906,60 +906,58 @@ federation.setObjectDispatcher(
   },
 );
 
-federation.setObjectDispatcher(
-  Flag,
-  "/reports/{id}",
-  async (ctx, { id }) => {
-    const report = await db.query.reports.findFirst({
-      where: eq(reports.id, id),
-      with: {
-        account: {
-          columns: { iri: true }
+federation.setObjectDispatcher(Flag, "/reports/{id}", async (ctx, { id }) => {
+  const report = await db.query.reports.findFirst({
+    where: eq(reports.id, id),
+    with: {
+      account: {
+        columns: { iri: true },
+      },
+      targetAccount: {
+        columns: {
+          iri: true,
         },
-        targetAccount: {
-          columns: {
-            iri: true
-          }
-        }
+      },
+    },
+  });
+
+  if (report == null) return null;
+
+  // Perform some access control on fetching a Flag activity
+  const keyOwner = await ctx.getSignedKeyOwner();
+  const keyOwnerId = keyOwner?.id;
+  if (keyOwnerId == null) return null;
+
+  // compare the keyOwner who signed the request with the targetAccount
+  // Note: this won't work if it's the instance actor doing the fetch and not the targetAccount:
+  if (keyOwnerId.href !== report.targetAccount.iri) {
+    return null;
+  }
+
+  // Fetch the posts for the Flag activity:
+  let targetPosts: { iri: string }[] = [];
+  if (report.posts.length > 0) {
+    targetPosts = await db.query.posts.findMany({
+      where: and(
+        inArray(posts.id, report.posts),
+        eq(posts.accountId, report.targetAccountId),
+      ),
+      columns: {
+        iri: true,
       },
     });
+  }
 
-    if (report == null) return null;
-
-    // Perform some access control on fetching a Flag activity
-    const keyOwner = await ctx.getSignedKeyOwner();
-    const keyOwnerId = keyOwner?.id;
-    if (keyOwnerId == null) return null;
-
-    // compare the keyOwner who signed the request with the targetAccount
-    // Note: this won't work if it's the instance actor doing the fetch and not the targetAccount:
-    if (keyOwnerId.href != report.targetAccount.iri) {
-      return null;
-    }
-
-    // Fetch the posts for the Flag activity:
-    let targetPosts: {iri: string}[] = []
-    if (report.posts.length > 0) {
-      targetPosts = await db.query.posts.findMany({
-        where: and(
-          inArray(posts.id, report.posts),
-          eq(posts.accountId, report.targetAccountId)
-        ),
-        columns: {
-          iri: true
-        }
-      })
-    }
-
-    return new Flag({
-      id: new URL(report.iri),
-      actor: new URL(report.account.iri),
-      // For Mastodon compatibility, objects must include the target account IRI along with the posts:
-      objects: targetPosts.map((post) => new URL(post.iri)).concat(new URL(report.targetAccount.iri)),
-      content: report.comment
-    });
-  },
-);
+  return new Flag({
+    id: new URL(report.iri),
+    actor: new URL(report.account.iri),
+    // For Mastodon compatibility, objects must include the target account IRI along with the posts:
+    objects: targetPosts
+      .map((post) => new URL(post.iri))
+      .concat(new URL(report.targetAccount.iri)),
+    content: report.comment,
+  });
+});
 
 federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
   const version = parse(metadata.version)!;
