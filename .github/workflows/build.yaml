@@ -7,6 +7,7 @@ on:
     - stable
     - "*.*-maintenance"
     tags: "*.*.*"
+  pull_request:
 
 jobs:
   check:
@@ -25,6 +26,7 @@ jobs:
         ! grep -i "to be released" CHANGES.md
 
   build-image:
+    if: github.event_name == 'push'
     needs: [check]
     permissions:
       contents: read
@@ -101,6 +103,7 @@ jobs:
           type=registry,ref=ghcr.io/${{ github.repository }}:build-cache,mode=max
 
   release:
+    if: github.event_name == 'push'
     needs: [check]
     runs-on: ubuntu-latest
     permissions:
