@@ -84,9 +84,11 @@ app.post("/", async (c) => {
   }
   const clientId = base64.fromArrayBuffer(
     crypto.getRandomValues(new Uint8Array(16)).buffer as ArrayBuffer,
+    true,
   );
   const clientSecret = base64.fromArrayBuffer(
     crypto.getRandomValues(new Uint8Array(32)).buffer as ArrayBuffer,
+    true,
   );
   const apps = await db
     .insert(applications)
