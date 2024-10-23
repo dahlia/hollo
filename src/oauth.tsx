@@ -1,7 +1,7 @@
 import { base64 } from "@hexagon/base64";
 import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
-import { Hono } from "hono";
+import { type Context, Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
 import { z } from "zod";
@@ -443,5 +443,27 @@ app.post("/token", cors(), async (c) => {
     created_at: (+tokens[0].created / 1000) | 0,
   });
 });
+
+export async function oauthAuthorizationServer(c: Context) {
+  const url = new URL(c.req.url);
+
+  return c.json({
+    issuer: new URL("/", url).href,
+    authorization_endpoint: new URL("/oauth/authorize", url).href,
+    token_endpoint: new URL("/oauth/token", url).href,
+    // Not yet supported by Hollo:
+    // "revocation_endpoint": "",
+    scopes_supported: scopeEnum.enumValues,
+    response_types_supported: ["code"],
+    response_modes_supported: ["query"],
+    grant_types_supported: ["authorization_code", "client_credentials"],
+    token_endpoint_auth_methods_supported: [
+      "client_secret_post",
+      // Not supported by Hollo:
+      // "client_secret_basic",
+    ],
+    app_registration_endpoint: new URL("/api/v1/apps", url).href,
+  });
+}
 
 export default app;
