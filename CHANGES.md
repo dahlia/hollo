@@ -22,9 +22,13 @@ To be released.
      -  Expose `redirect_uri`, `redirect_uris`, and `scopes` to verify
         credentials for apps.
 
+ -  Added support for RFC 8414 for OAuth Authorization Server metadata endpoint.
+    [[#47] by Emelia Smith]
+
 [#38]: https://github.com/dahlia/hollo/issues/38
 [#41]: https://github.com/dahlia/hollo/pull/41
 [#43]: https://github.com/dahlia/hollo/pull/43
+[#47]: https://github.com/dahlia/hollo/pull/47
 
 
 Version 0.1.1

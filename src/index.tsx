@@ -5,7 +5,7 @@ import { behindProxy } from "x-forwarded-fetch";
 import api from "./api";
 import fedi from "./federation";
 import image from "./image";
-import oauth from "./oauth";
+import oauth, { oauthAuthorizationServer } from "./oauth";
 import pages from "./pages";
 const app = new Hono();
 
@@ -13,6 +13,7 @@ app.use(federation(fedi, (_) => undefined));
 
 app.route("/", pages);
 app.route("/oauth", oauth);
+app.get("/.well-known/oauth-authorization-server", oauthAuthorizationServer);
 app.route("/api", api);
 app.route("/image", image);
 app.get("/nodeinfo/2.0", (c) => c.redirect("/nodeinfo/2.1"));
