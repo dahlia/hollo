@@ -3,7 +3,7 @@ import { getLogger } from "@logtape/logtape";
 import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
-import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
+import { type Variables, tokenRequired } from "../../oauth";
 import {
   type NewApplication,
   type Scope,
@@ -18,10 +18,9 @@ const app = new Hono<{ Variables: Variables }>();
 const applicationSchema = z.object({
   client_name: z.string().optional(),
   redirect_uris: z
-    .string()
-    .trim()
+    .union([z.string().trim(), z.array(z.string().trim())])
     .transform((v, ctx) => {
-      const uris = v.split(/\s+/g);
+      const uris = Array.isArray(v) ? v : v.split(/\s+/g);
       for (const uri of uris) {
         const parsed = z.string().url().safeParse(uri);
         if (parsed.error != null) {
@@ -107,28 +106,29 @@ app.post("/", async (c) => {
     id: app.id,
     name: app.name,
     website: app.website,
+    redirect_uris: app.redirectUris,
+    // redirect_uri is deprecated
     redirect_uri: app.redirectUris.join(" "),
     client_id: app.clientId,
     client_secret: app.clientSecret,
+    // vapid_key is deprecated, it should be fetched from /api/v1/instance instead
     vapid_key: "",
   };
   logger.debug("Created application: {app}", { app: result });
   return c.json(result);
 });
 
-app.get(
-  "/verify_credentials",
-  tokenRequired,
-  scopeRequired(["read"]),
-  async (c) => {
-    const token = c.get("token");
-    const app = token.application;
-    return c.json({
-      id: app.id,
-      name: app.name,
-      website: app.website,
-    });
-  },
-);
+app.get("/verify_credentials", tokenRequired, async (c) => {
+  const token = c.get("token");
+  const app = token.application;
+  return c.json({
+    id: app.id,
+    name: app.name,
+    website: app.website,
+    scopes: app.scopes,
+    redirect_uris: app.redirectUris,
+    redirect_uri: app.redirectUris.join(" "),
+  });
+});
 
 export default app;

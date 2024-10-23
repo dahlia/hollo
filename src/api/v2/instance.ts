@@ -80,6 +80,10 @@ app.get("/", async (c) => {
       translation: {
         enabled: false,
       },
+      // TODO: webpush
+      vapid: {
+        public_key: "",
+      },
     },
     registrations: {
       enabled: false,
