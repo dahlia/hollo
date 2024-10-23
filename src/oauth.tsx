@@ -322,7 +322,7 @@ const tokenRequestSchema = z.object({
   code: z.string().optional(),
   client_id: z.string(),
   client_secret: z.string(),
-  redirect_uri: z.string().url(),
+  redirect_uri: z.string().url().optional(),
   scope: scopesSchema.optional(),
 });
 
@@ -383,6 +383,18 @@ app.post("/token", cors(), async (c) => {
         400,
       );
     }
+
+    if (!form.redirect_uri) {
+      return c.json(
+        {
+          error: "invalid_request",
+          error_description:
+            "The authorization code grant flow requires a redirect URI.",
+        },
+        400,
+      );
+    }
+
     const token = await db.query.accessTokens.findFirst({
       where: eq(accessTokens.code, form.code),
       with: { application: true },
@@ -399,6 +411,20 @@ app.post("/token", cors(), async (c) => {
         400,
       );
     }
+
+    // Validate that the redirect URI given is registered with the Application
+    // (since we"re not tracking Access Grants which would bind the redirect URI
+    // to the code)
+    if (!token.application.redirectUris.includes(form.redirect_uri)) {
+      return c.json(
+        {
+          error: "invalid_request",
+          error_description: "Invalid redirect URI.",
+        },
+        400,
+      );
+    }
+
     const now = (Date.now() / 1000) | 0;
     const message = `${now}^${token.code}`;
     const textEncoder = new TextEncoder();
