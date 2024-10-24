@@ -31,6 +31,17 @@ To be released.
 [#47]: https://github.com/dahlia/hollo/pull/47
 
 
+Version 0.1.2
+-------------
+
+Released on October 24, 2024.
+
+ -  Fixed the last page in the profile using Moshidon leading to infinite
+    pagination.  [[#48] by  Emelia Smith]
+
+[#48]: https://github.com/dahlia/hollo/issues/48
+
+
 Version 0.1.1
 -------------
 
