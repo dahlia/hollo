@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.1.2
 -------------
 
-To be released.
+Released on October 24, 2024.
 
  -  Fixed the last page in the profile using Moshidon leading to infinite
     pagination.  [[#48] by  Emelia Smith]
