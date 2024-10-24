@@ -6,6 +6,11 @@ Version 0.1.2
 
 To be released.
 
+ -  Fixed the last page in the profile using Moshidon leading to infinite
+    pagination.  [[#48] by  Emelia Smith]
+
+[#48]: https://github.com/dahlia/hollo/issues/48
+
 
 Version 0.1.1
 -------------
