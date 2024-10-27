@@ -8,6 +8,7 @@ import {
   generateCryptoKeyPair,
   getActorHandle,
   isActor,
+  type Recipient,
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { eq, sql } from "drizzle-orm";
@@ -30,6 +31,7 @@ import {
   type PostVisibility,
   accountOwners,
   accounts as accountsTable,
+  follows,
 } from "../schema.ts";
 import { extractCustomEmojis, formatText } from "../text.ts";
 
@@ -269,14 +271,35 @@ accounts.post("/:id/delete", async (c) => {
   });
   if (accountOwner == null) return c.notFound();
   const fedCtx = federation.createContext(c.req.raw, undefined);
+  const activity = new Delete({
+    actor: fedCtx.getActorUri(accountOwner.handle),
+    to: PUBLIC_COLLECTION,
+    object: await fedCtx.getActor(accountOwner.handle),
+  });
   await fedCtx.sendActivity(
     { handle: accountOwner.handle },
     "followers",
-    new Delete({
-      actor: fedCtx.getActorUri(accountOwner.handle),
-      to: PUBLIC_COLLECTION,
-      object: await fedCtx.getActor(accountOwner.handle),
-    }),
+    activity,
+    { preferSharedInbox: true, excludeBaseUris: [fedCtx.url] },
+  );
+  const following = await db.query.follows.findMany({
+    with: { following: true },
+    where: eq(follows.followerId, accountId),
+  });
+  await fedCtx.sendActivity(
+    { handle: accountOwner.handle },
+    following.map(
+      (f) =>
+        ({
+          id: new URL(f.following.iri),
+          inboxId: new URL(f.following.inboxUrl),
+          endpoints:
+            f.following.sharedInboxUrl == null
+              ? null
+              : { sharedInbox: new URL(f.following.sharedInboxUrl) },
+        }) satisfies Recipient,
+    ),
+    activity,
     { preferSharedInbox: true, excludeBaseUris: [fedCtx.url] },
   );
   await db.transaction(async (tx) => {
