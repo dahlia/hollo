@@ -3,12 +3,12 @@ import {
   Move,
   type Object,
   PUBLIC_COLLECTION,
+  type Recipient,
   Update,
   exportJwk,
   generateCryptoKeyPair,
   getActorHandle,
   isActor,
-  type Recipient,
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
 import { eq, sql } from "drizzle-orm";
