@@ -110,6 +110,8 @@ if (getRedisUrl() == null) {
 export const federation = createFederation<void>({
   kv,
   queue,
+  // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+  allowPrivateAddress: process.env["ALLOW_PRIVATE_ADDRESS"] === "true",
 });
 
 federation
