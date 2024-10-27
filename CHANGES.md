@@ -31,6 +31,18 @@ To be released.
 [#47]: https://github.com/dahlia/hollo/pull/47
 
 
+Version 0.1.3
+-------------
+
+Released on October 27, 2024.
+
+ -  Fixed incorrect handling of relative path URIs in `Link` headers with
+    `rel=alternate`.  This caused inoperability with some software such as
+    GoToSocial.
+ -  It now sends `Delete(Person)` activity to followees besides followers
+    when a user deletes their account.
+
+
 Version 0.1.2
 -------------
 
