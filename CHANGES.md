@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.1.3
 -------------
 
-To be released.
+Released on October 27, 2024.
 
  -  Fixed incorrect handling of relative path URIs in `Link` headers with
     `rel=alternate`.  This caused inoperability with some software such as
