@@ -9,6 +9,8 @@ To be released.
  -  Fixed incorrect handling of relative path URIs in `Link` headers with
     `rel=alternate`.  This caused inoperability with some software such as
     GoToSocial.
+ -  It now sends `Delete(Person)` activity to followees besides followers
+    when a user deletes their account.
 
 
 Version 0.1.2
