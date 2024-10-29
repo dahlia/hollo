@@ -33,6 +33,15 @@ To be released.
 [#47]: https://github.com/dahlia/hollo/pull/47
 
 
+Version 0.1.4
+-------------
+
+Released on October 30, 2024.
+
+ -  Fixed the home timeline showing the shared posts from the blocked or muted
+    accounts.
+
+
 Version 0.1.3
 -------------
 
