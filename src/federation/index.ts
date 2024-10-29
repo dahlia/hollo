@@ -993,9 +993,13 @@ federation.setNodeInfoDispatcher("/nodeinfo/2.1", async (_ctx) => {
         prerelease:
           version.prerelease == null ? undefined : [...version.prerelease],
       },
+      homepage: new URL("https://docs.hollo.social/"),
       repository: new URL("https://github.com/dahlia/hollo"),
     },
     protocols: ["activitypub"],
+    services: {
+      outbound: ["atom1.0"],
+    },
     usage: {
       users: {
         total,
