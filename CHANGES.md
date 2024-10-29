@@ -6,6 +6,9 @@ Version 0.1.4
 
 To be released.
 
+ -  Fixed the home timeline showing the shared posts from the blocked or muted
+    accounts.
+
 
 Version 0.1.3
 -------------
