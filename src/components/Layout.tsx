@@ -47,6 +47,7 @@ export function Layout(props: PropsWithChildren<LayoutProps>) {
           rel="stylesheet"
           href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css"
         />
+        <link rel="icon" type="image/png" sizes="500x500" href="/favicon.png" />
       </head>
       <body>
         <main className="container">{props.children}</main>

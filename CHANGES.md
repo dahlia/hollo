@@ -25,6 +25,8 @@ To be released.
  -  Added support for RFC 8414 for OAuth Authorization Server metadata endpoint.
     [[#47] by Emelia Smith]
 
+ -  Added a favicon.
+
 [#38]: https://github.com/dahlia/hollo/issues/38
 [#41]: https://github.com/dahlia/hollo/pull/41
 [#43]: https://github.com/dahlia/hollo/pull/43
