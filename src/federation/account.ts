@@ -105,6 +105,24 @@ export async function persistAccount(
   const nodeInfo = await getNodeInfo(actor.id, {
     parse: "best-effort",
   });
+  const instanceValues: Omit<schema.NewInstance, "host"> = {
+    software: nodeInfo?.software.name ?? null,
+    softwareVersion:
+      nodeInfo?.software == null ||
+      formatSemVer(nodeInfo.software.version) === "0.0.0"
+        ? null
+        : formatSemVer(nodeInfo.software.version),
+  };
+  await db
+    .insert(schema.instances)
+    .values({
+      host: actor.id.host,
+      ...instanceValues,
+    })
+    .onConflictDoUpdate({
+      target: schema.instances.host,
+      set: instanceValues,
+    });
   const values: Omit<schema.NewAccount, "id" | "iri"> = {
     type: getActorTypeName(actor),
     name: actor?.name?.toString() ?? actor?.preferredUsername?.toString() ?? "",
@@ -125,12 +143,7 @@ export async function persistAccount(
     postsCount: (await actor.getOutbox(opts))?.totalItems ?? 0,
     successorId,
     aliases: actor?.aliasIds?.map((alias) => alias.href) ?? [],
-    software: nodeInfo?.software.name ?? null,
-    softwareVersion:
-      nodeInfo?.software == null ||
-      formatSemVer(nodeInfo.software.version) === "0.0.0"
-        ? null
-        : formatSemVer(nodeInfo.software.version),
+    instanceHost: actor.id.host,
     fieldHtmls,
     published: toDate(actor.published),
   };
