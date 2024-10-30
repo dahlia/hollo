@@ -89,8 +89,9 @@ export const accounts = pgTable("accounts", {
     onDelete: "cascade",
   }),
   aliases: text("aliases").array().notNull().default(sql`(ARRAY[]::text[])`),
-  software: text("software"),
-  softwareVersion: text("software_version"),
+  instanceHost: text("instance_host")
+    .notNull()
+    .references(() => instances.host),
   published: timestamp("published", { withTimezone: true }),
   updated: timestamp("updated", { withTimezone: true })
     .notNull()
@@ -118,6 +119,7 @@ export const accountRelations = relations(accounts, ({ one, many }) => ({
   mutedBy: many(mutes, { relationName: "muted" }),
   blocks: many(blocks, { relationName: "blocker" }),
   blockedBy: many(blocks, { relationName: "blocked" }),
+  instance: one(instances),
 }));
 
 export type Account = typeof accounts.$inferSelect;
@@ -169,6 +171,22 @@ export const accountOwnerRelations = relations(
     lists: many(lists),
   }),
 );
+
+export const instances = pgTable("instances", {
+  host: text("host").notNull().primaryKey(),
+  software: text("software"),
+  softwareVersion: text("software_version"),
+  created: timestamp("created", { withTimezone: true })
+    .notNull()
+    .default(currentTimestamp),
+});
+
+export type Instance = typeof instances.$inferSelect;
+export type NewInstance = typeof instances.$inferInsert;
+
+export const instanceRelations = relations(instances, ({ many }) => ({
+  accounts: many(accounts),
+}));
 
 export const follows = pgTable(
   "follows",

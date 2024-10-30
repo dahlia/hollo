@@ -32,6 +32,7 @@ import {
   accountOwners,
   accounts as accountsTable,
   follows,
+  instances,
 } from "../schema.ts";
 import { extractCustomEmojis, formatText } from "../text.ts";
 
@@ -89,15 +90,24 @@ accounts.post("/", async (c) => {
   const nameEmojis = await extractCustomEmojis(db, name);
   const emojis = { ...nameEmojis, ...bioResult.emojis };
   await db.transaction(async (tx) => {
+    await tx
+      .insert(instances)
+      .values({
+        host: fedCtx.host,
+        software: "hollo",
+        softwareVersion: null,
+      })
+      .onConflictDoNothing();
     const account = await tx
       .insert(accountsTable)
       .values({
         id: crypto.randomUUID(),
         iri: fedCtx.getActorUri(username).href,
+        instanceHost: fedCtx.host,
         type: "Person",
         name,
         emojis: sql`${emojis}::jsonb`,
-        handle: `@${username}@${fedCtx.url.host}`,
+        handle: `@${username}@${fedCtx.host}`,
         bioHtml: bioResult.html,
         url: fedCtx.getActorUri(username).href,
         protected: protected_,
