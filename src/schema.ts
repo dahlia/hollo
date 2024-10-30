@@ -1,4 +1,4 @@
-import { relations, sql } from "drizzle-orm";
+import { isNotNull, relations, sql } from "drizzle-orm";
 import {
   type AnyPgColumn,
   bigint,
@@ -386,6 +386,13 @@ export const posts = pgTable(
     sharingIdIdx: index().on(table.sharingId),
     actorIdSharingIdIdx: index().on(table.accountId, table.sharingId),
     replyTargetIdIdx: index().on(table.replyTargetId),
+    visibilityAccountIdIdx: index().on(table.visibility, table.accountId),
+    visibilityAccountIdSharingIdIdx: index()
+      .on(table.visibility, table.accountId, table.sharingId)
+      .where(isNotNull(table.sharingId)),
+    visibilityAccountIdReplyTargetIdIdx: index()
+      .on(table.visibility, table.accountId, table.replyTargetId)
+      .where(isNotNull(table.replyTargetId)),
   }),
 );
 
@@ -500,6 +507,7 @@ export const pollOptions = pgTable(
   (table) => ({
     pk: primaryKey({ columns: [table.pollId, table.index] }),
     uniquePollIdTitle: unique().on(table.pollId, table.title),
+    pollIdIndexIdx: index().on(table.pollId, table.index),
   }),
 );
 
@@ -536,7 +544,7 @@ export const pollVotes = pgTable(
       columns: [table.pollId, table.optionIndex],
       foreignColumns: [pollOptions.pollId, pollOptions.index],
     }),
-    pollIOdAccountIdIdx: index().on(table.pollId, table.accountId),
+    pollIdAccountIdIdx: index().on(table.pollId, table.accountId),
   }),
 );
 
@@ -570,6 +578,7 @@ export const mentions = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.accountId] }),
+    postIdAccountIdIdx: index().on(table.postId, table.accountId),
   }),
 );
 
@@ -605,6 +614,7 @@ export const pinnedPosts = pgTable(
       columns: [table.postId, table.accountId],
       foreignColumns: [posts.id, posts.accountId],
     }).onDelete("cascade"),
+    accountIdPostIdIdx: index().on(table.accountId, table.postId),
   }),
 );
 
@@ -637,6 +647,7 @@ export const likes = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.accountId] }),
+    accountIdPostIdIdx: index().on(table.accountId, table.postId),
   }),
 );
 
@@ -672,6 +683,8 @@ export const reactions = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.postId, table.accountId, table.emoji] }),
+    postIdIdx: index().on(table.postId),
+    postIdAccountIdIdx: index().on(table.postId, table.accountId),
   }),
 );
 
