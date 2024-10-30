@@ -135,7 +135,7 @@ export async function persistAccount(
     coverUrl:
       cover?.url instanceof Link ? cover.url.href?.href : cover?.url?.href,
     inboxUrl: actor.inboxId.href,
-    followersUrl: followers?.id?.href,
+    followersUrl: (followers?.id ?? actor?.followersId)?.href,
     sharedInboxUrl: actor.endpoints?.sharedInbox?.href,
     featuredUrl: actor.featuredId?.href,
     followingCount: (await actor.getFollowing(opts))?.totalItems ?? 0,

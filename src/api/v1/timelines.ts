@@ -83,6 +83,7 @@ app.get(
               db.select({ id: accountOwners.id }).from(accountOwners),
             )
           : undefined,
+        // Hide the posts from the muted accounts:
         notInArray(
           posts.accountId,
           db
@@ -101,6 +102,7 @@ app.get(
               ),
             ),
         ),
+        // Hide the posts from the blocked accounts:
         notInArray(
           posts.accountId,
           db
@@ -108,12 +110,60 @@ app.get(
             .from(blocks)
             .where(eq(blocks.accountId, owner.id)),
         ),
+        // Hide the posts from the accounts who blocked the owner:
         notInArray(
           posts.accountId,
           db
             .select({ accountId: blocks.accountId })
             .from(blocks)
             .where(eq(blocks.blockedAccountId, owner.id)),
+        ),
+        // Hide the shared posts from the muted accounts:
+        or(
+          isNull(posts.sharingId),
+          notInArray(
+            posts.sharingId,
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .innerJoin(mutes, eq(mutes.mutedAccountId, posts.accountId))
+              .where(
+                and(
+                  eq(mutes.accountId, owner.id),
+                  or(
+                    isNull(mutes.duration),
+                    gt(
+                      sql`${mutes.created} + ${mutes.duration}`,
+                      sql`CURRENT_TIMESTAMP`,
+                    ),
+                  ),
+                ),
+              ),
+          ),
+        ),
+        // Hide the shared posts from the blocked accounts:
+        or(
+          isNull(posts.sharingId),
+          notInArray(
+            posts.sharingId,
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .innerJoin(blocks, eq(blocks.blockedAccountId, posts.accountId))
+              .where(eq(blocks.accountId, owner.id)),
+          ),
+        ),
+        // Hide the shared posts from the accounts who blocked the owner:
+        or(
+          isNull(posts.sharingId),
+          notInArray(
+            posts.sharingId,
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .innerJoin(blocks, eq(blocks.accountId, posts.accountId))
+              .where(eq(blocks.blockedAccountId, owner.id)),
+          ),
         ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
@@ -375,6 +425,7 @@ app.get(
                   ),
               ),
         ),
+        // Hide the posts from the muted accounts:
         notInArray(
           posts.accountId,
           db
@@ -393,6 +444,7 @@ app.get(
               ),
             ),
         ),
+        // Hide the posts from the blocked accounts:
         notInArray(
           posts.accountId,
           db
@@ -400,12 +452,60 @@ app.get(
             .from(blocks)
             .where(eq(blocks.accountId, owner.id)),
         ),
+        // Hide the posts from the accounts who blocked the owner:
         notInArray(
           posts.accountId,
           db
             .select({ accountId: blocks.accountId })
             .from(blocks)
             .where(eq(blocks.blockedAccountId, owner.id)),
+        ),
+        // Hide the shared posts from the muted accounts:
+        or(
+          isNull(posts.sharingId),
+          notInArray(
+            posts.sharingId,
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .innerJoin(mutes, eq(mutes.mutedAccountId, posts.accountId))
+              .where(
+                and(
+                  eq(mutes.accountId, owner.id),
+                  or(
+                    isNull(mutes.duration),
+                    gt(
+                      sql`${mutes.created} + ${mutes.duration}`,
+                      sql`CURRENT_TIMESTAMP`,
+                    ),
+                  ),
+                ),
+              ),
+          ),
+        ),
+        // Hide the shared posts from the blocked accounts:
+        or(
+          isNull(posts.sharingId),
+          notInArray(
+            posts.sharingId,
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .innerJoin(blocks, eq(blocks.blockedAccountId, posts.accountId))
+              .where(eq(blocks.accountId, owner.id)),
+          ),
+        ),
+        // Hide the shared posts from the accounts who blocked the owner:
+        or(
+          isNull(posts.sharingId),
+          notInArray(
+            posts.sharingId,
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .innerJoin(blocks, eq(blocks.accountId, posts.accountId))
+              .where(eq(blocks.blockedAccountId, owner.id)),
+          ),
         ),
         query.max_id == null ? undefined : lt(posts.id, query.max_id),
         query.min_id == null ? undefined : gt(posts.id, query.min_id),
@@ -479,6 +579,7 @@ app.get(
               db.select({ id: accountOwners.id }).from(accountOwners),
             )
           : undefined,
+        // Hide the posts from the muted accounts:
         notInArray(
           posts.accountId,
           db
@@ -497,6 +598,7 @@ app.get(
               ),
             ),
         ),
+        // Hide the posts from the blocked accounts:
         notInArray(
           posts.accountId,
           db
@@ -504,6 +606,7 @@ app.get(
             .from(blocks)
             .where(eq(blocks.accountId, owner.id)),
         ),
+        // Hide the posts from the accounts who blocked the owner:
         notInArray(
           posts.accountId,
           db

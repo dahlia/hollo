@@ -33,6 +33,23 @@ To be released.
 [#47]: https://github.com/dahlia/hollo/pull/47
 
 
+Version 0.1.6
+-------------
+
+Released on October 30, 2024.
+
+ -  Fixed a bug where followers-only posts from accounts that had had set
+    their follower lists to private had been recognized as direct messages.
+    Even after upgrading to this version, such accounts need to be force-refreshed
+    from the administration dashboard to fix the issue.
+
+ -  Fixed the federated (public) timeline showing the shared posts from
+    the blocked or muted accounts.
+
+ -  Fixed the list timeline showing the shared posts from the blocked or muted
+    accounts.
+
+
 Version 0.1.5
 -------------
 
