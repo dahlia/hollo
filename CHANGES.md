@@ -11,6 +11,12 @@ To be released.
     Even after upgrading to this version, such accounts need to be force-refreshed
     from the administration dashboard to fix the issue.
 
+ -  Fixed the federated (public) timeline showing the shared posts from
+    the blocked or muted accounts.
+
+ -  Fixed the list timeline showing the shared posts from the blocked or muted
+    accounts.
+
 
 Version 0.1.5
 -------------
