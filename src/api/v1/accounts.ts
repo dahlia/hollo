@@ -23,6 +23,7 @@ import {
   isNull,
   lt,
   lte,
+  notInArray,
   or,
   sql,
 } from "drizzle-orm";
@@ -562,6 +563,64 @@ app.get(
                 .from(mentions)
                 .where(eq(mentions.accountId, tokenOwner.id)),
             ),
+          ),
+        ),
+        // Hide the posts from the muted accounts:
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: mutes.mutedAccountId })
+            .from(mutes)
+            .where(
+              and(
+                eq(mutes.accountId, tokenOwner.id),
+                or(
+                  isNull(mutes.duration),
+                  gt(
+                    sql`${mutes.created} + ${mutes.duration}`,
+                    sql`CURRENT_TIMESTAMP`,
+                  ),
+                ),
+              ),
+            ),
+        ),
+        // Hide the posts from the blocked accounts:
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.blockedAccountId })
+            .from(blocks)
+            .where(eq(blocks.accountId, tokenOwner.id)),
+        ),
+        // Hide the posts from the accounts who blocked the owner:
+        notInArray(
+          posts.accountId,
+          db
+            .select({ accountId: blocks.accountId })
+            .from(blocks)
+            .where(eq(blocks.blockedAccountId, tokenOwner.id)),
+        ),
+        // Hide the shared posts from the muted accounts:
+        or(
+          isNull(posts.sharingId),
+          notInArray(
+            posts.sharingId,
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .innerJoin(mutes, eq(mutes.mutedAccountId, posts.accountId))
+              .where(
+                and(
+                  eq(mutes.accountId, tokenOwner.id),
+                  or(
+                    isNull(mutes.duration),
+                    gt(
+                      sql`${mutes.created} + ${mutes.duration}`,
+                      sql`CURRENT_TIMESTAMP`,
+                    ),
+                  ),
+                ),
+              ),
           ),
         ),
         query.pinned === "true"

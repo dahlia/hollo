@@ -6,6 +6,9 @@ Version 0.1.5
 
 To be released.
 
+ -  Fixed the profile page showing the shared posts from the blocked or muted
+    accounts.
+
 
 Version 0.1.4
 -------------
