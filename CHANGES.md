@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.1.5
 -------------
 
-To be released.
+Released on October 30, 2024.
 
  -  Fixed the profile page showing the shared posts from the blocked or muted
     accounts.
