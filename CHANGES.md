@@ -6,6 +6,11 @@ Version 0.1.6
 
 To be released.
 
+ -  Fixed a bug where followers-only posts from accounts that had had set
+    their follower lists to private had been recognized as direct messages.
+    Even after upgrading to this version, such accounts need to be force-refreshed
+    from the administration dashboard to fix the issue.
+
 
 Version 0.1.5
 -------------
