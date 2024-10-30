@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.1.6
 -------------
 
-To be released.
+Released on October 30, 2024.
 
  -  Fixed a bug where followers-only posts from accounts that had had set
     their follower lists to private had been recognized as direct messages.
