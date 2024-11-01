@@ -3,7 +3,6 @@ import {
   Activity,
   Add,
   Announce,
-  Article,
   Block,
   Create,
   Delete,
@@ -53,10 +52,8 @@ import metadata from "../../package.json" with { type: "json" };
 import { db, postgres } from "../db";
 import { createRedis, getRedisUrl } from "../redis";
 import {
-  type NewPinnedPost,
   accountOwners,
   accounts,
-  blocks,
   customEmojis,
   follows,
   likes,
@@ -65,28 +62,31 @@ import {
   posts,
   reports,
 } from "../schema";
-import { persistAccount, updateAccountStats } from "./account";
 import { toTemporalInstant } from "./date";
 import {
+  onAccountDeleted,
+  onAccountMoved,
+  onAccountUpdated,
   onBlocked,
   onEmojiReactionAdded,
   onEmojiReactionRemoved,
+  onFollowAccepted,
+  onFollowRejected,
+  onFollowed,
   onLiked,
-  onMove,
+  onPostCreated,
+  onPostDeleted,
+  onPostPinned,
+  onPostShared,
+  onPostUnpinned,
+  onPostUnshared,
+  onPostUpdated,
   onUnblocked,
+  onUnfollowed,
   onUnliked,
+  onVoted,
 } from "./inbox";
-import {
-  isPost,
-  persistPollVote,
-  persistPost,
-  persistSharingPost,
-  toAnnounce,
-  toCreate,
-  toObject,
-  toUpdate,
-  updatePostStats,
-} from "./post";
+import { isPost, toAnnounce, toCreate, toObject } from "./post";
 
 const logger = getLogger(["hollo", "federation"]);
 
@@ -442,152 +442,9 @@ federation
     const anyOwner = await db.query.accountOwners.findFirst();
     return anyOwner ?? null;
   })
-  .on(Follow, async (ctx, follow) => {
-    if (follow.id == null) return;
-    const actor = await follow.getActor();
-    if (!isActor(actor) || actor.id == null) {
-      inboxLogger.debug("Invalid actor: {actor}", { actor });
-      return;
-    }
-    const object = await follow.getObject();
-    if (!isActor(object) || object.id == null) {
-      inboxLogger.debug("Invalid object: {object}", { object });
-      return;
-    }
-    const following = await db.query.accounts.findFirst({
-      where: eq(accounts.iri, object.id.href),
-      with: { owner: true },
-    });
-    if (following?.owner == null) {
-      inboxLogger.debug("Invalid following: {following}", { following });
-      return;
-    }
-    const follower = await persistAccount(db, actor, ctx);
-    if (follower == null) return;
-    let approves = !following.protected;
-    if (approves) {
-      const block = await db.query.blocks.findFirst({
-        where: and(
-          eq(blocks.accountId, following.id),
-          eq(blocks.blockedAccountId, follower.id),
-        ),
-      });
-      approves = block == null;
-    }
-    await db
-      .insert(follows)
-      .values({
-        iri: follow.id.href,
-        followingId: following.id,
-        followerId: follower.id,
-        approved: approves ? new Date() : null,
-      })
-      .onConflictDoNothing();
-    if (approves) {
-      await ctx.sendActivity(
-        { username: following.owner.handle },
-        actor,
-        new Accept({
-          id: new URL(
-            `#accepts/${follower.iri}`,
-            ctx.getActorUri(following.owner.handle),
-          ),
-          actor: object.id,
-          object: follow,
-        }),
-        { excludeBaseUris: [new URL(ctx.origin)] },
-      );
-      await updateAccountStats(db, { id: following.id });
-    }
-  })
-  .on(Accept, async (ctx, accept) => {
-    const actor = await accept.getActor();
-    if (!isActor(actor) || actor.id == null) {
-      inboxLogger.debug("Invalid actor: {actor}", { actor });
-      return;
-    }
-    const account = await persistAccount(db, actor, ctx);
-    if (account == null) return;
-    if (accept.objectId != null) {
-      const updated = await db
-        .update(follows)
-        .set({ approved: new Date() })
-        .where(
-          and(
-            eq(follows.iri, accept.objectId.href),
-            eq(follows.followingId, account.id),
-          ),
-        )
-        .returning();
-      if (updated.length > 0) {
-        await updateAccountStats(db, { id: updated[0].followerId });
-        return;
-      }
-    }
-    const object = await accept.getObject();
-    if (object instanceof Follow) {
-      if (object.actorId == null) return;
-      await db
-        .update(follows)
-        .set({ approved: new Date() })
-        .where(
-          and(
-            eq(
-              follows.followerId,
-              db
-                .select({ id: accounts.id })
-                .from(accounts)
-                .where(eq(accounts.iri, object.actorId.href)),
-            ),
-            eq(follows.followingId, account.id),
-          ),
-        );
-      await updateAccountStats(db, { iri: object.actorId.href });
-    }
-  })
-  .on(Reject, async (ctx, reject) => {
-    const actor = await reject.getActor();
-    if (!isActor(actor) || actor.id == null) {
-      inboxLogger.debug("Invalid actor: {actor}", { actor });
-      return;
-    }
-    const account = await persistAccount(db, actor, ctx);
-    if (account == null) return;
-    if (reject.objectId != null) {
-      const deleted = await db
-        .delete(follows)
-        .where(
-          and(
-            eq(follows.iri, reject.objectId.href),
-            eq(follows.followingId, account.id),
-          ),
-        )
-        .returning();
-      if (deleted.length > 0) {
-        await updateAccountStats(db, { id: deleted[0].followerId });
-        return;
-      }
-    }
-    const object = await reject.getObject();
-    if (object instanceof Follow) {
-      if (object.actorId == null) return;
-      await db
-        .delete(follows)
-        .where(
-          and(
-            eq(
-              follows.followerId,
-              db
-                .select({ id: accounts.id })
-                .from(accounts)
-                .where(eq(accounts.iri, object.actorId.href)),
-            ),
-            eq(follows.followingId, account.id),
-          ),
-        );
-      await updateAccountStats(db, { iri: object.actorId.href });
-    }
-  })
+  .on(Follow, onFollowed)
+  .on(Accept, onFollowAccepted)
+  .on(Reject, onFollowRejected)
   .on(Create, async (ctx, create) => {
     const object = await create.getObject();
     if (
@@ -596,82 +453,9 @@ federation
       object.attributionId != null &&
       object.name != null
     ) {
-      const vote = await db.transaction((tx) =>
-        persistPollVote(tx, object, ctx),
-      );
-      if (vote == null) return;
-      const post = await db.query.posts.findFirst({
-        with: {
-          account: { with: { owner: true } },
-          replyTarget: true,
-          quoteTarget: true,
-          media: true,
-          poll: {
-            with: {
-              options: { orderBy: pollOptions.index },
-              votes: { with: { account: true } },
-            },
-          },
-          mentions: { with: { account: true } },
-          replies: true,
-        },
-        where: eq(posts.pollId, vote.pollId),
-      });
-      if (post?.account.owner == null || post.poll == null) return;
-      await ctx.sendActivity(
-        { username: post.account.owner.handle },
-        post.poll.votes.map((v) => ({
-          id: new URL(v.account.iri),
-          inboxId: new URL(v.account.inboxUrl),
-          endpoints:
-            v.account.sharedInboxUrl == null
-              ? null
-              : {
-                  sharedInbox: new URL(v.account.sharedInboxUrl),
-                },
-        })),
-        toUpdate(post, ctx),
-        { preferSharedInbox: true, excludeBaseUris: [new URL(ctx.origin)] },
-      );
+      await onVoted(ctx, create);
     } else if (isPost(object)) {
-      const post = await db.transaction(async (tx) => {
-        const post = await persistPost(tx, object, ctx);
-        if (post?.replyTargetId != null) {
-          await updatePostStats(tx, { id: post.replyTargetId });
-        }
-        return post;
-      });
-      if (post?.replyTargetId != null) {
-        const replyTarget = await db.query.posts.findFirst({
-          where: eq(posts.id, post.replyTargetId),
-          with: {
-            account: { with: { owner: true } },
-            replyTarget: true,
-            quoteTarget: true,
-            media: true,
-            poll: { with: { options: true } },
-            mentions: { with: { account: true } },
-            replies: true,
-          },
-        });
-        if (replyTarget?.account.owner != null) {
-          await ctx.forwardActivity(
-            { username: replyTarget.account.owner.handle },
-            "followers",
-            {
-              skipIfUnsigned: true,
-              preferSharedInbox: true,
-              excludeBaseUris: [new URL(ctx.origin)],
-            },
-          );
-          await ctx.sendActivity(
-            { username: replyTarget.account.owner.handle },
-            "followers",
-            toUpdate(replyTarget, ctx),
-            { preferSharedInbox: true, excludeBaseUris: [new URL(ctx.origin)] },
-          );
-        }
-      }
+      await onPostCreated(ctx, create);
     } else {
       inboxLogger.debug("Unsupported object on Create: {object}", { object });
     }
@@ -681,12 +465,7 @@ federation
   .on(Announce, async (ctx, announce) => {
     const object = await announce.getObject();
     if (isPost(object)) {
-      await db.transaction(async (tx) => {
-        const post = await persistSharingPost(tx, announce, object, ctx);
-        if (post?.sharingId != null) {
-          await updatePostStats(tx, { id: post.sharingId });
-        }
-      });
+      await onPostShared(ctx, announce);
     } else {
       inboxLogger.debug("Unsupported object on Announce: {object}", { object });
     }
@@ -694,81 +473,27 @@ federation
   .on(Update, async (ctx, update) => {
     const object = await update.getObject();
     if (isActor(object)) {
-      await persistAccount(db, object, ctx);
-    } else if (object instanceof Article || object instanceof Note) {
-      await persistPost(db, object, ctx);
+      await onAccountUpdated(ctx, update);
+    } else if (isPost(object)) {
+      await onPostUpdated(ctx, update);
     } else {
       inboxLogger.debug("Unsupported object on Update: {object}", { object });
     }
   })
-  .on(Delete, async (_ctx, del) => {
+  .on(Delete, async (ctx, del) => {
     const actorId = del.actorId;
     const objectId = del.objectId;
     if (actorId == null || objectId == null) return;
     if (objectId.href === actorId.href) {
-      await db.delete(accounts).where(eq(accounts.iri, actorId.href));
+      await onAccountDeleted(ctx, del);
     } else {
-      await db.transaction(async (tx) => {
-        const deletedPosts = await tx
-          .delete(posts)
-          .where(eq(posts.iri, objectId.href))
-          .returning();
-        if (deletedPosts.length > 0) {
-          const deletedPost = deletedPosts[0];
-          if (deletedPost.replyTargetId != null) {
-            await updatePostStats(tx, { id: deletedPost.replyTargetId });
-          }
-          if (deletedPost.sharingId != null) {
-            await updatePostStats(tx, { id: deletedPost.sharingId });
-          }
-        }
-      });
+      await onPostDeleted(ctx, del);
     }
   })
-  .on(Add, async (ctx, add) => {
-    if (add.targetId == null) return;
-    const accountList = await db.query.accounts.findMany({
-      where: eq(accounts.featuredUrl, add.targetId.href),
-    });
-    const object = await add.getObject();
-    if (object instanceof Note || object instanceof Article) {
-      await db.transaction(async (tx) => {
-        const post = await persistPost(tx, object, ctx);
-        if (post == null) return;
-        for (const account of accountList) {
-          await tx.insert(pinnedPosts).values({
-            postId: post.id,
-            accountId: account.id,
-          } satisfies NewPinnedPost);
-        }
-      });
-    }
-  })
-  .on(Remove, async (ctx, remove) => {
-    if (remove.targetId == null) return;
-    const accountList = await db.query.accounts.findMany({
-      where: eq(accounts.featuredUrl, remove.targetId.href),
-    });
-    const object = await remove.getObject();
-    if (object instanceof Note || object instanceof Article) {
-      await db.transaction(async (tx) => {
-        const post = await persistPost(tx, object, ctx);
-        if (post == null) return;
-        for (const account of accountList) {
-          await tx
-            .delete(pinnedPosts)
-            .where(
-              and(
-                eq(pinnedPosts.postId, post.id),
-                eq(pinnedPosts.accountId, account.id),
-              ),
-            );
-        }
-      });
-    }
-  })
+  .on(Add, onPostPinned)
+  .on(Remove, onPostUnpinned)
   .on(Block, onBlocked)
-  .on(Move, onMove)
+  .on(Move, onAccountMoved)
   .on(Undo, async (ctx, undo) => {
     const object = await undo.getObject();
     if (
@@ -778,26 +503,7 @@ federation
       return;
     }
     if (object instanceof Follow) {
-      if (object.id == null) return;
-      const actor = await undo.getActor();
-      if (!isActor(actor) || actor.id == null) {
-        inboxLogger.debug("Invalid actor: {actor}", { actor });
-        return;
-      }
-      const account = await persistAccount(db, actor, ctx);
-      if (account == null) return;
-      const deleted = await db
-        .delete(follows)
-        .where(
-          and(
-            eq(follows.iri, object.id.href),
-            eq(follows.followerId, account.id),
-          ),
-        )
-        .returning({ followingId: follows.followingId });
-      if (deleted.length > 0) {
-        await updateAccountStats(db, { id: deleted[0].followingId });
-      }
+      await onUnfollowed(ctx, undo);
     } else if (object instanceof Block) {
       await onUnblocked(ctx, undo);
     } else if (object instanceof Like) {
@@ -805,35 +511,7 @@ federation
     } else if (object instanceof EmojiReact) {
       await onEmojiReactionRemoved(ctx, undo);
     } else if (object instanceof Announce) {
-      const sharer = object.actorId;
-      const originalPost = object.objectId;
-      if (sharer == null || originalPost == null) return;
-      await db.transaction(async (tx) => {
-        const deleted = await tx
-          .delete(posts)
-          .where(
-            and(
-              eq(
-                posts.accountId,
-                db
-                  .select({ id: accounts.id })
-                  .from(accounts)
-                  .where(eq(accounts.iri, sharer.href)),
-              ),
-              eq(
-                posts.sharingId,
-                db
-                  .select({ id: posts.id })
-                  .from(posts)
-                  .where(eq(posts.iri, originalPost.href)),
-              ),
-            ),
-          )
-          .returning();
-        if (deleted.length > 0 && deleted[0].sharingId != null) {
-          await updatePostStats(tx, { id: deleted[0].sharingId });
-        }
-      });
+      await onPostUnshared(ctx, undo);
     } else {
       inboxLogger.debug("Unsupported object on Undo: {object}", { object });
     }

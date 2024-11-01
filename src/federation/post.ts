@@ -1,6 +1,7 @@
 import {
   type Announce,
   Article,
+  ChatMessage,
   Collection,
   type Context,
   Create,
@@ -77,7 +78,8 @@ export function isPost(object?: vocab.Object | Link | null): object is ASPost {
   return (
     object instanceof Article ||
     object instanceof Note ||
-    object instanceof Question
+    object instanceof Question ||
+    object instanceof ChatMessage
   );
 }
 
