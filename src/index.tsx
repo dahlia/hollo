@@ -31,5 +31,10 @@ app.get("/favicon.png", async (c) => {
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const BEHIND_PROXY = process.env["BEHIND_PROXY"] === "true";
+// biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+const LISTEN_PORT = Number.parseInt(process.env["LISTEN_PORT"] ?? "3000", 10);
 
-export default BEHIND_PROXY ? { fetch: behindProxy(app.fetch.bind(app)) } : app;
+export default {
+  fetch: BEHIND_PROXY ? behindProxy(app.fetch.bind(app)) : app.fetch.bind(app),
+  port: LISTEN_PORT,
+};
