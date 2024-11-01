@@ -8,6 +8,8 @@ To be released.
 
  -  Added two-factor authentication support.  [[#38]]
 
+ -  Custom emojis now can be deleted from the administration dashboard.
+
  -  Added support for reporting remote accounts and posts.
     [[#41] by Emelia Smith]
 
