@@ -69,6 +69,7 @@ import { extractPreviewLink } from "../text";
 import { persistAccount, persistAccountByIri } from "./account";
 import { iterateCollection } from "./collection";
 import { toDate, toTemporalInstant } from "./date";
+import { toEmoji } from "./emoji";
 
 const logger = getLogger(["hollo", "federation", "post"]);
 
@@ -714,13 +715,8 @@ export function toObject(
             href: new URL(url),
           }),
       ),
-      ...Object.entries(post.emojis).map(
-        ([shortcode, url]) =>
-          new Emoji({
-            id: ctx.getObjectUri(Emoji, { shortcode }),
-            name: `:${shortcode.replace(/^:|:$/g, "")}:`,
-            icon: new Image({ url: new URL(url) }),
-          }),
+      ...Object.entries(post.emojis).map(([shortcode, url]) =>
+        toEmoji(ctx, { shortcode, url }),
       ),
       ...(post.quoteTarget == null
         ? []

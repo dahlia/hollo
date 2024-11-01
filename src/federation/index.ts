@@ -63,6 +63,7 @@ import {
   reports,
 } from "../schema";
 import { toTemporalInstant } from "./date";
+import { toEmoji } from "./emoji";
 import {
   onAccountDeleted,
   onAccountMoved,
@@ -574,13 +575,7 @@ federation.setObjectDispatcher(
       where: eq(customEmojis.shortcode, shortcode),
     });
     if (emoji == null) return null;
-    return new Emoji({
-      id: ctx.getObjectUri(Emoji, { shortcode }),
-      name: `:${shortcode}:`,
-      icon: new Image({
-        url: new URL(emoji.url),
-      }),
-    });
+    return toEmoji(ctx, emoji);
   },
 );
 
