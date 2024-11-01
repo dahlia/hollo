@@ -132,7 +132,9 @@ app.post(
     const fmtOpts = {
       url: fedCtx.url,
       contextLoader: fedCtx.contextLoader,
-      documentLoader: await fedCtx.getDocumentLoader(owner),
+      documentLoader: await fedCtx.getDocumentLoader({
+        username: owner.handle,
+      }),
     };
     const data = c.req.valid("json");
     const handle = owner.handle;
@@ -278,7 +280,9 @@ app.put(
     const fmtOpts = {
       url: fedCtx.url,
       contextLoader: fedCtx.contextLoader,
-      documentLoader: await fedCtx.getDocumentLoader(owner),
+      documentLoader: await fedCtx.getDocumentLoader({
+        username: owner.handle,
+      }),
     };
     const content =
       data.status == null ? null : await formatText(db, data.status, fmtOpts);

@@ -241,7 +241,9 @@ accounts.post("/:id", async (c) => {
   const fmtOpts = {
     url: fedCtx.url,
     contextLoader: fedCtx.contextLoader,
-    documentLoader: await fedCtx.getDocumentLoader(accountOwner),
+    documentLoader: await fedCtx.getDocumentLoader({
+      username: accountOwner.handle,
+    }),
   };
   const bioResult = await formatText(db, bio ?? "", fmtOpts);
   const nameEmojis = await extractCustomEmojis(db, name);
