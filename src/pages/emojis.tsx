@@ -1,5 +1,5 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import { desc, isNotNull, ne } from "drizzle-orm";
+import { desc, inArray, isNotNull, ne } from "drizzle-orm";
 import { Hono } from "hono";
 import { DashboardLayout } from "../components/DashboardLayout";
 import db from "../db";
@@ -22,42 +22,71 @@ emojis.get("/", async (c) => {
         <h1>Custom emojis</h1>
         <p>You can register custom emojis for your Hollo accounts.</p>
       </hgroup>
-      {emojis.length > 0 && (
-        <table>
-          <thead>
-            <tr>
-              <th>Category</th>
-              <th>Short code</th>
-              <th>Image</th>
-            </tr>
-          </thead>
-          <tbody>
-            {emojis.map((emoji) => (
+      <form
+        method="post"
+        action="/emojis/delete"
+        onsubmit="const cnt = this.querySelectorAll('input[name=emoji]:checked').length; return window.confirm('Are you sure you want to delete the selected ' + (cnt > 1 ? cnt + ' emojis' : cnt + ' emoji') + '?');"
+      >
+        {emojis.length > 0 && (
+          <table>
+            <thead>
               <tr>
-                <td>{emoji.category}</td>
-                <td>
-                  <tt>:{emoji.shortcode}:</tt>
-                </td>
-                <td>
-                  <img
-                    src={emoji.url}
-                    alt={`:${emoji.shortcode}:`}
-                    style="height: 24px"
-                  />
-                </td>
+                <th>Check</th>
+                <th>Category</th>
+                <th>Short code</th>
+                <th>Image</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-      <div role="group">
-        <a role="button" href="/emojis/new">
-          Add a custom emoji
-        </a>
-        <a role="button" href="/emojis/import" class="secondary">
-          Import custom emojis
-        </a>
-      </div>
+            </thead>
+            <tbody>
+              {emojis.map((emoji) => (
+                <tr>
+                  <td>
+                    <input
+                      type="checkbox"
+                      id={`emoji-${emoji.shortcode}`}
+                      name="emoji"
+                      value={emoji.shortcode}
+                      onchange="this.form.querySelector('button[type=submit]').disabled = !this.form.querySelectorAll('input[name=emoji]:checked').length"
+                    />
+                  </td>
+                  <td>
+                    <label for={`emoji-${emoji.shortcode}`}>
+                      {emoji.category}
+                    </label>
+                  </td>
+                  <td>
+                    <tt>
+                      <label for={`emoji-${emoji.shortcode}`}>
+                        :{emoji.shortcode}:
+                      </label>
+                    </tt>
+                  </td>
+                  <td>
+                    <label for={`emoji-${emoji.shortcode}`}>
+                      <img
+                        src={emoji.url}
+                        alt={`:${emoji.shortcode}:`}
+                        style="height: 24px"
+                      />
+                    </label>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <div role="group">
+          <a role="button" href="/emojis/new">
+            Add a custom emoji
+          </a>
+          <a role="button" href="/emojis/import" class="secondary">
+            Import custom emojis
+          </a>
+          <button type="submit" class="contrast" disabled>
+            Delete selected emojis
+          </button>
+        </div>
+      </form>
     </DashboardLayout>,
   );
 });
@@ -152,6 +181,21 @@ emojis.post("/", async (c) => {
     shortcode,
     url,
   });
+  return c.redirect("/emojis");
+});
+
+emojis.post("/delete", async (c) => {
+  const form = await c.req.formData();
+  const shortcodes = form.getAll("emoji");
+  if (shortcodes.length === 0) {
+    return c.redirect("/emojis");
+  }
+  await db.delete(customEmojis).where(
+    inArray(
+      customEmojis.shortcode,
+      shortcodes.map((s) => s.toString()),
+    ),
+  );
   return c.redirect("/emojis");
 });
 
