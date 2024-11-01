@@ -1,7 +1,12 @@
 import {
+  Accept,
+  type Add,
+  Announce,
   Article,
   Block,
   ChatMessage,
+  type Create,
+  type Delete,
   Emoji,
   EmojiReact,
   Follow,
@@ -11,8 +16,11 @@ import {
   Link,
   type Move,
   Note,
+  Question,
   Reject,
+  type Remove,
   Undo,
+  type Update,
   isActor,
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
@@ -20,18 +28,236 @@ import { and, eq } from "drizzle-orm";
 import { db } from "../db";
 import {
   type NewLike,
+  type NewPinnedPost,
   accountOwners,
+  accounts,
   blocks,
   follows,
   likes,
+  pinnedPosts,
+  pollOptions,
+  posts,
   reactions,
 } from "../schema";
-import { persistAccount } from "./account";
-import { updatePostStats } from "./post";
+import { persistAccount, updateAccountStats } from "./account";
+import {
+  isPost,
+  persistPollVote,
+  persistPost,
+  persistSharingPost,
+  toUpdate,
+  updatePostStats,
+} from "./post";
 
 const inboxLogger = getLogger(["hollo", "inbox"]);
 
-export async function onBlocked(ctx: InboxContext<void>, block: Block) {
+export async function onAccountUpdated(
+  ctx: InboxContext<void>,
+  update: Update,
+): Promise<void> {
+  const object = await update.getObject();
+  if (!isActor(object)) return;
+  await persistAccount(db, object, ctx);
+}
+
+export async function onAccountDeleted(
+  _ctx: InboxContext<void>,
+  del: Delete,
+): Promise<void> {
+  const actorId = del.actorId;
+  const objectId = del.objectId;
+  if (actorId == null || objectId == null) return;
+  if (objectId.href !== actorId.href) return;
+  await db.delete(accounts).where(eq(accounts.iri, actorId.href));
+}
+
+export async function onFollowed(
+  ctx: InboxContext<void>,
+  follow: Follow,
+): Promise<void> {
+  if (follow.id == null) return;
+  const actor = await follow.getActor();
+  if (!isActor(actor) || actor.id == null) {
+    inboxLogger.debug("Invalid actor: {actor}", { actor });
+    return;
+  }
+  const object = await follow.getObject();
+  if (!isActor(object) || object.id == null) {
+    inboxLogger.debug("Invalid object: {object}", { object });
+    return;
+  }
+  const following = await db.query.accounts.findFirst({
+    where: eq(accounts.iri, object.id.href),
+    with: { owner: true },
+  });
+  if (following?.owner == null) {
+    inboxLogger.debug("Invalid following: {following}", { following });
+    return;
+  }
+  const follower = await persistAccount(db, actor, ctx);
+  if (follower == null) return;
+  let approves = !following.protected;
+  if (approves) {
+    const block = await db.query.blocks.findFirst({
+      where: and(
+        eq(blocks.accountId, following.id),
+        eq(blocks.blockedAccountId, follower.id),
+      ),
+    });
+    approves = block == null;
+  }
+  await db
+    .insert(follows)
+    .values({
+      iri: follow.id.href,
+      followingId: following.id,
+      followerId: follower.id,
+      approved: approves ? new Date() : null,
+    })
+    .onConflictDoNothing();
+  if (approves) {
+    await ctx.sendActivity(
+      { username: following.owner.handle },
+      actor,
+      new Accept({
+        id: new URL(
+          `#accepts/${follower.iri}`,
+          ctx.getActorUri(following.owner.handle),
+        ),
+        actor: object.id,
+        object: follow,
+      }),
+      { excludeBaseUris: [new URL(ctx.origin)] },
+    );
+    await updateAccountStats(db, { id: following.id });
+  }
+}
+
+export async function onUnfollowed(
+  ctx: InboxContext<void>,
+  undo: Undo,
+): Promise<void> {
+  const object = await undo.getObject();
+  if (!(object instanceof Follow)) return;
+  if (object.actorId?.href !== undo.actorId?.href || object.id == null) return;
+  const actor = await undo.getActor();
+  if (!isActor(actor) || actor.id == null) {
+    inboxLogger.debug("Invalid actor: {actor}", { actor });
+    return;
+  }
+  const account = await persistAccount(db, actor, ctx);
+  if (account == null) return;
+  const deleted = await db
+    .delete(follows)
+    .where(
+      and(eq(follows.iri, object.id.href), eq(follows.followerId, account.id)),
+    )
+    .returning({ followingId: follows.followingId });
+  if (deleted.length > 0) {
+    await updateAccountStats(db, { id: deleted[0].followingId });
+  }
+}
+
+export async function onFollowAccepted(
+  ctx: InboxContext<void>,
+  accept: Accept,
+): Promise<void> {
+  const actor = await accept.getActor();
+  if (!isActor(actor) || actor.id == null) {
+    inboxLogger.debug("Invalid actor: {actor}", { actor });
+    return;
+  }
+  const account = await persistAccount(db, actor, ctx);
+  if (account == null) return;
+  if (accept.objectId != null) {
+    const updated = await db
+      .update(follows)
+      .set({ approved: new Date() })
+      .where(
+        and(
+          eq(follows.iri, accept.objectId.href),
+          eq(follows.followingId, account.id),
+        ),
+      )
+      .returning();
+    if (updated.length > 0) {
+      await updateAccountStats(db, { id: updated[0].followerId });
+      return;
+    }
+  }
+  const object = await accept.getObject();
+  if (object instanceof Follow) {
+    if (object.actorId == null) return;
+    await db
+      .update(follows)
+      .set({ approved: new Date() })
+      .where(
+        and(
+          eq(
+            follows.followerId,
+            db
+              .select({ id: accounts.id })
+              .from(accounts)
+              .where(eq(accounts.iri, object.actorId.href)),
+          ),
+          eq(follows.followingId, account.id),
+        ),
+      );
+    await updateAccountStats(db, { iri: object.actorId.href });
+  }
+}
+
+export async function onFollowRejected(
+  ctx: InboxContext<void>,
+  reject: Reject,
+): Promise<void> {
+  const actor = await reject.getActor();
+  if (!isActor(actor) || actor.id == null) {
+    inboxLogger.debug("Invalid actor: {actor}", { actor });
+    return;
+  }
+  const account = await persistAccount(db, actor, ctx);
+  if (account == null) return;
+  if (reject.objectId != null) {
+    const deleted = await db
+      .delete(follows)
+      .where(
+        and(
+          eq(follows.iri, reject.objectId.href),
+          eq(follows.followingId, account.id),
+        ),
+      )
+      .returning();
+    if (deleted.length > 0) {
+      await updateAccountStats(db, { id: deleted[0].followerId });
+      return;
+    }
+  }
+  const object = await reject.getObject();
+  if (object instanceof Follow) {
+    if (object.actorId == null) return;
+    await db
+      .delete(follows)
+      .where(
+        and(
+          eq(
+            follows.followerId,
+            db
+              .select({ id: accounts.id })
+              .from(accounts)
+              .where(eq(accounts.iri, object.actorId.href)),
+          ),
+          eq(follows.followingId, account.id),
+        ),
+      );
+    await updateAccountStats(db, { iri: object.actorId.href });
+  }
+}
+
+export async function onBlocked(
+  ctx: InboxContext<void>,
+  block: Block,
+): Promise<void> {
   const blocker = await block.getActor();
   if (blocker == null) return;
   const object = ctx.parseUri(block.objectId);
@@ -136,6 +362,185 @@ export async function onUnblocked(
     );
 }
 
+export async function onPostCreated(
+  ctx: InboxContext<void>,
+  create: Create,
+): Promise<void> {
+  const object = await create.getObject();
+  if (!isPost(object)) return;
+  const post = await db.transaction(async (tx) => {
+    const post = await persistPost(tx, object, ctx);
+    if (post?.replyTargetId != null) {
+      await updatePostStats(tx, { id: post.replyTargetId });
+    }
+    return post;
+  });
+  if (post?.replyTargetId != null) {
+    const replyTarget = await db.query.posts.findFirst({
+      where: eq(posts.id, post.replyTargetId),
+      with: {
+        account: { with: { owner: true } },
+        replyTarget: true,
+        quoteTarget: true,
+        media: true,
+        poll: { with: { options: true } },
+        mentions: { with: { account: true } },
+        replies: true,
+      },
+    });
+    if (replyTarget?.account.owner != null) {
+      await ctx.forwardActivity(
+        { username: replyTarget.account.owner.handle },
+        "followers",
+        {
+          skipIfUnsigned: true,
+          preferSharedInbox: true,
+          excludeBaseUris: [new URL(ctx.origin)],
+        },
+      );
+      await ctx.sendActivity(
+        { username: replyTarget.account.owner.handle },
+        "followers",
+        toUpdate(replyTarget, ctx),
+        { preferSharedInbox: true, excludeBaseUris: [new URL(ctx.origin)] },
+      );
+    }
+  }
+}
+
+export async function onPostUpdated(
+  ctx: InboxContext<void>,
+  update: Update,
+): Promise<void> {
+  const object = await update.getObject();
+  if (!isPost(object)) return;
+  await persistPost(db, object, ctx);
+}
+
+export async function onPostDeleted(
+  _ctx: InboxContext<void>,
+  del: Delete,
+): Promise<void> {
+  const actorId = del.actorId;
+  const objectId = del.objectId;
+  if (actorId == null || objectId == null) return;
+  await db.transaction(async (tx) => {
+    const deletedPosts = await tx
+      .delete(posts)
+      .where(eq(posts.iri, objectId.href))
+      .returning();
+    if (deletedPosts.length > 0) {
+      const deletedPost = deletedPosts[0];
+      if (deletedPost.replyTargetId != null) {
+        await updatePostStats(tx, { id: deletedPost.replyTargetId });
+      }
+      if (deletedPost.sharingId != null) {
+        await updatePostStats(tx, { id: deletedPost.sharingId });
+      }
+    }
+  });
+}
+
+export async function onPostShared(
+  ctx: InboxContext<void>,
+  announce: Announce,
+): Promise<void> {
+  const object = await announce.getObject();
+  if (!isPost(object)) return;
+  await db.transaction(async (tx) => {
+    const post = await persistSharingPost(tx, announce, object, ctx);
+    if (post?.sharingId != null) {
+      await updatePostStats(tx, { id: post.sharingId });
+    }
+  });
+}
+
+export async function onPostUnshared(
+  _ctx: InboxContext<void>,
+  undo: Undo,
+): Promise<void> {
+  const object = await undo.getObject();
+  if (!(object instanceof Announce)) return;
+  if (object.actorId?.href !== undo.actorId?.href) return;
+  const sharer = object.actorId;
+  const originalPost = object.objectId;
+  if (sharer == null || originalPost == null) return;
+  await db.transaction(async (tx) => {
+    const deleted = await tx
+      .delete(posts)
+      .where(
+        and(
+          eq(
+            posts.accountId,
+            db
+              .select({ id: accounts.id })
+              .from(accounts)
+              .where(eq(accounts.iri, sharer.href)),
+          ),
+          eq(
+            posts.sharingId,
+            db
+              .select({ id: posts.id })
+              .from(posts)
+              .where(eq(posts.iri, originalPost.href)),
+          ),
+        ),
+      )
+      .returning();
+    if (deleted.length > 0 && deleted[0].sharingId != null) {
+      await updatePostStats(tx, { id: deleted[0].sharingId });
+    }
+  });
+}
+
+export async function onPostPinned(
+  ctx: InboxContext<void>,
+  add: Add,
+): Promise<void> {
+  if (add.targetId == null) return;
+  const object = await add.getObject();
+  if (!isPost(object)) return;
+  const accountList = await db.query.accounts.findMany({
+    where: eq(accounts.featuredUrl, add.targetId.href),
+  });
+  await db.transaction(async (tx) => {
+    const post = await persistPost(tx, object, ctx);
+    if (post == null) return;
+    for (const account of accountList) {
+      await tx.insert(pinnedPosts).values({
+        postId: post.id,
+        accountId: account.id,
+      } satisfies NewPinnedPost);
+    }
+  });
+}
+
+export async function onPostUnpinned(
+  ctx: InboxContext<void>,
+  remove: Remove,
+): Promise<void> {
+  if (remove.targetId == null) return;
+  const object = await remove.getObject();
+  if (!isPost(object)) return;
+  const accountList = await db.query.accounts.findMany({
+    where: eq(accounts.featuredUrl, remove.targetId.href),
+  });
+  await db.transaction(async (tx) => {
+    const post = await persistPost(tx, object, ctx);
+    if (post == null) return;
+    for (const account of accountList) {
+      await tx
+        .delete(pinnedPosts)
+        .where(
+          and(
+            eq(pinnedPosts.postId, post.id),
+            eq(pinnedPosts.accountId, account.id),
+          ),
+        );
+    }
+  });
+}
+
 export async function onLiked(
   ctx: InboxContext<void>,
   like: Like,
@@ -152,6 +557,7 @@ export async function onLiked(
     type === "object" &&
     (parsed.class === Note ||
       parsed.class === Article ||
+      parsed.class === Question ||
       parsed.class === ChatMessage)
   ) {
     const actor = await like.getActor();
@@ -324,7 +730,57 @@ export async function onEmojiReactionRemoved(
   });
 }
 
-export async function onMove(
+export async function onVoted(
+  ctx: InboxContext<void>,
+  create: Create,
+): Promise<void> {
+  const object = await create.getObject();
+  if (
+    !(object instanceof Note) ||
+    object.replyTargetId == null ||
+    object.attributionId == null ||
+    object.name == null
+  ) {
+    return;
+  }
+  const vote = await db.transaction((tx) => persistPollVote(tx, object, ctx));
+  if (vote == null) return;
+  const post = await db.query.posts.findFirst({
+    with: {
+      account: { with: { owner: true } },
+      replyTarget: true,
+      quoteTarget: true,
+      media: true,
+      poll: {
+        with: {
+          options: { orderBy: pollOptions.index },
+          votes: { with: { account: true } },
+        },
+      },
+      mentions: { with: { account: true } },
+      replies: true,
+    },
+    where: eq(posts.pollId, vote.pollId),
+  });
+  if (post?.account.owner == null || post.poll == null) return;
+  await ctx.sendActivity(
+    { username: post.account.owner.handle },
+    post.poll.votes.map((v) => ({
+      id: new URL(v.account.iri),
+      inboxId: new URL(v.account.inboxUrl),
+      endpoints:
+        v.account.sharedInboxUrl == null
+          ? null
+          : {
+              sharedInbox: new URL(v.account.sharedInboxUrl),
+            },
+    })),
+    toUpdate(post, ctx),
+    { preferSharedInbox: true, excludeBaseUris: [new URL(ctx.origin)] },
+  );
+}
+
+export async function onAccountMoved(
   ctx: InboxContext<void>,
   move: Move,
 ): Promise<void> {
