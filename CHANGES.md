@@ -29,10 +29,14 @@ To be released.
 
  -  Added a favicon.
 
+ -  Added `LISTEN_PORT` and `ALLOW_PRIVATE_ADDRESS` environment variables.
+    [[#53] by Helge Krueger]
+
 [#38]: https://github.com/dahlia/hollo/issues/38
 [#41]: https://github.com/dahlia/hollo/pull/41
 [#43]: https://github.com/dahlia/hollo/pull/43
 [#47]: https://github.com/dahlia/hollo/pull/47
+[#53]: https://github.com/dahlia/hollo/pull/53
 
 
 Version 0.1.6
