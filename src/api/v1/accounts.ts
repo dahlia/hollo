@@ -150,7 +150,9 @@ app.patch(
     const fmtOpts = {
       url: fedCtx.url,
       contextLoader: fedCtx.contextLoader,
-      documentLoader: await fedCtx.getDocumentLoader(owner),
+      documentLoader: await fedCtx.getDocumentLoader({
+        username: account.handle,
+      }),
     };
     const fields = Object.entries(owner.fields);
     const fieldHtmls: [string, string][] = [];
@@ -319,7 +321,9 @@ app.get(
           ? fedCtx
           : {
               contextLoader: fedCtx.contextLoader,
-              documentLoader: await fedCtx.getDocumentLoader(owner),
+              documentLoader: await fedCtx.getDocumentLoader({
+                username: owner.handle,
+              }),
             };
       const actor = await lookupObject(acct, options);
       if (!isActor(actor)) return c.json({ error: "Record not found" }, 404);
@@ -386,7 +390,9 @@ app.get(
         const fedCtx = federation.createContext(c.req.raw, undefined);
         const options = {
           contextLoader: fedCtx.contextLoader,
-          documentLoader: await fedCtx.getDocumentLoader(exactMatch),
+          documentLoader: await fedCtx.getDocumentLoader({
+            username: exactMatch.handle,
+          }),
         };
         const actor = await lookupObject(query.q, options);
         if (isActor(actor)) await persistAccount(db, actor, options);

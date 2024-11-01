@@ -78,7 +78,9 @@ app.get(
         : [];
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const options = {
-      documentLoader: await fedCtx.getDocumentLoader(owner),
+      documentLoader: await fedCtx.getDocumentLoader({
+        username: owner.handle,
+      }),
       contextLoader: fedCtx.contextLoader,
     };
     let resolved: Object | null = null;
