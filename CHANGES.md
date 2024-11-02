@@ -34,7 +34,7 @@ To be released.
 
  -  Added a favicon.
 
- -  Added `LISTEN_PORT` and `ALLOW_PRIVATE_ADDRESS` environment variables.
+ -  Added `PORT` and `ALLOW_PRIVATE_ADDRESS` environment variables.
     [[#53] by Helge Krueger]
 
 [#38]: https://github.com/dahlia/hollo/issues/38
