@@ -6,6 +6,8 @@ Version 0.2.0
 
 To be released.
 
+ -  Dropped support for Redis.
+
  -  Added two-factor authentication support.  [[#38]]
 
  -  Custom emojis now can be deleted from the administration dashboard.

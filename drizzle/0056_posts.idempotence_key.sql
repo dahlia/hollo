@@ -1,0 +1,1 @@
+ALTER TABLE "posts" ADD COLUMN "idempotence_key" text;
