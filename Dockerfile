@@ -23,5 +23,6 @@ RUN \
     && mv .pkg.json package.json; \
   fi
 
+ENV LISTEN_PORT=3000
 EXPOSE 3000
 CMD ["bun", "run", "prod"]

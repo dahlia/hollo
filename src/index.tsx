@@ -8,6 +8,7 @@ import fedi from "./federation";
 import image from "./image";
 import oauth, { oauthAuthorizationServer } from "./oauth";
 import pages from "./pages";
+
 const app = new Hono();
 
 app.use(federation(fedi, (_) => undefined));
@@ -31,8 +32,14 @@ app.get("/favicon.png", async (c) => {
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const BEHIND_PROXY = process.env["BEHIND_PROXY"] === "true";
+
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const LISTEN_PORT = Number.parseInt(process.env["LISTEN_PORT"] ?? "3000", 10);
+
+if (!Number.isInteger(LISTEN_PORT)) {
+  console.error("Invalid LISTEN_PORT: must be an integer");
+  process.exit(1);
+}
 
 export default {
   fetch: BEHIND_PROXY ? behindProxy(app.fetch.bind(app)) : app.fetch.bind(app),
