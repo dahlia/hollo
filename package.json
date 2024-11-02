@@ -22,7 +22,7 @@
     "@hono/zod-validator": "^0.2.1",
     "@interop/wallet-export-ts": "^0.1.4",
     "@js-temporal/polyfill": "^0.4.4",
-    "@logtape/logtape": "^0.6.2",
+    "@logtape/logtape": "^0.7.1",
     "cheerio": "^1.0.0",
     "drizzle-orm": "^0.30.10",
     "es-toolkit": "^1.25.2",

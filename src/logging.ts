@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from "node:async_hooks";
 import {
   type LogLevel,
   configure,
@@ -33,6 +34,7 @@ const stdout = new WritableStream({
 });
 
 await configure({
+  contextLocalStorage: new AsyncLocalStorage(),
   sinks: {
     console: getStreamSink(stdout, {
       formatter: getAnsiColorFormatter({
