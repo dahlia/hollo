@@ -42,7 +42,6 @@ import {
 } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type PreviewCard, fetchPreviewCard } from "../../previewcard";
-import { createRedis, getRedisUrl } from "../../redis";
 import {
   type Like,
   type NewBookmark,
@@ -117,16 +116,16 @@ app.post(
       );
     }
     const idempotencyKey = c.req.header("Idempotency-Key");
-    if (idempotencyKey != null && getRedisUrl() != null) {
-      const redis = createRedis();
-      const prevPostId = await redis.get(`idempotency:${idempotencyKey}`);
-      if (prevPostId != null) {
-        const post = await db.query.posts.findFirst({
-          where: eq(posts.id, prevPostId),
-          with: getPostRelations(owner.id),
-        });
-        if (post != null) return c.json(serializePost(post, owner, c.req.url));
-      }
+    if (idempotencyKey != null) {
+      const post = await db.query.posts.findFirst({
+        where: and(
+          eq(posts.accountId, owner.id),
+          eq(posts.idempotenceKey, idempotencyKey),
+          gt(posts.published, sql`CURRENT_TIMESTAMP - INTERVAL '1 hour'`),
+        ),
+        with: getPostRelations(owner.id),
+      });
+      if (post != null) return c.json(serializePost(post, owner, c.req.url));
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const fmtOpts = {
@@ -212,6 +211,7 @@ app.post(
         sensitive: data.sensitive,
         url: url.href,
         previewCard,
+        idempotenceKey: idempotencyKey,
         published: sql`CURRENT_TIMESTAMP`,
       });
       if (data.media_ids != null && data.media_ids.length > 0) {
@@ -241,11 +241,6 @@ app.post(
       where: eq(posts.id, id),
       with: getPostRelations(owner.id),
     }))!;
-    if (idempotencyKey != null && getRedisUrl() != null) {
-      const redis = createRedis();
-      await redis.set(`idempotency:${idempotencyKey}`, id);
-      await redis.expire(`idempotency:${idempotencyKey}`, 60 * 60);
-    }
     const activity = toCreate(post, fedCtx);
     await fedCtx.sendActivity({ handle }, getRecipients(post), activity, {
       excludeBaseUris: [new URL(c.req.url)],

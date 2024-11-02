@@ -13,9 +13,7 @@ import {
   Follow,
   Hashtag,
   Image,
-  type KvStore,
   Like,
-  type MessageQueue,
   Move,
   Note,
   ParallelMessageQueue,
@@ -30,7 +28,6 @@ import {
   isActor,
 } from "@fedify/fedify";
 import { PostgresKvStore, PostgresMessageQueue } from "@fedify/postgres";
-import { RedisKvStore, RedisMessageQueue } from "@fedify/redis";
 import { getLogger } from "@logtape/logtape";
 import {
   and,
@@ -50,7 +47,6 @@ import { uniq } from "es-toolkit";
 import { parse } from "semver";
 import metadata from "../../package.json" with { type: "json" };
 import { db, postgres } from "../db";
-import { createRedis, getRedisUrl } from "../redis";
 import {
   accountOwners,
   accounts,
@@ -89,27 +85,9 @@ import {
 } from "./inbox";
 import { isPost, toAnnounce, toCreate, toObject } from "./post";
 
-const logger = getLogger(["hollo", "federation"]);
-
-let kv: KvStore;
-let queue: MessageQueue;
-
-if (getRedisUrl() == null) {
-  kv = new PostgresKvStore(postgres);
-  queue = new ParallelMessageQueue(new PostgresMessageQueue(postgres), 10);
-  logger.info(
-    "No REDIS_URL is defined, using PostgresKvStore and PostgresMessageQueue.",
-  );
-} else {
-  kv = new RedisKvStore(createRedis());
-  queue = new RedisMessageQueue(createRedis, {
-    loopInterval: { seconds: 2, milliseconds: 500 },
-  });
-}
-
 export const federation = createFederation<void>({
-  kv,
-  queue,
+  kv: new PostgresKvStore(postgres),
+  queue: new ParallelMessageQueue(new PostgresMessageQueue(postgres), 10),
   // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
   allowPrivateAddress: process.env["ALLOW_PRIVATE_ADDRESS"] === "true",
 });
