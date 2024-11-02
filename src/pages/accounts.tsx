@@ -11,19 +11,25 @@ import {
   isActor,
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { uniq } from "es-toolkit";
 import { Hono } from "hono";
 import { AccountForm } from "../components/AccountForm.tsx";
 import { AccountList } from "../components/AccountList.tsx";
+import { DashboardLayout } from "../components/DashboardLayout.tsx";
 import {
   NewAccountPage,
   type NewAccountPageProps,
-} from "../components/AccountNewPage.tsx";
-import { DashboardLayout } from "../components/DashboardLayout.tsx";
+} from "../components/NewAccountPage.tsx";
 import db from "../db.ts";
 import federation from "../federation";
-import { persistAccount } from "../federation/account.ts";
+import {
+  REMOTE_ACTOR_FETCH_POSTS,
+  followAccount,
+  persistAccount,
+  persistAccountPosts,
+  unfollowAccount,
+} from "../federation/account.ts";
 import { loginRequired } from "../login.ts";
 import {
   type Account,
@@ -35,6 +41,8 @@ import {
   instances,
 } from "../schema.ts";
 import { extractCustomEmojis, formatText } from "../text.ts";
+
+const HOLLO_OFFICIAL_ACCOUNT = "@hollo@hollo.social";
 
 const logger = getLogger(["hollo", "pages", "accounts"]);
 
@@ -60,6 +68,7 @@ accounts.post("/", async (c) => {
     .get("visibility")
     ?.toString()
     ?.trim() as PostVisibility;
+  const news = form.get("news") != null;
   if (username == null || username === "" || name == null || name === "") {
     return c.html(
       <NewAccountPage
@@ -70,6 +79,7 @@ accounts.post("/", async (c) => {
           protected: protected_,
           language,
           visibility,
+          news,
         }}
         errors={{
           username:
@@ -81,6 +91,7 @@ accounts.post("/", async (c) => {
               ? "Display name is required."
               : undefined,
         }}
+        officialAccount={HOLLO_OFFICIAL_ACCOUNT}
       />,
       400,
     );
@@ -89,7 +100,7 @@ accounts.post("/", async (c) => {
   const bioResult = await formatText(db, bio ?? "", fedCtx);
   const nameEmojis = await extractCustomEmojis(db, name);
   const emojis = { ...nameEmojis, ...bioResult.emojis };
-  await db.transaction(async (tx) => {
+  const [account, owner] = await db.transaction(async (tx) => {
     await tx
       .insert(instances)
       .values({
@@ -120,21 +131,40 @@ accounts.post("/", async (c) => {
       .returning();
     const rsaKeyPair = await generateCryptoKeyPair("RSASSA-PKCS1-v1_5");
     const ed25519KeyPair = await generateCryptoKeyPair("Ed25519");
-    await tx.insert(accountOwners).values({
-      id: account[0].id,
-      handle: username,
-      rsaPrivateKeyJwk: await exportJwk(rsaKeyPair.privateKey),
-      rsaPublicKeyJwk: await exportJwk(rsaKeyPair.publicKey),
-      ed25519PrivateKeyJwk: await exportJwk(ed25519KeyPair.privateKey),
-      ed25519PublicKeyJwk: await exportJwk(ed25519KeyPair.publicKey),
-      bio: bio ?? "",
-      language: language ?? "en",
-      visibility: visibility ?? "public",
-    });
+    const owner = await tx
+      .insert(accountOwners)
+      .values({
+        id: account[0].id,
+        handle: username,
+        rsaPrivateKeyJwk: await exportJwk(rsaKeyPair.privateKey),
+        rsaPublicKeyJwk: await exportJwk(rsaKeyPair.publicKey),
+        ed25519PrivateKeyJwk: await exportJwk(ed25519KeyPair.privateKey),
+        ed25519PublicKeyJwk: await exportJwk(ed25519KeyPair.publicKey),
+        bio: bio ?? "",
+        language: language ?? "en",
+        visibility: visibility ?? "public",
+      })
+      .returning();
+    return [account[0], owner[0]];
   });
   const owners = await db.query.accountOwners.findMany({
     with: { account: true },
   });
+  if (news) {
+    const actor = await fedCtx.lookupObject(HOLLO_OFFICIAL_ACCOUNT);
+    if (isActor(actor)) {
+      await db.transaction(async (tx) => {
+        const following = await persistAccount(tx, actor, fedCtx);
+        if (following != null) {
+          await followAccount(tx, fedCtx, { ...account, owner }, following);
+          await persistAccountPosts(tx, account, REMOTE_ACTOR_FETCH_POSTS, {
+            ...fedCtx,
+            suppressError: true,
+          });
+        }
+      });
+    }
+  }
   return c.html(<AccountListPage accountOwners={owners} />);
 });
 
@@ -161,7 +191,12 @@ function AccountListPage({ accountOwners }: AccountListPageProps) {
 }
 
 accounts.get("/new", (c) => {
-  return c.html(<NewAccountPage values={{ language: "en" }} />);
+  return c.html(
+    <NewAccountPage
+      values={{ language: "en", news: true }}
+      officialAccount={HOLLO_OFFICIAL_ACCOUNT}
+    />,
+  );
 });
 
 accounts.get("/:id", async (c) => {
@@ -170,11 +205,30 @@ accounts.get("/:id", async (c) => {
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
-  return c.html(<AccountPage accountOwner={accountOwner} />);
+  const news = await db.query.follows.findFirst({
+    where: and(
+      eq(
+        follows.followingId,
+        db
+          .select({ id: accountsTable.id })
+          .from(accountsTable)
+          .where(eq(accountsTable.handle, HOLLO_OFFICIAL_ACCOUNT)),
+      ),
+      eq(follows.followerId, accountOwner.id),
+    ),
+  });
+  return c.html(
+    <AccountPage
+      accountOwner={accountOwner}
+      news={news != null}
+      officialAccount={HOLLO_OFFICIAL_ACCOUNT}
+    />,
+  );
 });
 
 interface AccountPageProps extends NewAccountPageProps {
   accountOwner: AccountOwner & { account: Account };
+  news: boolean;
 }
 
 function AccountPage(props: AccountPageProps) {
@@ -196,8 +250,10 @@ function AccountPage(props: AccountPageProps) {
             props.values?.protected ?? props.accountOwner.account.protected,
           language: props.values?.language ?? props.accountOwner.language,
           visibility: props.values?.visibility ?? props.accountOwner.visibility,
+          news: props.values?.news ?? props.news,
         }}
         errors={props.errors}
+        officialAccount={HOLLO_OFFICIAL_ACCOUNT}
         submitLabel="Save changes"
       />
     </DashboardLayout>
@@ -219,20 +275,24 @@ accounts.post("/:id", async (c) => {
     .get("visibility")
     ?.toString()
     ?.trim() as PostVisibility;
+  const news = form.get("news") != null;
   if (name == null || name === "") {
     return c.html(
       <AccountPage
         accountOwner={accountOwner}
+        news={news}
         values={{
           name,
           bio,
           protected: protected_,
           language,
           visibility,
+          news,
         }}
         errors={{
           name: name == null || name === "" ? "Display name is required." : "",
         }}
+        officialAccount={HOLLO_OFFICIAL_ACCOUNT}
       />,
       400,
     );
@@ -273,6 +333,20 @@ accounts.post("/:id", async (c) => {
     }),
     { preferSharedInbox: true, excludeBaseUris: [fedCtx.url] },
   );
+  const account = { ...accountOwner.account, owner: accountOwner };
+  const newsActor = await fedCtx.lookupObject(HOLLO_OFFICIAL_ACCOUNT);
+  if (isActor(newsActor)) {
+    const newsAccount = await persistAccount(db, newsActor, fedCtx);
+    if (newsAccount != null) {
+      if (news) {
+        await followAccount(db, fedCtx, account, newsAccount);
+        await persistAccountPosts(db, newsAccount, REMOTE_ACTOR_FETCH_POSTS, {
+          ...fedCtx,
+          suppressError: true,
+        });
+      } else await unfollowAccount(db, fedCtx, account, newsAccount);
+    }
+  }
   return c.redirect("/accounts");
 });
 
@@ -404,7 +478,7 @@ accounts.get("/:id/migrate", async (c) => {
               <input
                 type="text"
                 name="handle"
-                placeholder="@hollo@hollo.social"
+                placeholder={HOLLO_OFFICIAL_ACCOUNT}
                 required
                 {...(error === "to"
                   ? { "aria-invalid": "true", value: handle }

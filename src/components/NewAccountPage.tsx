@@ -10,12 +10,14 @@ export interface NewAccountPageProps {
     protected?: boolean;
     language?: string;
     visibility?: PostVisibility;
+    news?: boolean;
   };
   errors?: {
     username?: string;
     name?: string;
     bio?: string;
   };
+  officialAccount: string;
 }
 
 export function NewAccountPage(props: NewAccountPageProps) {
@@ -30,6 +32,7 @@ export function NewAccountPage(props: NewAccountPageProps) {
         values={props.values}
         errors={props.errors}
         submitLabel="Create a new account"
+        officialAccount={props.officialAccount}
       />
     </DashboardLayout>
   );
