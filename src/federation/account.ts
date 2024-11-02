@@ -1,11 +1,15 @@
 import {
   type Actor,
   Announce,
+  type Context,
   Create,
   type DocumentLoader,
   Emoji,
+  Follow,
   Link,
   PropertyValue,
+  Reject,
+  Undo,
   formatSemVer,
   getActorHandle,
   getActorTypeName,
@@ -35,6 +39,11 @@ import {
   persistSharingPost,
   updatePostStats,
 } from "./post";
+
+export const REMOTE_ACTOR_FETCH_POSTS = Number.parseInt(
+  // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
+  process.env["REMOTE_ACTOR_FETCH_POSTS"] ?? "10",
+);
 
 export async function persistAccount(
   db: PgDatabase<
@@ -324,4 +333,158 @@ export async function updateAccountStats(
         ),
       ),
     );
+}
+
+export async function followAccount(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  ctx: Context<unknown>,
+  follower: schema.Account & { owner: schema.AccountOwner | null },
+  following: schema.Account & { owner: schema.AccountOwner | null },
+  options: {
+    shares?: boolean;
+    notify?: boolean;
+    languages?: string[];
+  } = {},
+): Promise<schema.Follow | null> {
+  if (follower.owner == null) {
+    throw new TypeError("Only local accounts can follow other accounts");
+  }
+  const result = await db
+    .insert(schema.follows)
+    .values({
+      iri: new URL(`#follows/${crypto.randomUUID()}`, follower.iri).href,
+      followingId: following.id,
+      followerId: follower.id,
+      shares: options.shares ?? true,
+      notify: options.notify ?? false,
+      languages: options.languages ?? null,
+      approved:
+        following.owner == null || following.protected ? null : new Date(),
+    } satisfies schema.NewFollow)
+    .onConflictDoNothing()
+    .returning();
+  if (result.length < 1) return null;
+  await updateAccountStats(db, follower);
+  await updateAccountStats(db, following);
+  const follow = result[0];
+  if (following.owner == null) {
+    await ctx.sendActivity(
+      { username: follower.owner.handle },
+      [
+        {
+          id: new URL(following.iri),
+          inboxId: new URL(following.inboxUrl),
+        },
+      ],
+      new Follow({
+        id: new URL(follow.iri),
+        actor: new URL(follower.iri),
+        object: new URL(following.iri),
+      }),
+      { excludeBaseUris: [new URL(ctx.origin)] },
+    );
+  }
+  return follow;
+}
+
+export async function unfollowAccount(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  ctx: Context<unknown>,
+  follower: schema.Account & { owner: schema.AccountOwner | null },
+  following: schema.Account & { owner: schema.AccountOwner | null },
+): Promise<schema.Follow | null> {
+  if (follower.owner == null) {
+    throw new TypeError("Only local accounts can unfollow other accounts");
+  }
+  const result = await db
+    .delete(schema.follows)
+    .where(
+      and(
+        eq(schema.follows.followingId, following.id),
+        eq(schema.follows.followerId, follower.id),
+      ),
+    )
+    .returning();
+  if (result.length < 1) return null;
+  await updateAccountStats(db, follower);
+  await updateAccountStats(db, following);
+  if (following.owner == null) {
+    await ctx.sendActivity(
+      { username: follower.owner.handle },
+      [
+        {
+          id: new URL(following.iri),
+          inboxId: new URL(following.inboxUrl),
+        },
+      ],
+      new Undo({
+        id: new URL(`#unfollows/${crypto.randomUUID()}`, follower.iri),
+        actor: new URL(follower.iri),
+        object: new Follow({
+          id: new URL(result[0].iri),
+          actor: new URL(follower.iri),
+          object: new URL(following.iri),
+        }),
+      }),
+      { excludeBaseUris: [new URL(ctx.origin)] },
+    );
+  }
+  return result[0];
+}
+
+export async function removeFollower(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  ctx: Context<unknown>,
+  following: schema.Account & { owner: schema.AccountOwner | null },
+  follower: schema.Account & { owner: schema.AccountOwner | null },
+): Promise<schema.Follow | null> {
+  if (following.owner == null) {
+    throw new TypeError("Only local accounts can remove followers");
+  }
+  const result = await db
+    .delete(schema.follows)
+    .where(
+      and(
+        eq(schema.follows.followingId, following.id),
+        eq(schema.follows.followerId, follower.id),
+      ),
+    )
+    .returning();
+  if (result.length < 1) return null;
+  await ctx.sendActivity(
+    { username: following.owner.handle },
+    {
+      id: new URL(follower.iri),
+      inboxId: new URL(follower.inboxUrl),
+      endpoints:
+        follower.sharedInboxUrl == null
+          ? null
+          : {
+              sharedInbox: new URL(follower.sharedInboxUrl),
+            },
+    },
+    new Reject({
+      id: new URL(`#reject/${crypto.randomUUID()}`, following.iri),
+      actor: new URL(following.iri),
+      object: new Follow({
+        id: new URL(result[0].iri),
+        actor: new URL(follower.iri),
+        object: new URL(following.iri),
+      }),
+    }),
+    { excludeBaseUris: [new URL(ctx.origin)] },
+  );
+  return result[0];
 }

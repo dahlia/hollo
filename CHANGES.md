@@ -27,6 +27,9 @@ To be released.
  -  Added support for RFC 8414 for OAuth Authorization Server metadata endpoint.
     [[#47] by Emelia Smith]
 
+ -  On creating a new account, the user now can choose to follow the official
+    Hollo account.
+
  -  Added a favicon.
 
  -  Added `LISTEN_PORT` and `ALLOW_PRIVATE_ADDRESS` environment variables.

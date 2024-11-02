@@ -17,9 +17,9 @@ import {
   type Move,
   Note,
   Question,
-  Reject,
+  type Reject,
   type Remove,
-  Undo,
+  type Undo,
   type Update,
   isActor,
 } from "@fedify/fedify";
@@ -39,7 +39,12 @@ import {
   posts,
   reactions,
 } from "../schema";
-import { persistAccount, updateAccountStats } from "./account";
+import {
+  persistAccount,
+  removeFollower,
+  unfollowAccount,
+  updateAccountStats,
+} from "./account";
 import {
   isPost,
   persistPollVote,
@@ -263,6 +268,7 @@ export async function onBlocked(
   const object = ctx.parseUri(block.objectId);
   if (block.objectId == null || object?.type !== "actor") return;
   const blocked = await db.query.accountOwners.findFirst({
+    with: { account: true },
     where: eq(accountOwners.handle, object.identifier),
   });
   if (blocked == null) return;
@@ -277,56 +283,18 @@ export async function onBlocked(
     .onConflictDoNothing()
     .returning();
   if (result.length < 1) return;
-  const following = await db
-    .delete(follows)
-    .where(
-      and(
-        eq(follows.followingId, blockerAccount.id),
-        eq(follows.followerId, blocked.id),
-      ),
-    )
-    .returning();
-  if (following.length > 0) {
-    await ctx.sendActivity(
-      object,
-      blocker,
-      new Undo({
-        id: new URL(`#unfollows/${crypto.randomUUID()}`, block.objectId),
-        actor: block.objectId,
-        object: new Follow({
-          id: new URL(following[0].iri),
-          actor: block.objectId,
-          object: blocker.id,
-        }),
-      }),
-      { excludeBaseUris: [new URL(ctx.origin)] },
-    );
-  }
-  const follower = await db
-    .delete(follows)
-    .where(
-      and(
-        eq(follows.followingId, blockerAccount.id),
-        eq(follows.followerId, blocked.id),
-      ),
-    )
-    .returning();
-  if (follower.length > 0) {
-    await ctx.sendActivity(
-      object,
-      blocker,
-      new Reject({
-        id: new URL(`#reject/${crypto.randomUUID()}`, block.objectId),
-        actor: block.objectId,
-        object: new Follow({
-          id: new URL(follower[0].iri),
-          actor: blocker.id,
-          object: block.objectId,
-        }),
-      }),
-      { excludeBaseUris: [new URL(ctx.origin)] },
-    );
-  }
+  await unfollowAccount(
+    db,
+    ctx,
+    { ...blocked.account, owner: blocked },
+    blockerAccount,
+  );
+  await removeFollower(
+    db,
+    ctx,
+    { ...blocked.account, owner: blocked },
+    blockerAccount,
+  );
 }
 
 export async function onUnblocked(

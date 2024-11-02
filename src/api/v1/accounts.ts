@@ -1,13 +1,5 @@
 import { PutObjectCommand } from "@aws-sdk/client-s3";
-import {
-  Block,
-  Follow,
-  type Recipient,
-  Reject,
-  Undo,
-  isActor,
-  lookupObject,
-} from "@fedify/fedify";
+import { Block, Undo, isActor, lookupObject } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
 import {
@@ -19,7 +11,6 @@ import {
   gte,
   ilike,
   inArray,
-  isNotNull,
   isNull,
   lt,
   lte,
@@ -38,13 +29,19 @@ import {
 import { serializeList } from "../../entities/list";
 import { getPostRelations, serializePost } from "../../entities/status";
 import { federation } from "../../federation";
-import { persistAccount, persistAccountPosts } from "../../federation/account";
+import {
+  REMOTE_ACTOR_FETCH_POSTS,
+  followAccount,
+  persistAccount,
+  persistAccountPosts,
+  removeFollower,
+  unfollowAccount,
+} from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
 import {
   type Account,
   type AccountOwner,
-  type NewFollow,
   type NewMute,
   accountOwners,
   accounts,
@@ -530,13 +527,9 @@ app.get(
       .select({ cnt: count() })
       .from(posts)
       .where(eq(posts.accountId, account.id));
-    const fetchPosts = Number.parseInt(
-      // biome-ignore lint/complexity/useLiteralKeys: tsc rants about this (TS4111)
-      process.env["REMOTE_ACTOR_FETCH_POSTS"] ?? "10",
-    );
-    if (cnt < fetchPosts) {
+    if (cnt < REMOTE_ACTOR_FETCH_POSTS) {
       const fedCtx = federation.createContext(c.req.raw, undefined);
-      await persistAccountPosts(db, account, fetchPosts, {
+      await persistAccountPosts(db, account, REMOTE_ACTOR_FETCH_POSTS, {
         documentLoader: await fedCtx.getDocumentLoader({
           username: tokenOwner.handle,
         }),
@@ -682,45 +675,18 @@ app.post(
     const id = c.req.param("id");
     const following = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
-      with: { owner: true, mutes: { where: eq(mutes.accountId, owner.id) } },
+      with: { owner: true },
     });
     if (following == null) return c.json({ error: "Record not found" }, 404);
-    const result = await db
-      .insert(follows)
-      .values({
-        iri: new URL(`#follows/${crypto.randomUUID()}`, owner.account.iri).href,
-        followingId: following.id,
-        followerId: owner.id,
-        shares: true,
-        notify: false,
-        languages: null,
-        approved:
-          following.owner == null || following.protected ? null : new Date(),
-      } satisfies NewFollow)
-      .onConflictDoNothing()
-      .returning();
-    // TODO: respond with 403 if the following blocks the follower
-    if (result.length < 1) {
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    const follow = await followAccount(
+      db,
+      fedCtx,
+      { ...owner.account, owner },
+      following,
+    );
+    if (follow == null) {
       return c.json({ error: "The action is not allowed" }, 403);
-    }
-    const follow = result[0];
-    if (following.owner == null) {
-      const fedCtx = federation.createContext(c.req.raw, undefined);
-      await fedCtx.sendActivity(
-        { username: owner.handle },
-        [
-          {
-            id: new URL(following.iri),
-            inboxId: new URL(following.inboxUrl),
-          },
-        ],
-        new vocab.Follow({
-          id: new URL(follow.iri),
-          actor: new URL(owner.account.iri),
-          object: new URL(following.iri),
-        }),
-        { excludeBaseUris: [new URL(fedCtx.url)] },
-      );
     }
     const account = await db.query.accounts.findFirst({
       where: eq(accounts.id, following.id),
@@ -760,58 +726,13 @@ app.post(
       );
     }
     const id = c.req.param("id");
-    const result = await db
-      .delete(follows)
-      .where(and(eq(follows.followingId, id), eq(follows.followerId, owner.id)))
-      .returning({ iri: follows.iri });
-
-    if (result.length > 0) {
-      const fedCtx = federation.createContext(c.req.raw, undefined);
-      const following = await db.query.accounts.findFirst({
-        where: eq(accounts.id, id),
-        with: {
-          owner: true,
-          mutes: {
-            where: eq(mutes.accountId, owner.id),
-          },
-        },
-      });
-      if (following != null && following.owner == null) {
-        await fedCtx.sendActivity(
-          { username: owner.handle },
-          [
-            {
-              id: new URL(following.iri),
-              inboxId: new URL(following.inboxUrl),
-            },
-          ],
-          new Undo({
-            id: new URL(`#unfollows/${crypto.randomUUID()}`, owner.account.iri),
-            actor: new URL(owner.account.iri),
-            object: new Follow({
-              id: new URL(result[0].iri),
-              actor: new URL(owner.account.iri),
-              object: new URL(following.iri),
-            }),
-          }),
-          { excludeBaseUris: [new URL(fedCtx.url)] },
-        );
-      }
-      await db
-        .update(accounts)
-        .set({
-          followingCount: sql`${db
-            .select({ cnt: count() })
-            .from(follows)
-            .where(
-              and(
-                eq(follows.followerId, owner.id),
-                isNotNull(follows.approved),
-              ),
-            )}`,
-        })
-        .where(eq(accounts.id, owner.id));
-    }
+    const following = await db.query.accounts.findFirst({
+      where: eq(accounts.id, id),
+      with: { owner: true },
+    });
+    if (following == null) return c.json({ error: "Record not found" }, 404);
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    await unfollowAccount(db, fedCtx, { ...owner.account, owner }, following);
     const account = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
       with: {
@@ -1098,57 +1019,11 @@ app.post(
     });
     if (acct.owner == null) {
       const fedCtx = federation.createContext(c.req.raw, undefined);
-      const recipient: Recipient = {
-        id: new URL(acct.iri),
-        inboxId: new URL(acct.inboxUrl),
-      };
-      const following = await db
-        .delete(follows)
-        .where(
-          and(eq(follows.followingId, id), eq(follows.followerId, owner.id)),
-        )
-        .returning();
-      if (following.length > 0) {
-        await fedCtx.sendActivity(
-          { username: owner.handle },
-          recipient,
-          new Undo({
-            id: new URL(`#unfollows/${crypto.randomUUID()}`, owner.account.iri),
-            actor: new URL(owner.account.iri),
-            object: new Follow({
-              id: new URL(following[0].iri),
-              actor: new URL(owner.account.iri),
-              object: new URL(acct.iri),
-            }),
-          }),
-          { excludeBaseUris: [new URL(fedCtx.url)] },
-        );
-      }
-      const follower = await db
-        .delete(follows)
-        .where(
-          and(eq(follows.followerId, id), eq(follows.followingId, owner.id)),
-        )
-        .returning();
-      if (follower.length > 0) {
-        await fedCtx.sendActivity(
-          { username: owner.handle },
-          recipient,
-          new Reject({
-            id: new URL(`#reject/${crypto.randomUUID()}`, owner.account.iri),
-            actor: new URL(owner.account.iri),
-            object: new Follow({
-              id: new URL(follower[0].iri),
-              actor: new URL(acct.iri),
-              object: new URL(owner.account.iri),
-            }),
-          }),
-          { excludeBaseUris: [new URL(fedCtx.url)] },
-        );
-      }
+      await unfollowAccount(db, fedCtx, { ...owner.account, owner }, acct);
+      await removeFollower(db, fedCtx, { ...owner.account, owner }, acct);
       await fedCtx.sendActivity(
         { username: owner.handle },
-        recipient,
+        { id: new URL(acct.iri), inboxId: new URL(acct.inboxUrl) },
         new Block({
           id: new URL(`#block/${acct.id}`, owner.account.iri),
           actor: new URL(owner.account.iri),

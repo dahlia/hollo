@@ -14,12 +14,14 @@ export interface AccountFormProps {
     protected?: boolean;
     language?: string;
     visibility?: PostVisibility;
+    news?: boolean;
   };
   errors?: {
     username?: string;
     name?: string;
     bio?: string;
   };
+  officialAccount: string;
   submitLabel: string;
 }
 
@@ -130,6 +132,18 @@ export function AccountForm(props: AccountFormProps) {
               Direct message
             </option>
           </select>
+        </label>
+      </fieldset>
+      <fieldset>
+        <label>
+          <input
+            type="checkbox"
+            name="news"
+            value="true"
+            checked={props.values?.news}
+          />{" "}
+          Receive news and updates of Hollo by following the official Hollo
+          account (<tt>{props.officialAccount}</tt>)
         </label>
       </fieldset>
       <button type="submit">{props.submitLabel}</button>
