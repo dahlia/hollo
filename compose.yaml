@@ -1,6 +1,6 @@
 services:
   hollo:
-    image: ghcr.io/dahlia/hollo:latest
+    image: ghcr.io/dahlia/hollo:canary
     ports:
     - "3000:3000"
     environment:
@@ -22,7 +22,7 @@ services:
     restart: unless-stopped
 
   postgres:
-    image: postgres:15
+    image: postgres:17
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
