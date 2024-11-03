@@ -1,4 +1,5 @@
 import { isActor } from "@fedify/fedify";
+import { count, sql } from "drizzle-orm";
 import { Hono } from "hono";
 import { DashboardLayout } from "../components/DashboardLayout";
 import db from "../db";
@@ -11,9 +12,18 @@ const data = new Hono();
 
 data.use(loginRequired);
 
-data.get("/", (c) => {
+data.get("/", async (c) => {
   const done = c.req.query("done");
   const error = c.req.query("error");
+
+  const queueMessages = await db
+    .select({
+      type: sql`fedify_message_v2.message ->> 'type'`,
+      number: count(),
+    })
+    .from(sql`fedify_message_v2`)
+    .groupBy(sql`fedify_message_v2.message ->> 'type'`)
+    .execute();
 
   return c.html(
     <DashboardLayout title="Hollo: Federation" selectedMenu="federation">
@@ -70,6 +80,49 @@ data.get("/", (c) => {
             </small>
           )}
         </form>
+      </article>
+
+      <article>
+        <header>
+          <hgroup>
+            <h2>Task queue messages</h2>
+            <p>The number of messages in the task queue.</p>
+          </hgroup>
+        </header>
+        <table>
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th style="text-align: right">Number of messages</th>
+            </tr>
+          </thead>
+          <tbody>
+            {queueMessages.map((queueMessage) => (
+              <tr>
+                <td>{queueMessage.type}</td>
+                <td style="text-align: right">
+                  {queueMessage.number.toLocaleString("en")}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </article>
+
+      <article>
+        <header>
+          <hgroup>
+            <h2>How to shut down your instance</h2>
+            <p>
+              So-called <q>self-destruct</q> your instance.
+            </p>
+          </hgroup>
+        </header>
+        <p>
+          Hollo does not provide so-called <q>self-destruct</q> feature.
+          However, you can achieve the same effect by deleting all{" "}
+          <a href="/accounts">your accounts</a>.
+        </p>
       </article>
     </DashboardLayout>,
   );
