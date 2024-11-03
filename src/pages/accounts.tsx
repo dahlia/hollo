@@ -473,37 +473,37 @@ accounts.get("/:id/migrate", async (c) => {
               account. Note that this action is <strong>irreversible</strong>.
             </p>
           </hgroup>
-          <form method="post" action="migrate/to">
-            <fieldset role="group">
-              <input
-                type="text"
-                name="handle"
-                placeholder={HOLLO_OFFICIAL_ACCOUNT}
-                required
-                {...(error === "to"
-                  ? { "aria-invalid": "true", value: handle }
-                  : { value: accountOwner.account.successor?.handle })}
-                {...(accountOwner.account.successorId == null
-                  ? {}
-                  : { disabled: true })}
-              />
-              {accountOwner.account.successorId == null ? (
-                <button type="submit">Migrate</button>
-              ) : (
-                <button type="submit" disabled>
-                  Migrated
-                </button>
-              )}
-            </fieldset>
-            <small>
-              A fediverse handle (e.g., <tt>@hollo@hollo.social</tt>) or an
-              actor URI (e.g., <tt>https://hollo.social/@hollo</tt>) is allowed.{" "}
-              <strong>
-                The new account must have an alias to this old account.
-              </strong>
-            </small>
-          </form>
         </header>
+        <form method="post" action="migrate/to">
+          <fieldset role="group">
+            <input
+              type="text"
+              name="handle"
+              placeholder={HOLLO_OFFICIAL_ACCOUNT}
+              required
+              {...(error === "to"
+                ? { "aria-invalid": "true", value: handle }
+                : { value: accountOwner.account.successor?.handle })}
+              {...(accountOwner.account.successorId == null
+                ? {}
+                : { disabled: true })}
+            />
+            {accountOwner.account.successorId == null ? (
+              <button type="submit">Migrate</button>
+            ) : (
+              <button type="submit" disabled>
+                Migrated
+              </button>
+            )}
+          </fieldset>
+          <small>
+            A fediverse handle (e.g., <tt>@hollo@hollo.social</tt>) or an actor
+            URI (e.g., <tt>https://hollo.social/@hollo</tt>) is allowed.{" "}
+            <strong>
+              The new account must have an alias to this old account.
+            </strong>
+          </small>
+        </form>
       </article>
     </DashboardLayout>,
   );
