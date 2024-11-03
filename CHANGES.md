@@ -15,6 +15,7 @@ To be released.
  -  Renamed the *Data* menu from the administration dashboard to *Federation*.
 
      -  Now posts also can be force-refreshed.
+     -  Now the number of messages in the task queue is shown.
 
  -  Added support for reporting remote accounts and posts.
     [[#41] by Emelia Smith]
