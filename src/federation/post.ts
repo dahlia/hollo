@@ -73,7 +73,7 @@ import { toEmoji } from "./emoji";
 
 const logger = getLogger(["hollo", "federation", "post"]);
 
-export type ASPost = Article | Note | Question;
+export type ASPost = Article | Note | Question | ChatMessage;
 
 export function isPost(object?: vocab.Object | Link | null): object is ASPost {
   return (
@@ -422,7 +422,10 @@ export async function persistPost(
   });
   if (post == null) return null;
   if (replies != null) {
-    for await (const item of iterateCollection(replies, options)) {
+    for await (const item of iterateCollection(replies, {
+      ...options,
+      suppressError: true,
+    })) {
       if (!isPost(item)) continue;
       await persistPost(db, item, {
         ...options,
