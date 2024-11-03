@@ -12,6 +12,10 @@ To be released.
 
  -  Custom emojis now can be deleted from the administration dashboard.
 
+ -  Renamed the *Data* menu from the administration dashboard to *Federation*.
+
+     -  Now posts also can be force-refreshed.
+
  -  Added support for reporting remote accounts and posts.
     [[#41] by Emelia Smith]
 
