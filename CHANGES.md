@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.1.7
 -------------
 
-To be released.
+Released on November 4, 2024.
 
  -  Fixed a bug where posts from some ActivityPub software (e.g., Misskey,
     Sharkey, Akkoma) had empty `url` fields, causing them to be displayed
