@@ -1,13 +1,13 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
+import mime from "mime";
 import sharp from "sharp";
 import { uuidv7 } from "uuidv7-js";
 import { db } from "../../db";
 import { serializeMedium } from "../../entities/medium";
 import { makeVideoScreenshot, uploadThumbnail } from "../../media";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
+import { assetUrlBase, disk } from "../../s3";
 import { media } from "../../schema";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -31,16 +31,14 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
   }
   const image = sharp(imageBytes);
   const fileMetadata = await image.metadata();
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: `media/${id}/original`,
-      Body: new Uint8Array(fileBuffer),
-      ContentType: file.type,
-      ACL: "public-read",
-    }),
-  );
-  const url = new URL(`media/${id}/original`, S3_URL_BASE).href;
+  const content = new Uint8Array(fileBuffer);
+  const path = `media/${id}/original.${mime.getExtension(file.type)}`;
+  await disk.put(path, content, {
+    contentType: file.type,
+    contentLength: content.byteLength,
+    visibility: "public",
+  });
+  const url = new URL(path, assetUrlBase).href;
   const result = await db
     .insert(media)
     .values({

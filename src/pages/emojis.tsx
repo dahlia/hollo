@@ -1,10 +1,10 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { desc, inArray, isNotNull, ne } from "drizzle-orm";
 import { Hono } from "hono";
+import mime from "mime";
 import { DashboardLayout } from "../components/DashboardLayout";
 import db from "../db";
 import { loginRequired } from "../login";
-import { S3_BUCKET, S3_URL_BASE, s3 } from "../s3";
+import { assetUrlBase, disk } from "../s3";
 import { accounts, customEmojis, posts, reactions } from "../schema";
 
 const emojis = new Hono();
@@ -166,20 +166,18 @@ emojis.post("/", async (c) => {
   if (image == null || !(image instanceof File)) {
     return c.text("No image provided", 400);
   }
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: `emojis/${shortcode}`,
-      Body: new Uint8Array(await image.arrayBuffer()),
-      ContentType: image.type,
-      ACL: "public-read",
-    }),
-  );
-  const url = new URL(`emojis/${shortcode}`, S3_URL_BASE).href;
+  const content = new Uint8Array(await image.arrayBuffer());
+  const path = `emojis/${shortcode}.${mime.getExtension(image.type)}`;
+  await disk.put(path, content, {
+    contentType: image.type,
+    contentLength: content.byteLength,
+    visibility: "public",
+  });
+  const url = new URL(path, assetUrlBase).href;
   await db.insert(customEmojis).values({
     category,
     shortcode,
-    url,
+    url: url,
   });
   return c.redirect("/emojis");
 });

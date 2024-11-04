@@ -1,0 +1,32 @@
+services:
+  hollo:
+    image: ghcr.io/dahlia/hollo:canary
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: "postgres://user:password@postgres:5432/database"
+      SECRET_KEY: "${SECRET_KEY}"
+      LOG_LEVEL: "${LOG_LEVEL}"
+      BEHIND_PROXY: "${BEHIND_PROXY}"
+      DRIVE_DISK: fs
+      ASSET_URL_BASE: http://localhost:3000/assets/
+      FS_ASSET_PATH: /var/lib/hollo
+    depends_on:
+      - postgres
+    volumes:
+      - assets_data:/var/lib/hollo
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: database
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  assets_data:

@@ -1,4 +1,3 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { Block, Undo, isActor, lookupObject } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
@@ -19,6 +18,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { Hono } from "hono";
+import mime from "mime";
 import { z } from "zod";
 import { db } from "../../db";
 import {
@@ -38,7 +38,7 @@ import {
   unfollowAccount,
 } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
+import { assetUrlBase, disk } from "../../s3";
 import {
   type Account,
   type AccountOwner,
@@ -117,31 +117,25 @@ app.patch(
     const form = c.req.valid("form");
     let avatarUrl = undefined;
     if (form.avatar instanceof File) {
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: `avatars/${account.id}`,
-          Body: new Uint8Array(await form.avatar.arrayBuffer()),
-          ContentType: form.avatar.type,
-          ACL: "public-read",
-        }),
-      );
-      avatarUrl = new URL(`avatars/${account.id}?${Date.now()}`, S3_URL_BASE)
-        .href;
+      const content = await form.avatar.arrayBuffer();
+      const path = `avatars/${account.id}.${mime.getExtension(form.avatar.type)}`;
+      await disk.put(path, new Uint8Array(content), {
+        contentType: form.avatar.type,
+        contentLength: content.byteLength,
+        visibility: "public",
+      });
+      avatarUrl = new URL(`${path}?${Date.now()}`, assetUrlBase).href;
     }
     let coverUrl = undefined;
     if (form.header instanceof File) {
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: `covers/${account.id}`,
-          Body: new Uint8Array(await form.header.arrayBuffer()),
-          ContentType: form.header.type,
-          ACL: "public-read",
-        }),
-      );
-      coverUrl = new URL(`covers/${account.id}?${Date.now()}`, S3_URL_BASE)
-        .href;
+      const content = await form.header.arrayBuffer();
+      const path = `covers/${account.id}.${mime.getExtension(form.header.type)}`;
+      await disk.put(path, new Uint8Array(content), {
+        contentType: form.header.type,
+        contentLength: content.byteLength,
+        visibility: "public",
+      });
+      coverUrl = new URL(`${path}?${Date.now()}`, assetUrlBase).href;
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const fmtOpts = {
