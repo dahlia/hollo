@@ -1,58 +1,10 @@
 Hollo changelog
 ===============
 
-Version 0.2.1
+Version 0.1.7
 -------------
 
 To be released.
-
-
-Version 0.2.0
--------------
-
-Released on November 3, 2024.
-
- -  Dropped support for Redis.
-
- -  Added two-factor authentication support.  [[#38]]
-
- -  Custom emojis now can be deleted from the administration dashboard.
-
- -  Renamed the *Data* menu from the administration dashboard to *Federation*.
-
-     -  Now posts also can be force-refreshed.
-     -  Now the number of messages in the task queue is shown.
-
- -  Added support for reporting remote accounts and posts.
-    [[#41] by Emelia Smith]
-
- -  Improved alignment on Mastodon API changes about OAuth and apps.
-    [[#43] by Emelia Smith]
-
-     -  `GET /api/v1/apps/verify_credentials` no longer requires `read` scope,
-        just a valid access token (or client credential).
-     -  `POST /api/v1/apps` now supports multiple redirect URIs.
-     -  `redirect_uri` is deprecated, but software may still rely on it until
-        they switch to `redirect_uris`.
-     -  Expose `redirect_uri`, `redirect_uris`, and `scopes` to verify
-        credentials for apps.
-
- -  Added support for RFC 8414 for OAuth Authorization Server metadata endpoint.
-    [[#47] by Emelia Smith]
-
- -  On creating a new account, the user now can choose to follow the official
-    Hollo account.
-
- -  Added a favicon.
-
- -  Added `PORT` and `ALLOW_PRIVATE_ADDRESS` environment variables.
-    [[#53] by Helge Krueger]
-
-[#38]: https://github.com/dahlia/hollo/issues/38
-[#41]: https://github.com/dahlia/hollo/pull/41
-[#43]: https://github.com/dahlia/hollo/pull/43
-[#47]: https://github.com/dahlia/hollo/pull/47
-[#53]: https://github.com/dahlia/hollo/pull/53
 
 
 Version 0.1.6
