@@ -6,6 +6,12 @@ Version 0.1.7
 
 To be released.
 
+ -  Fixed a bug where posts from some ActivityPub software (e.g., Misskey,
+    Sharkey, Akkoma) had empty `url` fields, causing them to be displayed
+    incorrectly in client apps.  [[#58]]
+
+[#58]: https://github.com/dahlia/hollo/issues/58
+
 
 Version 0.1.6
 -------------
