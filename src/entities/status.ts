@@ -216,7 +216,7 @@ export function serializePost(
     visibility: post.visibility,
     language: post.language,
     uri: post.iri,
-    url: post.url,
+    url: post.url ?? post.iri,
     replies_count: post.repliesCount ?? 0,
     reblogs_count: post.sharesCount ?? 0,
     favourites_count: post.likesCount ?? 0,
