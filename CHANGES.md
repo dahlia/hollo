@@ -1,7 +1,7 @@
 Hollo changelog
 ===============
 
-Version 0.3.0
+Version 0.2.1
 -------------
 
 To be released.
