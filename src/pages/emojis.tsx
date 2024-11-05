@@ -177,7 +177,7 @@ emojis.post("/", async (c) => {
   await db.insert(customEmojis).values({
     category,
     shortcode,
-    url: url,
+    url,
   });
   return c.redirect("/emojis");
 });
