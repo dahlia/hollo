@@ -117,6 +117,10 @@ app.patch(
     const form = c.req.valid("form");
     let avatarUrl = undefined;
     if (form.avatar instanceof File) {
+      const allowedImageMimeTypes = ['image/png', 'image/jpeg', 'image/gif'];
+      if (!allowedImageMimeTypes.includes(form.avatar.type)) {
+        return c.json({ error: 'Invalid avatar file type.' }, 400);
+      }
       const content = await form.avatar.arrayBuffer();
       const path = `avatars/${account.id}.${mime.getExtension(form.avatar.type)}`;
       await disk.put(path, new Uint8Array(content), {
