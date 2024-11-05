@@ -130,11 +130,15 @@ app.patch(
     if (form.header instanceof File) {
       const content = await form.header.arrayBuffer();
       const path = `covers/${account.id}.${mime.getExtension(form.header.type)}`;
-      await disk.put(path, new Uint8Array(content), {
-        contentType: form.header.type,
-        contentLength: content.byteLength,
-        visibility: "public",
-      });
+      try {
+        await disk.put(path, new Uint8Array(content), {
+          contentType: form.header.type,
+          contentLength: content.byteLength,
+          visibility: "public",
+        });
+      } catch (error) {
+        return c.json({ error: 'Failed to upload header image.' }, 500);
+      }
       coverUrl = new URL(`${path}?${Date.now()}`, assetUrlBase).href;
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
