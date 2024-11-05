@@ -28,11 +28,15 @@ export async function uploadThumbnail(
   );
   const thumbnail = await original.resize(thumbnailSize).webp().toBuffer();
   const content = new Uint8Array(thumbnail);
-  await disk.put(`media/${id}/thumbnail.webp`, content, {
-    contentType: "image/webp",
-    contentLength: content.byteLength,
-    visibility: "public",
-  });
+  try {
+    await disk.put(`media/${id}/thumbnail.webp`, content, {
+      contentType: "image/webp",
+      contentLength: content.byteLength,
+      visibility: "public",
+    });
+  } catch (error) {
+    throw new Error(`Failed to store thumbnail: ${error.message}`);
+  }
   return {
     thumbnailUrl: new URL(`media/${id}/thumbnail.webp`, assetUrlBase).href,
     thumbnailType: "image/webp",
