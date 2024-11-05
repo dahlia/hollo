@@ -37,11 +37,15 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
     return c.json({ error: 'Unsupported media type' }, 400);
   }
   const path = `media/${id}/original.${extension}`;
-  await disk.put(path, content, {
-    contentType: file.type,
-    contentLength: content.byteLength,
-    visibility: "public",
-  });
+  try {
+    await disk.put(path, content, {
+      contentType: file.type,
+      contentLength: content.byteLength,
+      visibility: "public",
+    });
+  } catch (error) {
+    return c.json({ error: 'Failed to save media file' }, 500);
+  }
   const url = new URL(path, assetUrlBase).href;
   const result = await db
     .insert(media)
