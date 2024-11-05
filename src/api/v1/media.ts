@@ -32,7 +32,11 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
   const image = sharp(imageBytes);
   const fileMetadata = await image.metadata();
   const content = new Uint8Array(fileBuffer);
-  const path = `media/${id}/original.${mime.getExtension(file.type)}`;
+  const extension = mime.getExtension(file.type);
+  if (!extension) {
+    return c.json({ error: 'Unsupported media type' }, 400);
+  }
+  const path = `media/${id}/original.${extension}`;
   await disk.put(path, content, {
     contentType: file.type,
     contentLength: content.byteLength,
