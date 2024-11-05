@@ -66,7 +66,7 @@ switch (DRIVE_DISK) {
     });
     break;
   default:
-    throw new Error("DRIVE_DISK is required");
+    throw new Error(`Unknown DRIVE_DISK value: '${DRIVE_DISK}'`);
 }
 
 export const disk = new Disk(driver);
