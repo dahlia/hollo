@@ -28,7 +28,14 @@ const accessKeyId = process.env["AWS_ACCESS_KEY_ID"];
 const secretAccessKey = process.env["AWS_SECRET_ACCESS_KEY"];
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
-export const driveDisk = process.env["DRIVE_DISK"];
+if (process.env["DRIVE_DISK"] == null) {
+  getLogger(["hollo", "assets"]).warn(
+    "DRIVE_DISK is not configured; defaults to 's3'.  " +
+    "The DRIVE_DISK environment variable will be mandatory in the future versions."
+  );
+}
+// biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+export const driveDisk = process.env["DRIVE_DISK"] ?? "s3";
 if (driveDisk == null) throw new Error("DRIVE_DISK is required");
 export const DRIVE_DISK = driveDisk;
 
