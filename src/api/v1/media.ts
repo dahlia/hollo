@@ -7,8 +7,8 @@ import { db } from "../../db";
 import { serializeMedium } from "../../entities/medium";
 import { makeVideoScreenshot, uploadThumbnail } from "../../media";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { assetUrlBase, disk } from "../../s3";
 import { media } from "../../schema";
+import { assetUrlBase, disk } from "../../storage";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -34,7 +34,7 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
   const content = new Uint8Array(fileBuffer);
   const extension = mime.getExtension(file.type);
   if (!extension) {
-    return c.json({ error: 'Unsupported media type' }, 400);
+    return c.json({ error: "Unsupported media type" }, 400);
   }
   const path = `media/${id}/original.${extension}`;
   try {
@@ -44,7 +44,7 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
       visibility: "public",
     });
   } catch (error) {
-    return c.json({ error: 'Failed to save media file' }, 500);
+    return c.json({ error: "Failed to save media file" }, 500);
   }
   const url = new URL(path, assetUrlBase).href;
   const result = await db

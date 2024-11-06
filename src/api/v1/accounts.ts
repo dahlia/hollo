@@ -38,7 +38,6 @@ import {
   unfollowAccount,
 } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { assetUrlBase, disk } from "../../s3";
 import {
   type Account,
   type AccountOwner,
@@ -55,6 +54,7 @@ import {
   pinnedPosts,
   posts,
 } from "../../schema";
+import { assetUrlBase, disk } from "../../storage";
 import { extractCustomEmojis, formatText } from "../../text";
 import { timelineQuerySchema } from "./timelines";
 
@@ -117,9 +117,9 @@ app.patch(
     const form = c.req.valid("form");
     let avatarUrl = undefined;
     if (form.avatar instanceof File) {
-      const allowedImageMimeTypes = ['image/png', 'image/jpeg', 'image/gif'];
+      const allowedImageMimeTypes = ["image/png", "image/jpeg", "image/gif"];
       if (!allowedImageMimeTypes.includes(form.avatar.type)) {
-        return c.json({ error: 'Invalid avatar file type.' }, 400);
+        return c.json({ error: "Invalid avatar file type." }, 400);
       }
       const content = await form.avatar.arrayBuffer();
       const path = `avatars/${account.id}.${mime.getExtension(form.avatar.type)}`;
@@ -141,7 +141,7 @@ app.patch(
           visibility: "public",
         });
       } catch (error) {
-        return c.json({ error: 'Failed to upload header image.' }, 500);
+        return c.json({ error: "Failed to upload header image." }, 500);
       }
       coverUrl = new URL(`${path}?${Date.now()}`, assetUrlBase).href;
     }

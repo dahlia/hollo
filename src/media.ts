@@ -3,8 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ffmpeg from "fluent-ffmpeg";
 import type { Sharp } from "sharp";
-import { disk } from "./s3";
-import { assetUrlBase } from "./s3";
+import { disk } from "./storage";
+import { assetUrlBase } from "./storage";
 
 const DEFAULT_THUMBNAIL_AREA = 230_400;
 
@@ -34,8 +34,11 @@ export async function uploadThumbnail(
       contentLength: content.byteLength,
       visibility: "public",
     });
-  } catch (error) {
-    throw new Error(`Failed to store thumbnail: ${error.message}`);
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to store thumbnail: ${error.message}`, error);
+    }
+    throw error;
   }
   return {
     thumbnailUrl: new URL(`media/${id}/thumbnail.webp`, assetUrlBase).href,

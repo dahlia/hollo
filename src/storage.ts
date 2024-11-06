@@ -1,4 +1,5 @@
 import { fromEnv } from "@aws-sdk/credential-providers";
+import { getLogger } from "@logtape/logtape";
 import { Disk } from "flydrive";
 import { FSDriver } from "flydrive/drivers/fs";
 import { S3Driver } from "flydrive/drivers/s3";
@@ -31,7 +32,7 @@ const secretAccessKey = process.env["AWS_SECRET_ACCESS_KEY"];
 if (process.env["DRIVE_DISK"] == null) {
   getLogger(["hollo", "assets"]).warn(
     "DRIVE_DISK is not configured; defaults to 's3'.  " +
-    "The DRIVE_DISK environment variable will be mandatory in the future versions."
+      "The DRIVE_DISK environment variable will be mandatory in the future versions.",
   );
 }
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)

@@ -9,7 +9,7 @@ import fedi from "./federation";
 import image from "./image";
 import oauth, { oauthAuthorizationServer } from "./oauth";
 import pages from "./pages";
-import { DRIVE_DISK, assetPath } from "./s3";
+import { DRIVE_DISK, assetPath } from "./storage";
 
 const app = new Hono();
 

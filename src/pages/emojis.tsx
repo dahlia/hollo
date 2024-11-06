@@ -4,8 +4,8 @@ import mime from "mime";
 import { DashboardLayout } from "../components/DashboardLayout";
 import db from "../db";
 import { loginRequired } from "../login";
-import { assetUrlBase, disk } from "../s3";
 import { accounts, customEmojis, posts, reactions } from "../schema";
+import { assetUrlBase, disk } from "../storage";
 
 const emojis = new Hono();
 
