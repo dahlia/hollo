@@ -7,6 +7,16 @@ Version 0.3.0
 To be released.
 
 
+Version 0.2.1
+-------------
+
+Released on November 4, 2024.
+
+ -  Fixed a bug where posts from some ActivityPub software (e.g., Misskey,
+    Sharkey, Akkoma) had empty `url` fields, causing them to be displayed
+    incorrectly in client apps.  [[#58]]
+
+
 Version 0.2.0
 -------------
 
@@ -53,6 +63,18 @@ Released on November 3, 2024.
 [#43]: https://github.com/dahlia/hollo/pull/43
 [#47]: https://github.com/dahlia/hollo/pull/47
 [#53]: https://github.com/dahlia/hollo/pull/53
+
+
+Version 0.1.7
+-------------
+
+Released on November 4, 2024.
+
+ -  Fixed a bug where posts from some ActivityPub software (e.g., Misskey,
+    Sharkey, Akkoma) had empty `url` fields, causing them to be displayed
+    incorrectly in client apps.  [[#58]]
+
+[#58]: https://github.com/dahlia/hollo/issues/58
 
 
 Version 0.1.6
