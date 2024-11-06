@@ -59,6 +59,7 @@ import { extractCustomEmojis, formatText } from "../../text";
 import { timelineQuerySchema } from "./timelines";
 
 const app = new Hono<{ Variables: Variables }>();
+const allowedImageMimeTypes = ["image/gif", "image/jpeg", "image/png"];
 
 app.get(
   "/verify_credentials",
@@ -117,12 +118,16 @@ app.patch(
     const form = c.req.valid("form");
     let avatarUrl = undefined;
     if (form.avatar instanceof File) {
-      const allowedImageMimeTypes = ["image/png", "image/jpeg", "image/gif"];
       if (!allowedImageMimeTypes.includes(form.avatar.type)) {
         return c.json({ error: "Invalid avatar file type." }, 400);
       }
+      const extension = mime.getExtension(form.avatar.type);
+      if (!extension) {
+        return c.json({ error: "Unsupported media type" }, 400);
+      }
+      const sanitizedExt = extension.replace(/[/\\]/g, "");
+      const path = `avatars/${account.id}.${sanitizedExt}`;
       const content = await form.avatar.arrayBuffer();
-      const path = `avatars/${account.id}.${mime.getExtension(form.avatar.type)}`;
       await disk.put(path, new Uint8Array(content), {
         contentType: form.avatar.type,
         contentLength: content.byteLength,
@@ -132,8 +137,16 @@ app.patch(
     }
     let coverUrl = undefined;
     if (form.header instanceof File) {
+      if (!allowedImageMimeTypes.includes(form.header.type)) {
+        return c.json({ error: "Invalid header file type." }, 400);
+      }
+      const extension = mime.getExtension(form.header.type);
+      if (!extension) {
+        return c.json({ error: "Unsupported media type" }, 400);
+      }
+      const sanitizedExt = extension.replace(/[/\\]/g, "");
+      const path = `covers/${account.id}.${sanitizedExt}`;
       const content = await form.header.arrayBuffer();
-      const path = `covers/${account.id}.${mime.getExtension(form.header.type)}`;
       try {
         await disk.put(path, new Uint8Array(content), {
           contentType: form.header.type,

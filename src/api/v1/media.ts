@@ -36,7 +36,8 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
   if (!extension) {
     return c.json({ error: "Unsupported media type" }, 400);
   }
-  const path = `media/${id}/original.${extension}`;
+  const sanitizedExt = extension.replace(/[/\\]/g, "");
+  const path = `media/${id}/original.${sanitizedExt}`;
   try {
     await disk.put(path, content, {
       contentType: file.type,
