@@ -154,13 +154,19 @@ accounts.post("/", async (c) => {
     const actor = await fedCtx.lookupObject(HOLLO_OFFICIAL_ACCOUNT);
     if (isActor(actor)) {
       await db.transaction(async (tx) => {
-        const following = await persistAccount(tx, actor, fedCtx);
+        const following = await persistAccount(tx, actor, c.req.url, fedCtx);
         if (following != null) {
           await followAccount(tx, fedCtx, { ...account, owner }, following);
-          await persistAccountPosts(tx, account, REMOTE_ACTOR_FETCH_POSTS, {
-            ...fedCtx,
-            suppressError: true,
-          });
+          await persistAccountPosts(
+            tx,
+            account,
+            REMOTE_ACTOR_FETCH_POSTS,
+            c.req.url,
+            {
+              ...fedCtx,
+              suppressError: true,
+            },
+          );
         }
       });
     }
@@ -336,14 +342,20 @@ accounts.post("/:id", async (c) => {
   const account = { ...accountOwner.account, owner: accountOwner };
   const newsActor = await fedCtx.lookupObject(HOLLO_OFFICIAL_ACCOUNT);
   if (isActor(newsActor)) {
-    const newsAccount = await persistAccount(db, newsActor, fedCtx);
+    const newsAccount = await persistAccount(db, newsActor, c.req.url, fedCtx);
     if (newsAccount != null) {
       if (news) {
         await followAccount(db, fedCtx, account, newsAccount);
-        await persistAccountPosts(db, newsAccount, REMOTE_ACTOR_FETCH_POSTS, {
-          ...fedCtx,
-          suppressError: true,
-        });
+        await persistAccountPosts(
+          db,
+          newsAccount,
+          REMOTE_ACTOR_FETCH_POSTS,
+          c.req.url,
+          {
+            ...fedCtx,
+            suppressError: true,
+          },
+        );
       } else await unfollowAccount(db, fedCtx, account, newsAccount);
     }
   }
@@ -582,7 +594,7 @@ accounts.post("/:id/migrate/to", async (c) => {
     );
     return c.redirect(errorPage);
   }
-  const targetAccount = await persistAccount(db, target);
+  const targetAccount = await persistAccount(db, target, c.req.url);
   if (targetAccount == null) {
     logger.error("Failed to persist the account: {actor}", { actor: target });
     return c.redirect(errorPage);

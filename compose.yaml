@@ -8,9 +8,10 @@ services:
       SECRET_KEY: "${SECRET_KEY}"
       LOG_LEVEL: "${LOG_LEVEL}"
       BEHIND_PROXY: "${BEHIND_PROXY}"
+      DRIVE_DISK: s3
+      ASSET_URL_BASE: http://localhost:9000/hollo/
       S3_REGION: us-east-1
       S3_BUCKET: hollo
-      S3_URL_BASE: http://localhost:9000/hollo/
       S3_ENDPOINT_URL: http://minio:9000
       S3_FORCE_PATH_STYLE: "true"
       AWS_ACCESS_KEY_ID: minioadmin

@@ -1,3 +1,4 @@
 .env
+assets/
 fedify-hollo-*.tgz
 node_modules/
