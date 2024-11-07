@@ -72,7 +72,7 @@ export async function formatText(
     if (mention in handles) continue;
     const actor = await lookupObject(mention, options);
     if (!isActor(actor) || actor.id == null) continue;
-    const account = await persistAccount(db, actor, options);
+    const account = await persistAccount(db, actor, options.url, options);
     if (account == null) continue;
     handles[account.handle] = {
       href: account.url ?? account.iri,

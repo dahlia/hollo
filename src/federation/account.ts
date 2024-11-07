@@ -52,6 +52,7 @@ export async function persistAccount(
     ExtractTablesWithRelations<typeof schema>
   >,
   actor: Actor,
+  baseUrl: string | URL,
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
@@ -86,8 +87,12 @@ export async function persistAccount(
   const successorId =
     successor == null
       ? null
-      : ((await persistAccount(db, successor, { ...options, skipUpdate: true }))
-          ?.id ?? null);
+      : ((
+          await persistAccount(db, successor, baseUrl, {
+            ...options,
+            skipUpdate: true,
+          })
+        )?.id ?? null);
   const fieldHtmls: Record<string, string> = {};
   for await (const attachment of actor.getAttachments(opts)) {
     if (
@@ -187,7 +192,7 @@ export async function persistAccount(
     const posts: Post[] = [];
     for await (const item of iterateCollection(featuredCollection, opts)) {
       if (!isPost(item)) continue;
-      const post = await persistPost(db, item, {
+      const post = await persistPost(db, item, baseUrl, {
         ...options,
         account,
         skipUpdate: true,
@@ -216,6 +221,7 @@ export async function persistAccountPosts(
   >,
   account: schema.Account,
   fetchPosts: number,
+  baseUrl: URL | string,
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
@@ -232,7 +238,7 @@ export async function persistAccountPosts(
       if (activity instanceof Create) {
         const item = await activity.getObject(options);
         if (!isPost(item)) continue;
-        const post = await persistPost(db, item, {
+        const post = await persistPost(db, item, baseUrl, {
           ...options,
           account,
           skipUpdate: true,
@@ -242,7 +248,7 @@ export async function persistAccountPosts(
         const item = await activity.getObject(options);
         if (!isPost(item)) continue;
         await db.transaction(async (tx) => {
-          const post = await persistSharingPost(tx, activity, item, {
+          const post = await persistSharingPost(tx, activity, item, baseUrl, {
             ...options,
             account,
           });
@@ -264,6 +270,7 @@ export async function persistAccountByIri(
     ExtractTablesWithRelations<typeof schema>
   >,
   iri: string,
+  baseUrl: URL | string,
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
@@ -275,7 +282,7 @@ export async function persistAccountByIri(
   if (account != null) return account;
   const actor = await lookupObject(iri, options);
   if (!isActor(actor) || actor.id == null) return null;
-  return await persistAccount(db, actor, options);
+  return await persistAccount(db, actor, baseUrl, options);
 }
 
 export async function updateAccountStats(

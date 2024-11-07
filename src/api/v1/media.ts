@@ -1,14 +1,14 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
+import mime from "mime";
 import sharp from "sharp";
 import { uuidv7 } from "uuidv7-js";
 import { db } from "../../db";
 import { serializeMedium } from "../../entities/medium";
 import { makeVideoScreenshot, uploadThumbnail } from "../../media";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
 import { media } from "../../schema";
+import { disk, getAssetUrl } from "../../storage";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -31,16 +31,23 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
   }
   const image = sharp(imageBytes);
   const fileMetadata = await image.metadata();
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: `media/${id}/original`,
-      Body: new Uint8Array(fileBuffer),
-      ContentType: file.type,
-      ACL: "public-read",
-    }),
-  );
-  const url = new URL(`media/${id}/original`, S3_URL_BASE).href;
+  const content = new Uint8Array(fileBuffer);
+  const extension = mime.getExtension(file.type);
+  if (!extension) {
+    return c.json({ error: "Unsupported media type" }, 400);
+  }
+  const sanitizedExt = extension.replace(/[/\\]/g, "");
+  const path = `media/${id}/original.${sanitizedExt}`;
+  try {
+    await disk.put(path, content, {
+      contentType: file.type,
+      contentLength: content.byteLength,
+      visibility: "public",
+    });
+  } catch (error) {
+    return c.json({ error: "Failed to save media file" }, 500);
+  }
+  const url = getAssetUrl(path, c.req.url);
   const result = await db
     .insert(media)
     .values({
@@ -50,7 +57,7 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
       width: fileMetadata.width!,
       height: fileMetadata.height!,
       description,
-      ...(await uploadThumbnail(id, image)),
+      ...(await uploadThumbnail(id, image, c.req.url)),
     })
     .returning();
   if (result.length < 1) {

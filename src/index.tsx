@@ -2,17 +2,28 @@ import "./logging";
 import { join } from "node:path";
 import { federation } from "@fedify/fedify/x/hono";
 import { Hono } from "hono";
+import { serveStatic } from "hono/bun";
 import { behindProxy } from "x-forwarded-fetch";
 import api from "./api";
 import fedi from "./federation";
 import image from "./image";
 import oauth, { oauthAuthorizationServer } from "./oauth";
 import pages from "./pages";
+import { DRIVE_DISK, assetPath } from "./storage";
 
 const app = new Hono();
 
-app.use(federation(fedi, (_) => undefined));
+if (DRIVE_DISK === "fs") {
+  app.use(
+    "/assets/*",
+    serveStatic({
+      root: assetPath,
+      rewriteRequestPath: (path) => path.substring("/assets".length),
+    }),
+  );
+}
 
+app.use(federation(fedi, (_) => undefined));
 app.route("/", pages);
 app.route("/oauth", oauth);
 app.get("/.well-known/oauth-authorization-server", oauthAuthorizationServer);

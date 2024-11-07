@@ -1,4 +1,3 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { Block, Undo, isActor, lookupObject } from "@fedify/fedify";
 import * as vocab from "@fedify/fedify/vocab";
 import { zValidator } from "@hono/zod-validator";
@@ -19,6 +18,7 @@ import {
   sql,
 } from "drizzle-orm";
 import { Hono } from "hono";
+import mime from "mime";
 import { z } from "zod";
 import { db } from "../../db";
 import {
@@ -38,7 +38,6 @@ import {
   unfollowAccount,
 } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
-import { S3_BUCKET, S3_URL_BASE, s3 } from "../../s3";
 import {
   type Account,
   type AccountOwner,
@@ -55,10 +54,12 @@ import {
   pinnedPosts,
   posts,
 } from "../../schema";
+import { disk, getAssetUrl } from "../../storage";
 import { extractCustomEmojis, formatText } from "../../text";
 import { timelineQuerySchema } from "./timelines";
 
 const app = new Hono<{ Variables: Variables }>();
+const allowedImageMimeTypes = ["image/gif", "image/jpeg", "image/png"];
 
 app.get(
   "/verify_credentials",
@@ -117,31 +118,45 @@ app.patch(
     const form = c.req.valid("form");
     let avatarUrl = undefined;
     if (form.avatar instanceof File) {
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: `avatars/${account.id}`,
-          Body: new Uint8Array(await form.avatar.arrayBuffer()),
-          ContentType: form.avatar.type,
-          ACL: "public-read",
-        }),
-      );
-      avatarUrl = new URL(`avatars/${account.id}?${Date.now()}`, S3_URL_BASE)
-        .href;
+      if (!allowedImageMimeTypes.includes(form.avatar.type)) {
+        return c.json({ error: "Invalid avatar file type." }, 400);
+      }
+      const extension = mime.getExtension(form.avatar.type);
+      if (!extension) {
+        return c.json({ error: "Unsupported media type" }, 400);
+      }
+      const sanitizedExt = extension.replace(/[/\\]/g, "");
+      const path = `avatars/${account.id}.${sanitizedExt}`;
+      const content = await form.avatar.arrayBuffer();
+      await disk.put(path, new Uint8Array(content), {
+        contentType: form.avatar.type,
+        contentLength: content.byteLength,
+        visibility: "public",
+      });
+      avatarUrl = getAssetUrl(`${path}?${Date.now()}`, c.req.url);
     }
     let coverUrl = undefined;
     if (form.header instanceof File) {
-      await s3.send(
-        new PutObjectCommand({
-          Bucket: S3_BUCKET,
-          Key: `covers/${account.id}`,
-          Body: new Uint8Array(await form.header.arrayBuffer()),
-          ContentType: form.header.type,
-          ACL: "public-read",
-        }),
-      );
-      coverUrl = new URL(`covers/${account.id}?${Date.now()}`, S3_URL_BASE)
-        .href;
+      if (!allowedImageMimeTypes.includes(form.header.type)) {
+        return c.json({ error: "Invalid header file type." }, 400);
+      }
+      const extension = mime.getExtension(form.header.type);
+      if (!extension) {
+        return c.json({ error: "Unsupported media type" }, 400);
+      }
+      const sanitizedExt = extension.replace(/[/\\]/g, "");
+      const path = `covers/${account.id}.${sanitizedExt}`;
+      const content = await form.header.arrayBuffer();
+      try {
+        await disk.put(path, new Uint8Array(content), {
+          contentType: form.header.type,
+          contentLength: content.byteLength,
+          visibility: "public",
+        });
+      } catch (error) {
+        return c.json({ error: "Failed to upload header image." }, 500);
+      }
+      coverUrl = getAssetUrl(`${path}?${Date.now()}`, c.req.url);
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const fmtOpts = {
@@ -324,7 +339,7 @@ app.get(
             };
       const actor = await lookupObject(acct, options);
       if (!isActor(actor)) return c.json({ error: "Record not found" }, 404);
-      const loaded = await persistAccount(db, actor, options);
+      const loaded = await persistAccount(db, actor, c.req.url, options);
       if (loaded != null) {
         account = {
           ...loaded,
@@ -392,7 +407,7 @@ app.get(
           }),
         };
         const actor = await lookupObject(query.q, options);
-        if (isActor(actor)) await persistAccount(db, actor, options);
+        if (isActor(actor)) await persistAccount(db, actor, c.req.url, options);
       }
     }
     const accountList = await db.query.accounts.findMany({
@@ -529,13 +544,19 @@ app.get(
       .where(eq(posts.accountId, account.id));
     if (cnt < REMOTE_ACTOR_FETCH_POSTS) {
       const fedCtx = federation.createContext(c.req.raw, undefined);
-      await persistAccountPosts(db, account, REMOTE_ACTOR_FETCH_POSTS, {
-        documentLoader: await fedCtx.getDocumentLoader({
-          username: tokenOwner.handle,
-        }),
-        contextLoader: fedCtx.contextLoader,
-        suppressError: true,
-      });
+      await persistAccountPosts(
+        db,
+        account,
+        REMOTE_ACTOR_FETCH_POSTS,
+        c.req.url,
+        {
+          documentLoader: await fedCtx.getDocumentLoader({
+            username: tokenOwner.handle,
+          }),
+          contextLoader: fedCtx.contextLoader,
+          suppressError: true,
+        },
+      );
     }
     const query = c.req.valid("query");
     const limit = query.limit ?? 20;

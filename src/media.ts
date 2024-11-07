@@ -1,10 +1,10 @@
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
 import ffmpeg from "fluent-ffmpeg";
 import type { Sharp } from "sharp";
-import { S3_BUCKET, S3_URL_BASE, s3 } from "./s3";
+import { disk } from "./storage";
+import { getAssetUrl } from "./storage";
 
 const DEFAULT_THUMBNAIL_AREA = 230_400;
 
@@ -18,6 +18,7 @@ export interface Thumbnail {
 export async function uploadThumbnail(
   id: string,
   original: Sharp,
+  url: URL | string,
   thumbnailArea = DEFAULT_THUMBNAIL_AREA,
 ): Promise<Thumbnail> {
   const originalMetadata = await original.metadata();
@@ -27,17 +28,21 @@ export async function uploadThumbnail(
     thumbnailArea,
   );
   const thumbnail = await original.resize(thumbnailSize).webp().toBuffer();
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: S3_BUCKET,
-      Key: `media/${id}/thumbnail`,
-      Body: thumbnail.subarray(),
-      ContentType: "image/webp",
-      ACL: "public-read",
-    }),
-  );
+  const content = new Uint8Array(thumbnail);
+  try {
+    await disk.put(`media/${id}/thumbnail.webp`, content, {
+      contentType: "image/webp",
+      contentLength: content.byteLength,
+      visibility: "public",
+    });
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw new Error(`Failed to store thumbnail: ${error.message}`, error);
+    }
+    throw error;
+  }
   return {
-    thumbnailUrl: new URL(`media/${id}/thumbnail`, S3_URL_BASE).href,
+    thumbnailUrl: getAssetUrl(`media/${id}/thumbnail.webp`, url),
     thumbnailType: "image/webp",
     thumbnailWidth: thumbnailSize.width,
     thumbnailHeight: thumbnailSize.height,

@@ -113,7 +113,12 @@ app.get(
         offset: query.offset,
       });
       if (isActor(resolved)) {
-        const resolvedAccount = await persistAccount(db, resolved, options);
+        const resolvedAccount = await persistAccount(
+          db,
+          resolved,
+          c.req.url,
+          options,
+        );
         if (resolvedAccount != null) hits.unshift(resolvedAccount);
       }
       for (const hit of hits) {
@@ -144,7 +149,12 @@ app.get(
         hits != null &&
         (resolved instanceof Note || resolved instanceof Article)
       ) {
-        const resolvedPost = await persistPost(db, resolved, options);
+        const resolvedPost = await persistPost(
+          db,
+          resolved,
+          c.req.url,
+          options,
+        );
         if (resolvedPost != null) hits.push(resolvedPost);
       }
       const result =

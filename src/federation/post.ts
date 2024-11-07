@@ -91,6 +91,7 @@ export async function persistPost(
     ExtractTablesWithRelations<typeof schema>
   >,
   object: ASPost,
+  baseUrl: URL | string,
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
@@ -114,7 +115,10 @@ export async function persistPost(
   const account =
     options?.account != null && options.account.iri === actor.id?.href
       ? options.account
-      : await persistAccount(db, actor, { ...options, skipUpdate: true });
+      : await persistAccount(db, actor, baseUrl, {
+          ...options,
+          skipUpdate: true,
+        });
   logger.debug("Persisted account: {account}", { account });
   if (account == null) return null;
   let replyTargetId: string | null = null;
@@ -139,7 +143,7 @@ export async function persistPost(
         logger.debug("Persisting the reply target...");
         const replyTarget = await object.getReplyTarget(options);
         if (isPost(replyTarget)) {
-          const replyTargetObj = await persistPost(db, replyTarget, {
+          const replyTargetObj = await persistPost(db, replyTarget, baseUrl, {
             ...options,
             skipUpdate: true,
           });
@@ -197,7 +201,7 @@ export async function persistPost(
       logger.debug("Persisting the quote target...");
       const quoteTarget = await lookupObject(objectLink, options);
       if (isPost(quoteTarget)) {
-        const quoteTargetObj = await persistPost(db, quoteTarget, {
+        const quoteTargetObj = await persistPost(db, quoteTarget, baseUrl, {
           ...options,
           skipUpdate: true,
         });
@@ -352,7 +356,12 @@ export async function persistPost(
   await db.delete(mentions).where(eq(mentions.postId, post.id));
   for await (const tag of object.getTags(options)) {
     if (tag instanceof vocab.Mention && tag.name != null && tag.href != null) {
-      const account = await persistAccountByIri(db, tag.href.href, options);
+      const account = await persistAccountByIri(
+        db,
+        tag.href.href,
+        baseUrl,
+        options,
+      );
       if (account == null) continue;
       await db.insert(mentions).values({
         accountId: account.id,
@@ -391,7 +400,7 @@ export async function persistPost(
       }
       const image = sharp(imageBuffer);
       metadata = await image.metadata();
-      thumbnail = await uploadThumbnail(id, image);
+      thumbnail = await uploadThumbnail(id, image, baseUrl);
     } catch {
       metadata = {
         width: attachment.width ?? 512,
@@ -427,7 +436,7 @@ export async function persistPost(
       suppressError: true,
     })) {
       if (!isPost(item)) continue;
-      await persistPost(db, item, {
+      await persistPost(db, item, baseUrl, {
         ...options,
         skipUpdate: true,
         replyTarget: post,
@@ -445,6 +454,7 @@ export async function persistSharingPost(
   >,
   announce: Announce,
   object: ASPost,
+  baseUrl: URL | string,
   options: {
     account?: Account;
     contextLoader?: DocumentLoader;
@@ -462,9 +472,12 @@ export async function persistSharingPost(
   const account =
     options.account?.iri != null && options.account.iri === actor.id?.href
       ? options.account
-      : await persistAccount(db, actor, { ...options, skipUpdate: true });
+      : await persistAccount(db, actor, baseUrl, {
+          ...options,
+          skipUpdate: true,
+        });
   if (account == null) return null;
-  const originalPost = await persistPost(db, object, {
+  const originalPost = await persistPost(db, object, baseUrl, {
     ...options,
     skipUpdate: true,
   });
@@ -508,6 +521,7 @@ export async function persistPollVote(
     ExtractTablesWithRelations<typeof schema>
   >,
   object: Note,
+  baseUrl: URL | string,
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
@@ -537,6 +551,7 @@ export async function persistPollVote(
   const voter = await persistAccountByIri(
     db,
     object.attributionId.href,
+    baseUrl,
     options,
   );
   if (voter == null) return null;
