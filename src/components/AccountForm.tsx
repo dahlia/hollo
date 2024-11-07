@@ -2,7 +2,7 @@ import iso6391 from "iso-639-1";
 import type { PostVisibility } from "../schema";
 
 export interface AccountFormProps {
-  method?: string;
+  method?: "get" | "post" | "dialog";
   action: string;
   readOnly?: {
     username?: boolean;

@@ -9,7 +9,8 @@
       "docs/.astro/",
       "docs/dist/",
       "docs/node_modules/",
-      "drizzle/"
+      "drizzle/",
+      "src/public/"
     ]
   },
   "formatter": {

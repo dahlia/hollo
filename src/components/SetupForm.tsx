@@ -1,5 +1,5 @@
 export interface SetupFormProps {
-  method?: string;
+  method?: "get" | "post" | "dialog";
   action: string;
   values?: {
     email?: string;
