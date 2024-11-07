@@ -19,6 +19,17 @@ To be released.
 [#59]: https://github.com/dahlia/hollo/pull/59
 
 
+Version 0.2.2
+-------------
+
+Released on November 7, 2024.
+
+ -  Fixed a bug where replies without mention had not shown up in
+    the notifications.  [[#62]]
+
+[#62]: https://github.com/dahlia/hollo/issues/62
+
+
 Version 0.2.1
 -------------
 

@@ -100,10 +100,24 @@ app.get(
           customEmoji: sql<string | null>`null`,
         })
         .from(posts)
-        .leftJoin(mentions, eq(posts.id, mentions.postId))
         .where(
           and(
-            eq(mentions.accountId, owner.id),
+            or(
+              inArray(
+                posts.replyTargetId,
+                db
+                  .select({ postId: posts.id })
+                  .from(posts)
+                  .where(eq(posts.accountId, owner.id)),
+              ),
+              inArray(
+                posts.id,
+                db
+                  .select({ postId: mentions.postId })
+                  .from(mentions)
+                  .where(eq(mentions.accountId, owner.id)),
+              ),
+            ),
             olderThan == null ? undefined : lt(posts.published, olderThan),
             ne(posts.accountId, owner.id),
             notInArray(
