@@ -8,7 +8,7 @@ import { serializeMedium } from "../../entities/medium";
 import { makeVideoScreenshot, uploadThumbnail } from "../../media";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { media } from "../../schema";
-import { assetUrlBase, disk } from "../../storage";
+import { disk, getAssetUrl } from "../../storage";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -47,7 +47,7 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
   } catch (error) {
     return c.json({ error: "Failed to save media file" }, 500);
   }
-  const url = new URL(path, assetUrlBase).href;
+  const url = getAssetUrl(path, c.req.url);
   const result = await db
     .insert(media)
     .values({
@@ -57,7 +57,7 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
       width: fileMetadata.width!,
       height: fileMetadata.height!,
       description,
-      ...(await uploadThumbnail(id, image)),
+      ...(await uploadThumbnail(id, image, c.req.url)),
     })
     .returning();
   if (result.length < 1) {

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import ffmpeg from "fluent-ffmpeg";
 import type { Sharp } from "sharp";
 import { disk } from "./storage";
-import { assetUrlBase } from "./storage";
+import { getAssetUrl } from "./storage";
 
 const DEFAULT_THUMBNAIL_AREA = 230_400;
 
@@ -18,6 +18,7 @@ export interface Thumbnail {
 export async function uploadThumbnail(
   id: string,
   original: Sharp,
+  url: URL | string,
   thumbnailArea = DEFAULT_THUMBNAIL_AREA,
 ): Promise<Thumbnail> {
   const originalMetadata = await original.metadata();
@@ -41,7 +42,7 @@ export async function uploadThumbnail(
     throw error;
   }
   return {
-    thumbnailUrl: new URL(`media/${id}/thumbnail.webp`, assetUrlBase).href,
+    thumbnailUrl: getAssetUrl(`media/${id}/thumbnail.webp`, url),
     thumbnailType: "image/webp",
     thumbnailWidth: thumbnailSize.width,
     thumbnailHeight: thumbnailSize.height,

@@ -1,10 +1,13 @@
 import { constants, access, lstatSync } from "node:fs";
+import { dirname, isAbsolute, join } from "node:path";
 import { fromEnv } from "@aws-sdk/credential-providers";
 import { getLogger } from "@logtape/logtape";
 import { Disk } from "flydrive";
 import { FSDriver } from "flydrive/drivers/fs";
 import { S3Driver } from "flydrive/drivers/s3";
 import type { DriverContract } from "flydrive/types";
+
+const logger = getLogger(["hollo", "storage"]);
 
 export type DriveDisk = "fs" | "s3";
 
@@ -18,11 +21,6 @@ const region = process.env["S3_REGION"];
 const bucket = process.env["S3_BUCKET"];
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
-export const assetUrlBase = process.env["ASSET_URL_BASE"];
-if (assetUrlBase == null) throw new Error("ASSET_URL_BASE is required");
-export const S3_URL_BASE = assetUrlBase;
-
-// biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const endpointUrl = process.env["S3_ENDPOINT_URL"];
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
@@ -34,16 +32,35 @@ const secretAccessKey = process.env["AWS_SECRET_ACCESS_KEY"];
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 let driveDisk = process.env["DRIVE_DISK"];
 if (!driveDisk) {
-  getLogger(["hollo", "assets"]).warn(
+  logger.warn(
     "DRIVE_DISK is not configured; defaults to 's3'.  " +
       "The DRIVE_DISK environment variable will be mandatory in the future versions.",
   );
   driveDisk = "s3";
-} else if (["fs", "s3"].includes(driveDisk)) {
+} else if (!["fs", "s3"].includes(driveDisk)) {
   throw new Error(`Unknown DRIVE_DISK value: '${driveDisk}'`);
 }
 export const DRIVE_DISK: DriveDisk =
   driveDisk === "fs" || driveDisk === "s3" ? driveDisk : "s3";
+
+const assetUrlBase =
+  // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+  process.env["ASSET_URL_BASE"] ??
+  // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+  (driveDisk === "s3" ? process.env["S3_URL_BASE"] : undefined);
+if (driveDisk !== "fs" && assetUrlBase == null)
+  throw new Error("ASSET_URL_BASE is required unless DRIVE_DISK=fs.");
+// biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+if (driveDisk === "s3" && process.env["ASSET_URL_BASE"] == null) {
+  logger.warn("S3_URL_BASE is deprecated; use ASSET_URL_BASE instead.");
+}
+
+export function getAssetUrl(path: string, base: URL | string): string {
+  if (assetUrlBase == null) {
+    return new URL(`/assets/${path.replace(/^\/+/, "")}`, base).href;
+  }
+  return `${assetUrlBase.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
+}
 
 let driver: DriverContract;
 switch (DRIVE_DISK) {
@@ -65,7 +82,9 @@ switch (DRIVE_DISK) {
     );
 
     driver = new FSDriver({
-      location: new URL(assetPath, import.meta.url),
+      location: isAbsolute(assetPath)
+        ? assetPath
+        : join(dirname(import.meta.dir), assetPath),
       visibility: "public",
     });
     break;

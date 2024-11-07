@@ -54,7 +54,7 @@ import {
   pinnedPosts,
   posts,
 } from "../../schema";
-import { assetUrlBase, disk } from "../../storage";
+import { disk, getAssetUrl } from "../../storage";
 import { extractCustomEmojis, formatText } from "../../text";
 import { timelineQuerySchema } from "./timelines";
 
@@ -133,7 +133,7 @@ app.patch(
         contentLength: content.byteLength,
         visibility: "public",
       });
-      avatarUrl = new URL(`${path}?${Date.now()}`, assetUrlBase).href;
+      avatarUrl = getAssetUrl(`${path}?${Date.now()}`, c.req.url);
     }
     let coverUrl = undefined;
     if (form.header instanceof File) {
@@ -156,7 +156,7 @@ app.patch(
       } catch (error) {
         return c.json({ error: "Failed to upload header image." }, 500);
       }
-      coverUrl = new URL(`${path}?${Date.now()}`, assetUrlBase).href;
+      coverUrl = getAssetUrl(`${path}?${Date.now()}`, c.req.url);
     }
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const fmtOpts = {
@@ -339,7 +339,7 @@ app.get(
             };
       const actor = await lookupObject(acct, options);
       if (!isActor(actor)) return c.json({ error: "Record not found" }, 404);
-      const loaded = await persistAccount(db, actor, options);
+      const loaded = await persistAccount(db, actor, c.req.url, options);
       if (loaded != null) {
         account = {
           ...loaded,
@@ -407,7 +407,7 @@ app.get(
           }),
         };
         const actor = await lookupObject(query.q, options);
-        if (isActor(actor)) await persistAccount(db, actor, options);
+        if (isActor(actor)) await persistAccount(db, actor, c.req.url, options);
       }
     }
     const accountList = await db.query.accounts.findMany({
@@ -544,13 +544,19 @@ app.get(
       .where(eq(posts.accountId, account.id));
     if (cnt < REMOTE_ACTOR_FETCH_POSTS) {
       const fedCtx = federation.createContext(c.req.raw, undefined);
-      await persistAccountPosts(db, account, REMOTE_ACTOR_FETCH_POSTS, {
-        documentLoader: await fedCtx.getDocumentLoader({
-          username: tokenOwner.handle,
-        }),
-        contextLoader: fedCtx.contextLoader,
-        suppressError: true,
-      });
+      await persistAccountPosts(
+        db,
+        account,
+        REMOTE_ACTOR_FETCH_POSTS,
+        c.req.url,
+        {
+          documentLoader: await fedCtx.getDocumentLoader({
+            username: tokenOwner.handle,
+          }),
+          contextLoader: fedCtx.contextLoader,
+          suppressError: true,
+        },
+      );
     }
     const query = c.req.valid("query");
     const limit = query.limit ?? 20;

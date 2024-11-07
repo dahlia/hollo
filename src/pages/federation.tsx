@@ -140,11 +140,14 @@ data.post("/refresh", async (c) => {
     try {
       const object = await fedCtx.lookupObject(uri, { documentLoader });
       if (isActor(object)) {
-        await persistAccount(db, object, { ...fedCtx, documentLoader });
+        await persistAccount(db, object, c.req.url, {
+          ...fedCtx,
+          documentLoader,
+        });
         return c.redirect("/federation?done=refresh:account");
       }
       if (isPost(object)) {
-        await persistPost(db, object, { ...fedCtx, documentLoader });
+        await persistPost(db, object, c.req.url, { ...fedCtx, documentLoader });
         return c.redirect("/federation?done=refresh:post");
       }
     } catch {}

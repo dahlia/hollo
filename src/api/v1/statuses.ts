@@ -162,7 +162,12 @@ app.post(
     let quoteTargetId: string | null = null;
     if (data.quote_id != null) quoteTargetId = data.quote_id;
     else if (content?.quoteTarget != null) {
-      const quoted = await persistPost(db, content.quoteTarget, fmtOpts);
+      const quoted = await persistPost(
+        db,
+        content.quoteTarget,
+        c.req.url,
+        fmtOpts,
+      );
       if (quoted != null) quoteTargetId = quoted.id;
     }
     await db.transaction(async (tx) => {

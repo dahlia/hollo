@@ -5,7 +5,7 @@ import { DashboardLayout } from "../components/DashboardLayout";
 import db from "../db";
 import { loginRequired } from "../login";
 import { accounts, customEmojis, posts, reactions } from "../schema";
-import { assetUrlBase, disk } from "../storage";
+import { disk, getAssetUrl } from "../storage";
 
 const emojis = new Hono();
 
@@ -184,7 +184,7 @@ emojis.post("/", async (c) => {
   } catch (error) {
     return c.text("Failed to store emoji image", 500);
   }
-  const url = new URL(path, assetUrlBase).href;
+  const url = getAssetUrl(path, c.req.url);
   await db.insert(customEmojis).values({
     category,
     shortcode,
