@@ -6,6 +6,11 @@ Version 0.2.2
 
 To be released.
 
+ -  Fixed a bug where replies without mention had not shown up in
+    the notifications.  [[#62]]
+
+[#62]: https://github.com/dahlia/hollo/issues/62
+
 
 Version 0.2.1
 -------------
