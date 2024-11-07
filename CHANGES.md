@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.2.2
 -------------
 
-To be released.
+Released on November 7, 2024.
 
  -  Fixed a bug where replies without mention had not shown up in
     the notifications.  [[#62]]
