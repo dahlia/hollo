@@ -1,5 +1,5 @@
 export interface LoginFormProps {
-  method?: string;
+  method?: "get" | "post" | "dialog";
   action: string;
   next?: string;
   values?: {

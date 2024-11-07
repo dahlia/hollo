@@ -1,5 +1,5 @@
 export interface OtpFormProps {
-  method?: string;
+  method?: "get" | "post" | "dialog";
   action: string;
   next?: string;
   errors?: {
