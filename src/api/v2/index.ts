@@ -19,7 +19,7 @@ import { persistPost } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type Account, accounts, posts } from "../../schema";
 import { postMedia } from "../v1/media";
-import { exportController } from "./controllers/accountExport";
+import { exportController, importController } from "./controllers/account";
 import instance from "./instance";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -34,6 +34,8 @@ app.post(
   // scopeRequired(["read:accounts"]),
   exportController,
 );
+
+app.post(":actorId/accountImport", importController);
 
 app.get(
   "/search",

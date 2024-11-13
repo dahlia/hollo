@@ -1,4 +1,3 @@
-// @ts-ignore-next-line
 import { exportActorProfile } from "@interop/wallet-export-ts";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
@@ -132,7 +131,6 @@ export class AccountExporter {
       bookmarks: serializedBookmarks,
     });
 
-    // Return the tarball as a response
     return c.body(exportTarballStream, 200, {
       "Content-Type": "application/x-tar",
       "Content-Disposition": `attachment; filename="account_export_${this.actorId}.tar"`,
