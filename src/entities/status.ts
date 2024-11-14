@@ -209,6 +209,7 @@ export function serializePost(
   return {
     id: post.id,
     created_at: post.published ?? post.updated,
+    type: post.type,
     in_reply_to_id: post.replyTargetId,
     in_reply_to_account_id: post.replyTarget?.accountId,
     sensitive: post.sensitive,

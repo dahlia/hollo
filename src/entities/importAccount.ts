@@ -1,6 +1,5 @@
 import { importActorProfile } from "@interop/wallet-export-ts";
-import { getLogger } from "@logtape/logtape";
-import { eq } from "drizzle-orm";
+import { Placeholder, SQL, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import db from "../db";
 import * as schema from "../schema";
@@ -15,9 +14,8 @@ export class AccountImporter {
 
   async importData(tarBuffer: Buffer, c: Context) {
     const importedData = await importActorProfile(tarBuffer);
-    const logger = getLogger(["AccountImporter"]);
 
-    logger.info(
+    console.info(
       "🚀 ~ AccountImporter ~ importData ~ importedData:",
       importedData,
     );
@@ -28,8 +26,16 @@ export class AccountImporter {
         await this.importAccount(
           importedData["activitypub/actor.json"] as ActorProfile,
         );
+        // for (const post of importedData["activitypub/outbox.json"]) {
+        //   await this.importOutbox(post as Post[]);
+        // }
+        await Promise.all(
+          (importedData["activitypub/outbox.json"] as Post[]).map(
+            (post: Post) => this.importOutbox(post),
+          ),
+        );
       } catch (error) {
-        logger.error("Error importing account profile:", error);
+        console.error("Error importing account profile:", { error });
         return c.json({ error: "Failed to import account profile" }, 500);
       }
     }
@@ -38,7 +44,6 @@ export class AccountImporter {
   }
 
   async importAccount(profileData: ActorProfile) {
-    const logger = getLogger(["AccountImporter"]);
     const {
       id,
       acct: handle,
@@ -101,32 +106,80 @@ export class AccountImporter {
         "🚀 ~ AccountImporter ~ importAccount ~ existingAccount:",
         existingAccount,
       );
-      console.log(`Searching for existing account with ID: ${this.actorId}`);
-      if (this.actorId !== profileData.id) {
-        console.log(
-          `Mismatch between actorId (${this.actorId}) and profileData.id (${profileData.id})`,
-        );
-      } else {
-        console.log(
-          `Found existing account with ID: ${this.actorId}. Updating...`,
-        );
-      }
 
-      if (existingAccount) {
-        // Update existing account
-        await db
-          .update(schema.accounts)
-          .set(accountData)
-          .where(eq(schema.accounts.id, id));
-        logger.info(`Updated existing account with ID: ${id}`);
-      } else {
-        // Insert new account
-        await db.insert(schema.accounts).values(accountData);
-        logger.info(`Inserted new account with ID: ${id}`);
+      if (!existingAccount) {
+        console.error(`Cannot find existing account with ID: ${id}`);
+        throw new Error("Account not found");
       }
+      if (this.actorId !== profileData.id) {
+        console.error(
+          `Account ID mismatch: ${this.actorId} !== ${profileData.id}`,
+        );
+        throw new Error("Account ID mismatch");
+      }
+      // Update existing account
+      await db
+        .update(schema.accounts)
+        .set(accountData)
+        .where(eq(schema.accounts.id, id));
+      console.info(`Updated existing account with ID: ${id}`);
     } catch (error) {
-      logger.error("Database operation failed:", error);
+      console.error("Database operation failed:", error);
       throw error; // Re-throw the error to be caught in importData
     }
+  }
+
+  async importOutbox(post: Post) {
+    console.info("Importing outbox data:", post.id);
+
+    const postId = post.id;
+
+    // Create post data for insertion or updating
+    const postData = {
+      id: postId,
+      iri: post.uri, // Mapping uri to iri
+      type: post.type,
+      accountId: this.actorId, // Assuming accountId refers to actorId
+      createdAt: post.created_at,
+      inReplyToId: post.in_reply_to_id,
+      sensitive: post.sensitive,
+      spoilerText: post.spoiler_text,
+      visibility: post.visibility,
+      language: post.language,
+      url: post.url,
+      repliesCount: post.replies_count,
+      reblogsCount: post.reblogs_count,
+      favouritesCount: post.favourites_count,
+      favourited: post.favourited,
+      reblogged: post.reblogged,
+      muted: post.muted,
+      bookmarked: post.bookmarked,
+      pinned: post.pinned,
+      contentHtml: post.content,
+      quoteId: post.quote_id,
+    };
+
+    try {
+      // Check if the post already exists in the database
+      const existingPost = await db.query.posts.findFirst({
+        where: eq(schema.posts.id, postId),
+      });
+
+      if (!existingPost) {
+        await db.insert(schema.posts).values(postData);
+        console.info(`Inserted new post with ID: ${postId}`);
+      } else {
+        // Update existing post
+        await db
+          .update(schema.posts)
+          .set(postData)
+          .where(eq(schema.posts.id, postId));
+        console.info(`Updated existing post with ID: ${postId}`);
+      }
+    } catch (error) {
+      console.error(`Failed to import post with ID: ${postId}`, error);
+    }
+
+    console.info("Outbox data imported successfully.");
   }
 }

@@ -23,12 +23,20 @@ interface ActorProfile {
 
 // Define an interface for a Post
 interface Post {
-  id: string;
+  id: string | SQL<unknown>;
+  iri: string;
   created_at: string;
   in_reply_to_id: null | string;
+  type: SQL<unknown> | "Article" | "Note" | "Question" | undefined;
   sensitive: boolean;
   spoiler_text: string;
-  visibility: string;
+  visibility:
+    | SQL<unknown>
+    | "public"
+    | "unlisted"
+    | "private"
+    | "direct"
+    | undefined;
   language: string;
   uri: string;
   url: null | string;
