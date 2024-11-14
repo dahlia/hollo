@@ -65,15 +65,21 @@ interface Post {
 }
 
 // Define an interface for FollowersData
+interface Follower {
+  followerId: string;
+  followingId: string;
+  shares: boolean;
+  notify: boolean;
+  languages: string[];
+  created: StringIterator;
+  approved: Date | SQL<unknown> | null | undefined;
+  iri: string;
+}
 interface FollowersData {
   "@context": string;
   id: string;
   type: string;
-  orderedItems: Array<{
-    account: string;
-    followedSince: string;
-    language: string;
-  }>;
+  orderedItems: Follwer[];
 }
 
 // Define an interface for BookmarksData

@@ -1,5 +1,5 @@
 import { importActorProfile } from "@interop/wallet-export-ts";
-import { Placeholder, SQL, eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import db from "../db";
 import * as schema from "../schema";
@@ -26,13 +26,17 @@ export class AccountImporter {
         await this.importAccount(
           importedData["activitypub/actor.json"] as ActorProfile,
         );
-        // for (const post of importedData["activitypub/outbox.json"]) {
-        //   await this.importOutbox(post as Post[]);
-        // }
         await Promise.all(
           (importedData["activitypub/outbox.json"] as Post[]).map(
             (post: Post) => this.importOutbox(post),
           ),
+        );
+        await Promise.all(
+          (
+            importedData["activitypub/followers.json"] as FollowersData
+          ).orderedItems.map((follower: Follower) => {
+            this.importFollower(follower);
+          }),
         );
       } catch (error) {
         console.error("Error importing account profile:", { error });
@@ -105,6 +109,9 @@ export class AccountImporter {
       console.log(
         "🚀 ~ AccountImporter ~ importAccount ~ existingAccount:",
         existingAccount,
+      );
+      console.error(
+        `Account ID mismatch: ${this.actorId} !== ${profileData.id}`,
       );
 
       if (!existingAccount) {
@@ -181,5 +188,58 @@ export class AccountImporter {
     }
 
     console.info("Outbox data imported successfully.");
+  }
+
+  async importFollower(follower: Follower) {
+    console.info("Importing followers data:", follower);
+
+    try {
+      // Check if both follower and following accounts exist
+      const actor = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.id, follower.followerId),
+      });
+      if (!actor) {
+        console.error(`Cannot find actor with ID: ${follower.followerId}`);
+        throw new Error("Actor not found");
+      }
+
+      const following = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.id, follower.followingId),
+      });
+      if (!following) {
+        console.error(`Cannot find following with ID: ${follower.followingId}`);
+        throw new Error("Following not found");
+      }
+
+      // Convert created and approved dates as needed
+      const createdDate = new Date(follower.created as string); // Convert from string to Date
+      const approvedDate =
+        follower.approved instanceof Date ? follower.approved : null;
+
+      // Check if a follow relationship already exists
+      const existingFollow = await db.query.follows.findFirst({
+        where: eq(schema.follows.followerId, follower.followerId),
+      });
+
+      if (existingFollow) {
+        // Update existing follow relationship
+        await db
+          .update(schema.follows)
+          .set({
+            created: createdDate,
+            approved: approvedDate,
+            iri: follower.iri,
+            shares: follower.shares,
+            notify: follower.notify,
+          })
+          .where(eq(schema.follows.followerId, follower.followerId));
+        console.info(
+          `Updated follow relationship for follower ID: ${follower.followerId}`,
+        );
+      }
+    } catch (error) {
+      console.error("Database operation failed:", error);
+      throw error; // Re-throw the error to be caught in importData
+    }
   }
 }

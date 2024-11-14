@@ -7,9 +7,6 @@ import { serializeAccount } from "./account";
 import { serializeList } from "./list";
 import { getPostRelations, serializePost } from "./status";
 
-// biome-ignore lint/complexity/useLiteralKeys: <explanation>
-const homeUrl = process.env["HOME_URL"] || "http://localhost:3000/";
-
 // Account Exporter class to handle data loading and serialization
 export class AccountExporter {
   actorId: string;
@@ -65,11 +62,15 @@ export class AccountExporter {
       "@context": "https://www.w3.org/ns/activitystreams",
       id: "following_accounts.json",
       type: "OrderedCollection",
-      orderedItems: followingAccounts.map((account) => ({
-        account: `${homeUrl}/accounts/${account.followingId}`,
-        showBoosts: account.shares,
-        notifyOnNewPosts: account.notify,
-        language: account.languages,
+      orderedItems: followingAccounts.map((follower) => ({
+        followingId: follower.followingId,
+        followerId: follower.followerId,
+        created: follower.created,
+        languages: follower.languages,
+        approved: follower.approved,
+        iri: follower.iri,
+        shares: follower.shares,
+        notify: follower.notify,
       })),
     };
   }
@@ -80,9 +81,14 @@ export class AccountExporter {
       id: "followers.json",
       type: "OrderedCollection",
       orderedItems: followers.map((follower) => ({
-        account: `${homeUrl}/accounts/${follower.followerId}`,
-        followedSince: follower.created,
-        language: follower.languages,
+        followingId: follower.followingId,
+        followerId: follower.followerId,
+        created: follower.created,
+        languages: follower.languages,
+        approved: follower.approved,
+        iri: follower.iri,
+        shares: follower.shares,
+        notify: follower.notify,
       })),
     };
   }
@@ -112,7 +118,15 @@ export class AccountExporter {
 
     // Load and serialize following
     const followingAccounts = await this.loadFollows("following");
+    console.log(
+      "🚀 ~ AccountExporter ~ exportData ~ followingAccounts:",
+      followingAccounts,
+    );
     const serializedFollowing = this.serializeFollowing(followingAccounts);
+    console.log(
+      "🚀 ~ AccountExporter ~ exportData ~ serializedFollowing:",
+      serializedFollowing,
+    );
 
     // Load and serialize bookmarks
     const bookmarks = await this.loadBookmarks();
@@ -131,6 +145,7 @@ export class AccountExporter {
       bookmarks: serializedBookmarks,
     });
 
+    // @ts-ignore-next-line
     return c.body(exportTarballStream, 200, {
       "Content-Type": "application/x-tar",
       "Content-Disposition": `attachment; filename="account_export_${this.actorId}.tar"`,
