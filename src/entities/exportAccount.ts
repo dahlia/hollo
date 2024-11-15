@@ -102,36 +102,19 @@ export class AccountExporter {
       serializePost(post, { id: account.owner.id }, c.req.url),
     );
 
-    // Load and serialize lists
     const lists = await this.loadLists();
-    console.log("🚀 ~ AccountExporter ~ exportData ~ lists:", lists);
     const serializedLists = lists.map((list) => serializeList(list));
-    console.log(
-      "🚀 ~ AccountExporter ~ exportData ~ serializedLists:",
-      serializedLists,
-    );
 
-    // Load and serialize followers
     const followers = await this.loadFollows("follower");
     const serializedFollowers = this.serializeFollowers(followers);
 
-    // Load and serialize following
     const followingAccounts = await this.loadFollows("following");
-    console.log(
-      "🚀 ~ AccountExporter ~ exportData ~ followingAccounts:",
-      followingAccounts,
-    );
-    const serializedFollowing = this.serializeFollowing(followingAccounts);
-    console.log(
-      "🚀 ~ AccountExporter ~ exportData ~ serializedFollowing:",
-      serializedFollowing,
-    );
 
-    // Load and serialize bookmarks
+    const serializedFollowing = this.serializeFollowing(followingAccounts);
+
     const bookmarks = await this.loadBookmarks();
     const serializedBookmarks = this.serializeBookmarks(bookmarks);
 
-    // Generate export tarball
     const exportTarballStream = exportActorProfile({
       actorProfile: serializeAccount(
         { ...account, successor: null },
@@ -144,7 +127,6 @@ export class AccountExporter {
       bookmarks: serializedBookmarks,
     });
 
-    // @ts-ignore-next-line
     return c.body(exportTarballStream, 200, {
       "Content-Type": "application/x-tar",
       "Content-Disposition": `attachment; filename="account_export_${this.actorId}.tar"`,
