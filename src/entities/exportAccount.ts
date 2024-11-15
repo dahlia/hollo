@@ -29,10 +29,9 @@ export class AccountExporter {
     });
   }
 
-  async loadFollows(type: "following" | "followers") {
-    const column = type === "following" ? "followerId" : "followingId";
+  async loadFollows(type: "following" | "follower") {
     return db.query.follows.findMany({
-      where: eq(schema.follows[column], this.actorId),
+      where: eq(schema.follows[`${type}Id`], this.actorId),
     });
   }
 
@@ -113,7 +112,7 @@ export class AccountExporter {
     );
 
     // Load and serialize followers
-    const followers = await this.loadFollows("followers");
+    const followers = await this.loadFollows("follower");
     const serializedFollowers = this.serializeFollowers(followers);
 
     // Load and serialize following

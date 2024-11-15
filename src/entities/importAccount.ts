@@ -38,6 +38,13 @@ export class AccountImporter {
             this.importFollower(follower);
           }),
         );
+        await Promise.all(
+          (
+            importedData["activitypub/following.json"] as FollowersData
+          ).orderedItems.map((follower: Follower) => {
+            this.importFollowing(follower);
+          }),
+        );
       } catch (error) {
         console.error("Error importing account profile:", { error });
         return c.json({ error: "Failed to import account profile" }, 500);
@@ -196,10 +203,10 @@ export class AccountImporter {
     try {
       // Check if both follower and following accounts exist
       const actor = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, follower.followerId),
+        where: eq(schema.accounts.id, this.actorId),
       });
       if (!actor) {
-        console.error(`Cannot find actor with ID: ${follower.followerId}`);
+        console.error(`Cannot find actor with ID: ${this.actorId}`);
         throw new Error("Actor not found");
       }
 
@@ -218,7 +225,7 @@ export class AccountImporter {
 
       // Check if a follow relationship already exists
       const existingFollow = await db.query.follows.findFirst({
-        where: eq(schema.follows.followerId, follower.followerId),
+        where: eq(schema.follows.followerId, this.actorId),
       });
 
       if (existingFollow) {
@@ -231,15 +238,72 @@ export class AccountImporter {
             iri: follower.iri,
             shares: follower.shares,
             notify: follower.notify,
+            languages: follower.languages,
           })
-          .where(eq(schema.follows.followerId, follower.followerId));
+          .where(eq(schema.follows.followerId, this.actorId));
         console.info(
-          `Updated follow relationship for follower ID: ${follower.followerId}`,
+          `Updated follow relationship for follower ID: ${this.actorId}`,
         );
       }
     } catch (error) {
       console.error("Database operation failed:", error);
       throw error; // Re-throw the error to be caught in importData
+    }
+  }
+
+  async importFollowing(following: Follower) {
+    console.info("Importing following data:", following);
+
+    try {
+      // Check if both follower and following accounts exist
+      const actor = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.id, following.followerId),
+      });
+      if (!actor) {
+        console.error(`Cannot find actor with ID: ${following.followerId}`);
+        throw new Error("Actor not found");
+      }
+
+      const followingAccount = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.id, this.actorId),
+      });
+      if (!followingAccount) {
+        console.error(`Cannot find following with ID: ${this.actorId}`);
+        throw new Error("Following not found");
+      }
+
+      // Convert created and approved dates as needed
+      const createdDate = new Date(following.created as string); // Convert from string to Date
+      const approvedDate =
+        following.approved instanceof Date ? following.approved : null;
+
+      // Check if a follow relationship already exists
+      const existingFollow = await db.query.follows.findFirst({
+        where: eq(schema.follows.followingId, this.actorId),
+      });
+
+      if (existingFollow) {
+        // Update existing follow relationship
+        await db
+          .update(schema.follows)
+          .set({
+            created: createdDate,
+            approved: approvedDate,
+            iri: following.iri,
+            shares: following.shares,
+            notify: following.notify,
+            languages: following.languages,
+          })
+          .where(eq(schema.follows.followingId, this.actorId));
+        console.info(
+          `Updated follow relationship for follower ID: ${this.actorId}`,
+        );
+      }
+    } catch (error) {
+      console.error(
+        `Failed to import follow relationship for follower ID: ${following.followerId} following ID: ${following.followingId}`,
+        error,
+      );
     }
   }
 }
