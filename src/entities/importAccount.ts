@@ -15,13 +15,7 @@ export class AccountImporter {
   async importData(tarBuffer: Buffer, c: Context) {
     const importedData = await importActorProfile(tarBuffer);
 
-    console.info(
-      "🚀 ~ AccountImporter ~ importData ~ importedData:",
-      importedData,
-    );
-
     if (importedData["activitypub/actor.json"]) {
-      // Import actor profile
       try {
         await this.importAccount(
           importedData["activitypub/actor.json"] as ActorProfile,
@@ -45,6 +39,13 @@ export class AccountImporter {
             this.importFollowing(follower);
           }),
         );
+        await Promise.all(
+          (
+            importedData["activitypub/bookmarks.json"] as FollowersData
+          ).orderedItems.map((bookmark: Bookmark) => {
+            this.importBookmark(bookmark);
+          }),
+        );
       } catch (error) {
         console.error("Error importing account profile:", { error });
         return c.json({ error: "Failed to import account profile" }, 500);
@@ -60,7 +61,6 @@ export class AccountImporter {
       acct: handle,
       display_name: name,
       locked: protectedAccount,
-      bot,
       created_at: published,
       note: bioHtml,
       url,
@@ -73,7 +73,6 @@ export class AccountImporter {
       fields,
     } = profileData;
 
-    // Convert fields and emojis arrays
     const fieldHtmls = fields.reduce(
       (acc, field) => {
         acc[field.name] = field.value;
@@ -90,7 +89,6 @@ export class AccountImporter {
       {} as Record<string, string>,
     );
 
-    // Construct the account data object
     const accountData = {
       iri: url,
       handle,
@@ -109,17 +107,9 @@ export class AccountImporter {
     };
 
     try {
-      // Check if the account already exists in the database
       const existingAccount = await db.query.accounts.findFirst({
         where: eq(schema.accounts.id, id),
       });
-      console.log(
-        "🚀 ~ AccountImporter ~ importAccount ~ existingAccount:",
-        existingAccount,
-      );
-      console.error(
-        `Account ID mismatch: ${this.actorId} !== ${profileData.id}`,
-      );
 
       if (!existingAccount) {
         console.error(`Cannot find existing account with ID: ${id}`);
@@ -131,7 +121,7 @@ export class AccountImporter {
         );
         throw new Error("Account ID mismatch");
       }
-      // Update existing account
+
       await db
         .update(schema.accounts)
         .set(accountData)
@@ -139,7 +129,7 @@ export class AccountImporter {
       console.info(`Updated existing account with ID: ${id}`);
     } catch (error) {
       console.error("Database operation failed:", error);
-      throw error; // Re-throw the error to be caught in importData
+      throw error;
     }
   }
 
@@ -148,12 +138,11 @@ export class AccountImporter {
 
     const postId = post.id;
 
-    // Create post data for insertion or updating
     const postData = {
       id: postId,
       iri: post.uri, // Mapping uri to iri
       type: post.type,
-      accountId: this.actorId, // Assuming accountId refers to actorId
+      accountId: this.actorId,
       createdAt: post.created_at,
       inReplyToId: post.in_reply_to_id,
       sensitive: post.sensitive,
@@ -174,7 +163,6 @@ export class AccountImporter {
     };
 
     try {
-      // Check if the post already exists in the database
       const existingPost = await db.query.posts.findFirst({
         where: eq(schema.posts.id, postId),
       });
@@ -183,7 +171,6 @@ export class AccountImporter {
         await db.insert(schema.posts).values(postData);
         console.info(`Inserted new post with ID: ${postId}`);
       } else {
-        // Update existing post
         await db
           .update(schema.posts)
           .set(postData)
@@ -197,11 +184,55 @@ export class AccountImporter {
     console.info("Outbox data imported successfully.");
   }
 
+  async importBookmark(bookmark: Bookmark) {
+    try {
+      const account = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.id, this.actorId),
+      });
+      if (!account) {
+        console.error(`Cannot find account with ID: ${this.actorId}`);
+        throw new Error("Account not found");
+      }
+
+      const existingBookmark = await db.query.bookmarks.findFirst({
+        where: and(
+          eq(schema.bookmarks.accountOwnerId, this.actorId),
+          eq(schema.bookmarks.postId, bookmark.postId),
+        ),
+      });
+
+      if (existingBookmark) {
+        await db
+          .update(schema.bookmarks)
+          .set({
+            created: new Date(bookmark.created as string),
+            postId: bookmark.postId,
+            accountOwnerId: this.actorId,
+          })
+          .where(
+            and(
+              eq(schema.bookmarks.accountOwnerId, this.actorId),
+              eq(schema.bookmarks.postId, bookmark.postId),
+            ),
+          );
+      } else {
+        await db.insert(schema.bookmarks).values({
+          created: bookmark.created,
+          postId: bookmark.postId,
+          accountOwnerId: this.actorId,
+        });
+      }
+    } catch (error) {
+      console.error(
+        `Failed to import bookmark relationship for account ID: ${this.actorId} post ID: ${bookmark.postId}`,
+        error,
+      );
+    }
+  }
   async importFollower(follower: Follower) {
     console.info("Importing followers data:", follower);
 
     try {
-      // Check if both follower and following accounts exist
       const actor = await db.query.accounts.findFirst({
         where: eq(schema.accounts.id, this.actorId),
       });
@@ -218,18 +249,15 @@ export class AccountImporter {
         throw new Error("Following not found");
       }
 
-      // Convert created and approved dates as needed
-      const createdDate = new Date(follower.created as string); // Convert from string to Date
+      const createdDate = new Date(follower.created as string);
       const approvedDate =
         follower.approved instanceof Date ? follower.approved : null;
 
-      // Check if a follow relationship already exists
       const existingFollow = await db.query.follows.findFirst({
         where: eq(schema.follows.followerId, this.actorId),
       });
 
       if (existingFollow) {
-        // Update existing follow relationship
         await db
           .update(schema.follows)
           .set({
@@ -244,10 +272,24 @@ export class AccountImporter {
         console.info(
           `Updated follow relationship for follower ID: ${this.actorId}`,
         );
+      } else {
+        await db.insert(schema.follows).values({
+          created: createdDate,
+          approved: approvedDate,
+          iri: follower.iri,
+          shares: follower.shares,
+          notify: follower.notify,
+          languages: follower.languages,
+          followerId: this.actorId,
+          followingId: follower.followingId,
+        });
+        console.info(
+          `Inserted new follow relationship for follower ID: ${this.actorId} following ID: ${follower.followingId}`,
+        );
       }
     } catch (error) {
       console.error("Database operation failed:", error);
-      throw error; // Re-throw the error to be caught in importData
+      throw error;
     }
   }
 
@@ -255,7 +297,6 @@ export class AccountImporter {
     console.info("Importing following data:", following);
 
     try {
-      // Check if both follower and following accounts exist
       const actor = await db.query.accounts.findFirst({
         where: eq(schema.accounts.id, following.followerId),
       });
@@ -272,18 +313,15 @@ export class AccountImporter {
         throw new Error("Following not found");
       }
 
-      // Convert created and approved dates as needed
-      const createdDate = new Date(following.created as string); // Convert from string to Date
+      const createdDate = new Date(following.created as string);
       const approvedDate =
         following.approved instanceof Date ? following.approved : null;
 
-      // Check if a follow relationship already exists
       const existingFollow = await db.query.follows.findFirst({
         where: eq(schema.follows.followingId, this.actorId),
       });
 
       if (existingFollow) {
-        // Update existing follow relationship
         await db
           .update(schema.follows)
           .set({
@@ -297,6 +335,20 @@ export class AccountImporter {
           .where(eq(schema.follows.followingId, this.actorId));
         console.info(
           `Updated follow relationship for follower ID: ${this.actorId}`,
+        );
+      } else {
+        await db.insert(schema.follows).values({
+          created: createdDate,
+          approved: approvedDate,
+          iri: following.iri,
+          shares: following.shares,
+          notify: following.notify,
+          languages: following.languages,
+          followerId: following.followerId,
+          followingId: this.actorId,
+        });
+        console.info(
+          `Inserted new follow relationship for follower ID: ${following.followerId} following ID: ${this.actorId}`,
         );
       }
     } catch (error) {

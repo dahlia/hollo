@@ -83,9 +83,14 @@ interface FollowersData {
 }
 
 // Define an interface for BookmarksData
+interface Bookmark {
+  postId: string;
+  accountOwnerId: string;
+  created: Date | SQL<unknown>;
+}
 interface BookmarksData {
   "@context": string;
   id: string;
   type: string;
-  orderedItems: string[]; // Array of post IDs
+  orderedItems: Bookmark;
 }

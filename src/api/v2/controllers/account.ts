@@ -38,6 +38,10 @@ export const importController = async (c: Context) => {
 
     // Get the buffer from the request
     const tarballBuffer = await c.req.arrayBuffer();
+    console.log("🚀 ~ importController ~ tarballBuffer:", tarballBuffer);
+    if (tarballBuffer.byteLength === 0) {
+      return c.json({ error: "No data provided" }, 400);
+    }
     const buffer = Buffer.from(tarballBuffer);
 
     return await importer.importData(buffer, c);
