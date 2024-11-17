@@ -1,0 +1,18 @@
+{
+  "name": "hollo_dev",
+  "dockerComposeFile": "../compose-fs.yaml",
+  "service": "hollo",
+  "workspaceFolder": "/app",
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/sh"
+  },
+  "extensions": ["dbaeumer.vscode-eslint", "ms-azuretools.vscode-docker"],
+  "forwardPorts": [3000],
+  "postCreateCommand": "bun install --frozen-lockfile --no-cache",
+  "remoteUser": "root",
+  "containerEnv": {
+    "LOG_LEVEL": "debug",
+    "SECRET_KEY": "suVR2cPip3gGFEc1zCKXXERk3zN5Z9AP",
+    "BEHIND_PROXY": true
+  }
+}
