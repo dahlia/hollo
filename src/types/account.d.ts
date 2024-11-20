@@ -94,3 +94,46 @@ interface BookmarksData {
   type: string;
   orderedItems: Bookmark;
 }
+
+interface List {
+  id: string | SQL<unknown>;
+  title: string;
+  replies_policy: "none" | "list" | "followed";
+  exclusive: boolean;
+}
+
+interface Mute {
+  id: string;
+  accountId: string;
+  mutedAccountId: string;
+  notifications: boolean;
+  duration?: string | null;
+  created: string;
+}
+
+interface Block {
+  accountId: string;
+  blockedAccountId: string;
+  created: string;
+}
+
+interface Like {
+  postId: string;
+  accountId: string;
+  created: Date;
+}
+
+interface Media {
+  id: string;
+  postId?: string | null;
+  type: string;
+  url: string;
+  width: number;
+  height: number;
+  description?: string | null;
+  thumbnailType: string;
+  thumbnailUrl: string;
+  thumbnailWidth: number;
+  thumbnailHeight: number;
+  created: string;
+}

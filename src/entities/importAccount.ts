@@ -15,16 +15,41 @@ export class AccountImporter {
   async importData(tarBuffer: Buffer, c: Context) {
     const importedData = await importActorProfile(tarBuffer);
 
-    if (importedData["activitypub/actor.json"]) {
-      try {
+    try {
+      if (importedData["activitypub/actor.json"]) {
         await this.importAccount(
           importedData["activitypub/actor.json"] as ActorProfile,
         );
+      }
+      if (importedData["activitypub/outbox.json"]) {
         await Promise.all(
           (importedData["activitypub/outbox.json"] as Post[]).map(
             (post: Post) => this.importOutbox(post),
           ),
         );
+      }
+      // if (importedData["activitypub/likes.json"]) {
+      //   await Promise.all(
+      //     (importedData["activitypub/likes.json"] as Like[]).map((like: Like) =>
+      //       this.importLike(like),
+      //     ),
+      //   );
+      // }
+      if (importedData["activitypub/blocked_accounts.json"]) {
+        await Promise.all(
+          (importedData["activitypub/blocked_accounts.json"] as Block[]).map(
+            (block: Block) => this.importBlock(block),
+          ),
+        );
+      }
+      if (importedData["activitypub/muted_accounts.json"]) {
+        await Promise.all(
+          (importedData["activitypub/muted_accounts.json"] as Mute[]).map(
+            (mute: Mute) => this.importMute(mute),
+          ),
+        );
+      }
+      if (importedData["activitypub/followers.json"]) {
         await Promise.all(
           (
             importedData["activitypub/followers.json"] as FollowersData
@@ -32,6 +57,8 @@ export class AccountImporter {
             this.importFollower(follower);
           }),
         );
+      }
+      if (importedData["activitypub/following.json"]) {
         await Promise.all(
           (
             importedData["activitypub/following.json"] as FollowersData
@@ -39,6 +66,8 @@ export class AccountImporter {
             this.importFollowing(follower);
           }),
         );
+      }
+      if (importedData["activitypub/bookmarks.json"]) {
         await Promise.all(
           (
             importedData["activitypub/bookmarks.json"] as FollowersData
@@ -46,10 +75,17 @@ export class AccountImporter {
             this.importBookmark(bookmark);
           }),
         );
-      } catch (error) {
-        console.error("Error importing account profile:", { error });
-        return c.json({ error: "Failed to import account profile" }, 500);
       }
+      if (importedData["activitypub/lists.json"]) {
+        await Promise.all(
+          (importedData["activitypub/lists.json"] as List[]).map((list: List) =>
+            this.importList(list),
+          ),
+        );
+      }
+    } catch (error) {
+      console.error("Error importing account profile:", { error });
+      return c.json({ error: "Failed to import account profile" }, 500);
     }
 
     return c.json({ message: "Data imported successfully" }, 200);
@@ -354,6 +390,197 @@ export class AccountImporter {
     } catch (error) {
       console.error(
         `Failed to import follow relationship for follower ID: ${following.followerId} following ID: ${following.followingId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async importList(list: List) {
+    console.info("Importing list data:", list);
+
+    try {
+      const actor = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.id, this.actorId),
+      });
+      if (!actor) {
+        console.error(`Cannot find actor with ID: ${this.actorId}`);
+        throw new Error("Actor not found");
+      }
+
+      const existingList = await db.query.lists.findFirst({
+        where: eq(schema.lists.id, list.id),
+      });
+
+      if (existingList) {
+        await db
+          .update(schema.lists)
+          .set({
+            title: list.title,
+            repliesPolicy: list.replies_policy,
+            exclusive: list.exclusive,
+          })
+          .where(eq(schema.lists.id, list.id));
+        console.info(`Updated list with ID: ${list}`);
+      } else {
+        await db.insert(schema.lists).values({
+          id: list.id,
+          title: list.title,
+          repliesPolicy: list.replies_policy,
+          exclusive: list.exclusive,
+          accountOwnerId: this.actorId,
+        });
+        console.info(`Inserted new list with ID: ${list.id}`);
+      }
+    } catch (error) {
+      console.error(`Failed to import list with ID: ${list.id}`, error);
+      throw error;
+    }
+  }
+
+  async importLike(like: Like) {
+    console.info("Importing like data:", like);
+
+    try {
+      const actor = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.id, this.actorId),
+      });
+      if (!actor) {
+        console.error(`Cannot find actor with ID: ${this.actorId}`);
+        throw new Error("Actor not found");
+      }
+
+      const existingLike = await db.query.likes.findFirst({
+        where: and(
+          eq(schema.likes.accountId, this.actorId),
+          eq(schema.likes.postId, like.postId),
+        ),
+      });
+
+      if (existingLike) {
+        await db
+          .update(schema.likes)
+          .set({
+            created: like.created,
+            postId: like.postId,
+            accountId: this.actorId,
+          })
+          .where(
+            and(
+              eq(schema.likes.accountId, this.actorId),
+              eq(schema.likes.postId, like.postId),
+            ),
+          );
+      } else {
+        await db.insert(schema.likes).values({
+          created: like.created,
+          postId: like.postId,
+          accountId: this.actorId,
+        });
+      }
+    } catch (error) {
+      console.error(
+        `Failed to import like relationship for account ID: ${this.actorId} post ID: ${like.postId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async importBlock(block: Block) {
+    console.info("Importing block data:", block);
+
+    try {
+      const actor = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.id, this.actorId),
+      });
+      if (!actor) {
+        console.error(`Cannot find actor with ID: ${this.actorId}`);
+        throw new Error("Actor not found");
+      }
+
+      const existingBlock = await db.query.blocks.findFirst({
+        where: and(
+          eq(schema.blocks.accountId, this.actorId),
+          eq(schema.blocks.blockedAccountId, block.blockedAccountId),
+        ),
+      });
+
+      if (existingBlock) {
+        await db
+          .update(schema.blocks)
+          .set({
+            created: new Date(block.created),
+            accountId: this.actorId,
+            blockedAccountId: block.blockedAccountId,
+          })
+          .where(
+            and(
+              eq(schema.blocks.accountId, this.actorId),
+              eq(schema.blocks.blockedAccountId, block.blockedAccountId),
+            ),
+          );
+      } else {
+        await db.insert(schema.blocks).values({
+          accountId: this.actorId,
+          blockedAccountId: block.blockedAccountId,
+        });
+      }
+    } catch (error) {
+      console.error(
+        `Failed to import block relationship for account ID: ${this.actorId} blocked account ID: ${block.blockedAccountId}`,
+        error,
+      );
+      throw error;
+    }
+  }
+
+  async importMute(mute: Mute) {
+    console.info("Importing mute data:", mute);
+
+    try {
+      const actor = await db.query.accounts.findFirst({
+        where: eq(schema.accounts.id, this.actorId),
+      });
+      if (!actor) {
+        console.error(`Cannot find actor with ID: ${this.actorId}`);
+        throw new Error("Actor not found");
+      }
+
+      const existingMute = await db.query.mutes.findFirst({
+        where: and(
+          eq(schema.mutes.accountId, this.actorId),
+          eq(schema.mutes.mutedAccountId, mute.mutedAccountId),
+        ),
+      });
+
+      if (existingMute) {
+        await db
+          .update(schema.mutes)
+          .set({
+            created: new Date(mute.created),
+            notifications: mute.notifications,
+            duration: mute.duration,
+          })
+          .where(
+            and(
+              eq(schema.mutes.accountId, this.actorId),
+              eq(schema.mutes.mutedAccountId, mute.mutedAccountId),
+            ),
+          );
+      } else {
+        await db.insert(schema.mutes).values({
+          id: mute.id, // Assuming you have a function to generate unique IDs
+          accountId: this.actorId,
+          mutedAccountId: mute.mutedAccountId,
+          created: new Date(mute.created),
+          notifications: mute.notifications,
+          duration: mute.duration,
+        });
+      }
+    } catch (error) {
+      console.error(
+        `Failed to import mute relationship for account ID: ${this.actorId} muted account ID: ${mute.mutedAccountId}`,
         error,
       );
       throw error;
