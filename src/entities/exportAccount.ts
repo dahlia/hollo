@@ -113,7 +113,7 @@ export class AccountExporter {
   serializeMutes(mutes: schema.Mute[]) {
     return {
       "@context": "https://www.w3.org/ns/activitystreams",
-      id: "mutes.json",
+      id: "muted_accounts.json",
       type: "OrderedCollection",
       orderedItems: mutes.map((mute) => ({
         id: mute.id,
@@ -129,7 +129,7 @@ export class AccountExporter {
   serializeBlocks(blocks: schema.Block[]) {
     return {
       "@context": "https://www.w3.org/ns/activitystreams",
-      id: "blocks.json",
+      id: "blocked_accounts.json",
       type: "OrderedCollection",
       orderedItems: blocks.map((block) => ({
         accountId: block.accountId,

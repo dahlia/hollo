@@ -28,23 +28,23 @@ export class AccountImporter {
           ),
         );
       }
-      // if (importedData["activitypub/likes.json"]) {
-      //   await Promise.all(
-      //     (importedData["activitypub/likes.json"] as Like[]).map((like: Like) =>
-      //       this.importLike(like),
-      //     ),
-      //   );
-      // }
+      if (importedData["activitypub/likes.json"]) {
+        await Promise.all(
+          importedData["activitypub/likes.json"].orderedItems.map(
+            (like: Like) => this.importLike(like),
+          ),
+        );
+      }
       if (importedData["activitypub/blocked_accounts.json"]) {
         await Promise.all(
-          (importedData["activitypub/blocked_accounts.json"] as Block[]).map(
+          importedData["activitypub/blocked_accounts.json"].orderedItems.map(
             (block: Block) => this.importBlock(block),
           ),
         );
       }
       if (importedData["activitypub/muted_accounts.json"]) {
         await Promise.all(
-          (importedData["activitypub/muted_accounts.json"] as Mute[]).map(
+          importedData["activitypub/muted_accounts.json"].orderedItems.map(
             (mute: Mute) => this.importMute(mute),
           ),
         );
@@ -457,11 +457,13 @@ export class AccountImporter {
         ),
       });
 
+      const formattedCreated = new Date(like.created);
+
       if (existingLike) {
         await db
           .update(schema.likes)
           .set({
-            created: like.created,
+            created: formattedCreated,
             postId: like.postId,
             accountId: this.actorId,
           })
@@ -473,7 +475,7 @@ export class AccountImporter {
           );
       } else {
         await db.insert(schema.likes).values({
-          created: like.created,
+          created: formattedCreated,
           postId: like.postId,
           accountId: this.actorId,
         });
@@ -481,6 +483,9 @@ export class AccountImporter {
     } catch (error) {
       console.error(
         `Failed to import like relationship for account ID: ${this.actorId} post ID: ${like.postId}`,
+        {
+          created: like.created,
+        },
         error,
       );
       throw error;
