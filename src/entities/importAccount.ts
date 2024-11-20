@@ -4,7 +4,6 @@ import type { Context } from "hono";
 import db from "../db";
 import * as schema from "../schema";
 
-// AccountImporter class with refined typing using interfaces
 export class AccountImporter {
   actorId: string;
 
@@ -16,73 +15,51 @@ export class AccountImporter {
     const importedData = await importActorProfile(tarBuffer);
 
     try {
-      if (importedData["activitypub/actor.json"]) {
-        await this.importAccount(
-          importedData["activitypub/actor.json"] as ActorProfile,
-        );
-      }
-      if (importedData["activitypub/outbox.json"]) {
-        await Promise.all(
-          (importedData["activitypub/outbox.json"] as Post[]).map(
-            (post: Post) => this.importOutbox(post),
-          ),
-        );
-      }
-      if (importedData["activitypub/likes.json"]) {
-        await Promise.all(
-          importedData["activitypub/likes.json"].orderedItems.map(
-            (like: Like) => this.importLike(like),
-          ),
-        );
-      }
-      if (importedData["activitypub/blocked_accounts.json"]) {
-        await Promise.all(
-          importedData["activitypub/blocked_accounts.json"].orderedItems.map(
-            (block: Block) => this.importBlock(block),
-          ),
-        );
-      }
-      if (importedData["activitypub/muted_accounts.json"]) {
-        await Promise.all(
-          importedData["activitypub/muted_accounts.json"].orderedItems.map(
-            (mute: Mute) => this.importMute(mute),
-          ),
-        );
-      }
-      if (importedData["activitypub/followers.json"]) {
-        await Promise.all(
-          (
-            importedData["activitypub/followers.json"] as FollowersData
-          ).orderedItems.map((follower: Follower) => {
-            this.importFollower(follower);
-          }),
-        );
-      }
-      if (importedData["activitypub/following.json"]) {
-        await Promise.all(
-          (
-            importedData["activitypub/following.json"] as FollowersData
-          ).orderedItems.map((follower: Follower) => {
-            this.importFollowing(follower);
-          }),
-        );
-      }
-      if (importedData["activitypub/bookmarks.json"]) {
-        await Promise.all(
-          (
-            importedData["activitypub/bookmarks.json"] as FollowersData
-          ).orderedItems.map((bookmark: Bookmark) => {
-            this.importBookmark(bookmark);
-          }),
-        );
-      }
-      if (importedData["activitypub/lists.json"]) {
-        await Promise.all(
-          (importedData["activitypub/lists.json"] as List[]).map((list: List) =>
-            this.importList(list),
-          ),
-        );
-      }
+      await this.importIfExists(
+        importedData,
+        "activitypub/actor.json",
+        this.importAccount.bind(this),
+      );
+      await this.importCollection(
+        importedData,
+        "activitypub/outbox.json",
+        this.importOutbox.bind(this),
+      );
+      await this.importOrderedItems(
+        importedData,
+        "activitypub/likes.json",
+        this.importLike.bind(this),
+      );
+      await this.importOrderedItems(
+        importedData,
+        "activitypub/blocked_accounts.json",
+        this.importBlock.bind(this),
+      );
+      await this.importOrderedItems(
+        importedData,
+        "activitypub/muted_accounts.json",
+        this.importMute.bind(this),
+      );
+      await this.importOrderedItems(
+        importedData,
+        "activitypub/followers.json",
+        this.importFollower.bind(this),
+      );
+      await this.importOrderedItems(
+        importedData,
+        "activitypub/following.json",
+        this.importFollowing.bind(this),
+      );
+      await this.importOrderedItems(
+        importedData,
+        "activitypub/bookmarks.json",
+        this.importBookmark.bind(this),
+      );
+      await this.importCollection(
+        importedData,
+        "activitypub/lists.json",
+        this.importList.bind(this),
+      );
     } catch (error) {
       console.error("Error importing account profile:", { error });
       return c.json({ error: "Failed to import account profile" }, 500);
@@ -91,95 +68,93 @@ export class AccountImporter {
     return c.json({ message: "Data imported successfully" }, 200);
   }
 
-  async importAccount(profileData: ActorProfile) {
-    const {
-      id,
-      acct: handle,
-      display_name: name,
-      locked: protectedAccount,
-      created_at: published,
-      note: bioHtml,
-      url,
-      avatar: avatarUrl,
-      header: coverUrl,
-      followers_count: followersCount,
-      following_count: followingCount,
-      statuses_count: postsCount,
-      emojis,
-      fields,
-    } = profileData;
-
-    const fieldHtmls = fields.reduce(
-      (acc, field) => {
-        acc[field.name] = field.value;
-        return acc;
-      },
-      {} as Record<string, string>,
-    );
-
-    const emojiMap = emojis.reduce(
-      (acc, emoji) => {
-        acc[emoji.shortcode] = emoji.url;
-        return acc;
-      },
-      {} as Record<string, string>,
-    );
-
-    const accountData = {
-      iri: url,
-      handle,
-      name,
-      protected: protectedAccount,
-      bioHtml,
-      url,
-      avatarUrl,
-      coverUrl,
-      followersCount,
-      followingCount,
-      postsCount,
-      fieldHtmls,
-      emojis: emojiMap,
-      published: new Date(published),
-    };
-
-    try {
-      const existingAccount = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, id),
-      });
-
-      if (!existingAccount) {
-        console.error(`Cannot find existing account with ID: ${id}`);
-        throw new Error("Account not found");
-      }
-      if (this.actorId !== profileData.id) {
-        console.error(
-          `Account ID mismatch: ${this.actorId} !== ${profileData.id}`,
-        );
-        throw new Error("Account ID mismatch");
-      }
-
-      await db
-        .update(schema.accounts)
-        .set(accountData)
-        .where(eq(schema.accounts.id, id));
-      console.info(`Updated existing account with ID: ${id}`);
-    } catch (error) {
-      console.error("Database operation failed:", error);
-      throw error;
+  async importIfExists<T>(
+    data: Record<string, unknown>,
+    key: string,
+    handler: (item: T) => Promise<void>,
+  ) {
+    if (key in data) {
+      await handler(data[key] as T);
     }
   }
 
+  async importCollection<T>(
+    data: Record<string, unknown>,
+    key: string,
+    handler: (item: T) => Promise<void>,
+  ) {
+    if (Array.isArray(data[key])) {
+      await Promise.all((data[key] as T[]).map(handler));
+    }
+  }
+
+  async importOrderedItems<T>(
+    data: Record<string, unknown>,
+    key: string,
+    handler: (item: T) => Promise<void>,
+  ) {
+    if (
+      key in data &&
+      typeof data[key] === "object" &&
+      data[key] !== null &&
+      "orderedItems" in (data[key] as Record<string, unknown>)
+    ) {
+      const orderedItems = (data[key] as { orderedItems: T[] }).orderedItems;
+      await Promise.all(orderedItems.map(handler));
+    }
+  }
+
+  async importAccount(profileData: ActorProfile) {
+    const accountData = {
+      iri: profileData.url,
+      handle: profileData.acct,
+      name: profileData.display_name,
+      protected: profileData.locked,
+      bioHtml: profileData.note,
+      url: profileData.url,
+      avatarUrl: profileData.avatar,
+      coverUrl: profileData.header,
+      followersCount: profileData.followers_count,
+      followingCount: profileData.following_count,
+      postsCount: profileData.statuses_count,
+      fieldHtmls: profileData.fields.reduce(
+        (acc, field) => {
+          acc[field.name] = field.value;
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
+      emojis: profileData.emojis.reduce(
+        (acc, emoji) => {
+          acc[emoji.shortcode] = emoji.url;
+          return acc;
+        },
+        {} as Record<string, string>,
+      ),
+      published: new Date(profileData.created_at),
+    };
+
+    const existingAccount = await db.query.accounts.findFirst({
+      where: eq(schema.accounts.id, profileData.id),
+    });
+
+    if (!existingAccount || this.actorId !== profileData.id) {
+      throw new Error("Account mismatch or not found");
+    }
+
+    await db
+      .update(schema.accounts)
+      .set(accountData)
+      .where(eq(schema.accounts.id, profileData.id));
+  }
+
   async importOutbox(post: Post) {
-    console.info("Importing outbox data:", post.id);
-
-    const postId = post.id;
-
     const postData = {
-      id: postId,
-      iri: post.uri, // Mapping uri to iri
+      id: post.id,
+      iri: post.uri,
       type: post.type,
       accountId: this.actorId,
-      createdAt: post.created_at,
+      createdAt: new Date(post.created_at),
       inReplyToId: post.in_reply_to_id,
       sensitive: post.sensitive,
       spoilerText: post.spoiler_text,
@@ -198,397 +173,241 @@ export class AccountImporter {
       quoteId: post.quote_id,
     };
 
-    try {
-      const existingPost = await db.query.posts.findFirst({
-        where: eq(schema.posts.id, postId),
-      });
+    const existingPost = await db.query.posts.findFirst({
+      where: eq(schema.posts.id, post.id),
+    });
 
-      if (!existingPost) {
-        await db.insert(schema.posts).values(postData);
-        console.info(`Inserted new post with ID: ${postId}`);
-      } else {
-        await db
-          .update(schema.posts)
-          .set(postData)
-          .where(eq(schema.posts.id, postId));
-        console.info(`Updated existing post with ID: ${postId}`);
-      }
-    } catch (error) {
-      console.error(`Failed to import post with ID: ${postId}`, error);
+    if (existingPost) {
+      await db
+        .update(schema.posts)
+        .set(postData)
+        .where(eq(schema.posts.id, post.id));
+    } else {
+      await db.insert(schema.posts).values(postData);
     }
-
-    console.info("Outbox data imported successfully.");
   }
 
   async importBookmark(bookmark: Bookmark) {
-    try {
-      const account = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, this.actorId),
-      });
-      if (!account) {
-        console.error(`Cannot find account with ID: ${this.actorId}`);
-        throw new Error("Account not found");
-      }
+    const existingBookmark = await db.query.bookmarks.findFirst({
+      where: and(
+        eq(schema.bookmarks.accountOwnerId, this.actorId),
+        eq(schema.bookmarks.postId, bookmark.postId),
+      ),
+    });
 
-      const existingBookmark = await db.query.bookmarks.findFirst({
-        where: and(
-          eq(schema.bookmarks.accountOwnerId, this.actorId),
-          eq(schema.bookmarks.postId, bookmark.postId),
-        ),
-      });
-
-      if (existingBookmark) {
-        await db
-          .update(schema.bookmarks)
-          .set({
-            created: new Date(bookmark.created as string),
-            postId: bookmark.postId,
-            accountOwnerId: this.actorId,
-          })
-          .where(
-            and(
-              eq(schema.bookmarks.accountOwnerId, this.actorId),
-              eq(schema.bookmarks.postId, bookmark.postId),
-            ),
-          );
-      } else {
-        await db.insert(schema.bookmarks).values({
-          created: bookmark.created,
+    if (existingBookmark) {
+      await db
+        .update(schema.bookmarks)
+        .set({
+          created: new Date(bookmark.created),
           postId: bookmark.postId,
           accountOwnerId: this.actorId,
-        });
-      }
-    } catch (error) {
-      console.error(
-        `Failed to import bookmark relationship for account ID: ${this.actorId} post ID: ${bookmark.postId}`,
-        error,
-      );
+        })
+        .where(
+          and(
+            eq(schema.bookmarks.accountOwnerId, this.actorId),
+            eq(schema.bookmarks.postId, bookmark.postId),
+          ),
+        );
+    } else {
+      await db.insert(schema.bookmarks).values({
+        created: new Date(bookmark.created),
+        postId: bookmark.postId,
+        accountOwnerId: this.actorId,
+      });
     }
   }
   async importFollower(follower: Follower) {
-    console.info("Importing followers data:", follower);
-
     try {
-      const actor = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, this.actorId),
-      });
-      if (!actor) {
-        console.error(`Cannot find actor with ID: ${this.actorId}`);
-        throw new Error("Actor not found");
-      }
-
-      const following = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, follower.followingId),
-      });
-      if (!following) {
-        console.error(`Cannot find following with ID: ${follower.followingId}`);
-        throw new Error("Following not found");
-      }
-
-      const createdDate = new Date(follower.created as string);
-      const approvedDate =
-        follower.approved instanceof Date ? follower.approved : null;
-
       const existingFollow = await db.query.follows.findFirst({
-        where: eq(schema.follows.followerId, this.actorId),
+        where: and(
+          eq(schema.follows.followerId, this.actorId),
+          eq(schema.follows.followingId, follower.followingId),
+        ),
       });
+
+      const followData = {
+        created: new Date(follower.created),
+        approved: follower.approved ? new Date(follower.approved) : null,
+        iri: follower.iri,
+        shares: follower.shares,
+        notify: follower.notify,
+        languages: follower.languages,
+        followerId: this.actorId,
+        followingId: follower.followingId,
+      };
 
       if (existingFollow) {
         await db
           .update(schema.follows)
-          .set({
-            created: createdDate,
-            approved: approvedDate,
-            iri: follower.iri,
-            shares: follower.shares,
-            notify: follower.notify,
-            languages: follower.languages,
-          })
-          .where(eq(schema.follows.followerId, this.actorId));
-        console.info(
-          `Updated follow relationship for follower ID: ${this.actorId}`,
-        );
+          .set(followData)
+          .where(
+            and(
+              eq(schema.follows.followerId, this.actorId),
+              eq(schema.follows.followingId, follower.followingId),
+            ),
+          );
       } else {
-        await db.insert(schema.follows).values({
-          created: createdDate,
-          approved: approvedDate,
-          iri: follower.iri,
-          shares: follower.shares,
-          notify: follower.notify,
-          languages: follower.languages,
-          followerId: this.actorId,
-          followingId: follower.followingId,
-        });
-        console.info(
-          `Inserted new follow relationship for follower ID: ${this.actorId} following ID: ${follower.followingId}`,
-        );
+        await db.insert(schema.follows).values(followData);
       }
     } catch (error) {
-      console.error("Database operation failed:", error);
-      throw error;
+      console.error(
+        `Failed to import follow relationship for follower ID: ${this.actorId} following ID: ${follower.followingId}`,
+        error,
+      );
     }
   }
 
   async importFollowing(following: Follower) {
-    console.info("Importing following data:", following);
-
     try {
-      const actor = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, following.followerId),
-      });
-      if (!actor) {
-        console.error(`Cannot find actor with ID: ${following.followerId}`);
-        throw new Error("Actor not found");
-      }
-
-      const followingAccount = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, this.actorId),
-      });
-      if (!followingAccount) {
-        console.error(`Cannot find following with ID: ${this.actorId}`);
-        throw new Error("Following not found");
-      }
-
-      const createdDate = new Date(following.created as string);
-      const approvedDate =
-        following.approved instanceof Date ? following.approved : null;
-
       const existingFollow = await db.query.follows.findFirst({
-        where: eq(schema.follows.followingId, this.actorId),
+        where: and(
+          eq(schema.follows.followerId, following.followerId),
+          eq(schema.follows.followingId, this.actorId),
+        ),
       });
+
+      const followData = {
+        created: new Date(following.created),
+        approved: following.approved ? new Date(following.approved) : null,
+        iri: following.iri,
+        shares: following.shares,
+        notify: following.notify,
+        languages: following.languages,
+        followerId: following.followerId,
+        followingId: this.actorId,
+      };
 
       if (existingFollow) {
         await db
           .update(schema.follows)
-          .set({
-            created: createdDate,
-            approved: approvedDate,
-            iri: following.iri,
-            shares: following.shares,
-            notify: following.notify,
-            languages: following.languages,
-          })
-          .where(eq(schema.follows.followingId, this.actorId));
-        console.info(
-          `Updated follow relationship for follower ID: ${this.actorId}`,
-        );
+          .set(followData)
+          .where(
+            and(
+              eq(schema.follows.followerId, following.followerId),
+              eq(schema.follows.followingId, this.actorId),
+            ),
+          );
       } else {
-        await db.insert(schema.follows).values({
-          created: createdDate,
-          approved: approvedDate,
-          iri: following.iri,
-          shares: following.shares,
-          notify: following.notify,
-          languages: following.languages,
-          followerId: following.followerId,
-          followingId: this.actorId,
-        });
-        console.info(
-          `Inserted new follow relationship for follower ID: ${following.followerId} following ID: ${this.actorId}`,
-        );
+        await db.insert(schema.follows).values(followData);
       }
     } catch (error) {
       console.error(
-        `Failed to import follow relationship for follower ID: ${following.followerId} following ID: ${following.followingId}`,
+        `Failed to import follow relationship for follower ID: ${following.followerId} following ID: ${this.actorId}`,
         error,
       );
-      throw error;
     }
   }
 
   async importList(list: List) {
-    console.info("Importing list data:", list);
+    const existingList = await db.query.lists.findFirst({
+      where: eq(schema.lists.id, list.id),
+    });
 
-    try {
-      const actor = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, this.actorId),
-      });
-      if (!actor) {
-        console.error(`Cannot find actor with ID: ${this.actorId}`);
-        throw new Error("Actor not found");
-      }
+    const listData = {
+      title: list.title,
+      repliesPolicy: list.replies_policy,
+      exclusive: list.exclusive,
+      accountOwnerId: this.actorId,
+    };
 
-      const existingList = await db.query.lists.findFirst({
-        where: eq(schema.lists.id, list.id),
-      });
-
-      if (existingList) {
-        await db
-          .update(schema.lists)
-          .set({
-            title: list.title,
-            repliesPolicy: list.replies_policy,
-            exclusive: list.exclusive,
-          })
-          .where(eq(schema.lists.id, list.id));
-        console.info(`Updated list with ID: ${list}`);
-      } else {
-        await db.insert(schema.lists).values({
-          id: list.id,
-          title: list.title,
-          repliesPolicy: list.replies_policy,
-          exclusive: list.exclusive,
-          accountOwnerId: this.actorId,
-        });
-        console.info(`Inserted new list with ID: ${list.id}`);
-      }
-    } catch (error) {
-      console.error(`Failed to import list with ID: ${list.id}`, error);
-      throw error;
+    if (existingList) {
+      await db
+        .update(schema.lists)
+        .set(listData)
+        .where(eq(schema.lists.id, list.id));
+    } else {
+      await db.insert(schema.lists).values({ id: list.id, ...listData });
     }
   }
 
   async importLike(like: Like) {
-    console.info("Importing like data:", like);
+    const existingLike = await db.query.likes.findFirst({
+      where: and(
+        eq(schema.likes.accountId, this.actorId),
+        eq(schema.likes.postId, like.postId),
+      ),
+    });
 
-    try {
-      const actor = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, this.actorId),
-      });
-      if (!actor) {
-        console.error(`Cannot find actor with ID: ${this.actorId}`);
-        throw new Error("Actor not found");
-      }
+    const likeData = {
+      created: new Date(like.created),
+      postId: like.postId,
+      accountId: this.actorId,
+    };
 
-      const existingLike = await db.query.likes.findFirst({
-        where: and(
-          eq(schema.likes.accountId, this.actorId),
-          eq(schema.likes.postId, like.postId),
-        ),
-      });
-
-      const formattedCreated = new Date(like.created);
-
-      if (existingLike) {
-        await db
-          .update(schema.likes)
-          .set({
-            created: formattedCreated,
-            postId: like.postId,
-            accountId: this.actorId,
-          })
-          .where(
-            and(
-              eq(schema.likes.accountId, this.actorId),
-              eq(schema.likes.postId, like.postId),
-            ),
-          );
-      } else {
-        await db.insert(schema.likes).values({
-          created: formattedCreated,
-          postId: like.postId,
-          accountId: this.actorId,
-        });
-      }
-    } catch (error) {
-      console.error(
-        `Failed to import like relationship for account ID: ${this.actorId} post ID: ${like.postId}`,
-        {
-          created: like.created,
-        },
-        error,
-      );
-      throw error;
+    if (existingLike) {
+      await db
+        .update(schema.likes)
+        .set(likeData)
+        .where(
+          and(
+            eq(schema.likes.accountId, this.actorId),
+            eq(schema.likes.postId, like.postId),
+          ),
+        );
+    } else {
+      await db.insert(schema.likes).values(likeData);
     }
   }
 
   async importBlock(block: Block) {
-    console.info("Importing block data:", block);
+    const existingBlock = await db.query.blocks.findFirst({
+      where: and(
+        eq(schema.blocks.accountId, this.actorId),
+        eq(schema.blocks.blockedAccountId, block.blockedAccountId),
+      ),
+    });
 
-    try {
-      const actor = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, this.actorId),
-      });
-      if (!actor) {
-        console.error(`Cannot find actor with ID: ${this.actorId}`);
-        throw new Error("Actor not found");
-      }
+    const blockData = {
+      created: new Date(block.created),
+      accountId: this.actorId,
+      blockedAccountId: block.blockedAccountId,
+    };
 
-      const existingBlock = await db.query.blocks.findFirst({
-        where: and(
-          eq(schema.blocks.accountId, this.actorId),
-          eq(schema.blocks.blockedAccountId, block.blockedAccountId),
-        ),
-      });
-
-      if (existingBlock) {
-        await db
-          .update(schema.blocks)
-          .set({
-            created: new Date(block.created),
-            accountId: this.actorId,
-            blockedAccountId: block.blockedAccountId,
-          })
-          .where(
-            and(
-              eq(schema.blocks.accountId, this.actorId),
-              eq(schema.blocks.blockedAccountId, block.blockedAccountId),
-            ),
-          );
-      } else {
-        await db.insert(schema.blocks).values({
-          accountId: this.actorId,
-          blockedAccountId: block.blockedAccountId,
-        });
-      }
-    } catch (error) {
-      console.error(
-        `Failed to import block relationship for account ID: ${this.actorId} blocked account ID: ${block.blockedAccountId}`,
-        error,
-      );
-      throw error;
+    if (existingBlock) {
+      await db
+        .update(schema.blocks)
+        .set(blockData)
+        .where(
+          and(
+            eq(schema.blocks.accountId, this.actorId),
+            eq(schema.blocks.blockedAccountId, block.blockedAccountId),
+          ),
+        );
+    } else {
+      await db.insert(schema.blocks).values(blockData);
     }
   }
 
   async importMute(mute: Mute) {
-    console.info("Importing mute data:", mute);
+    const existingMute = await db.query.mutes.findFirst({
+      where: and(
+        eq(schema.mutes.accountId, this.actorId),
+        eq(schema.mutes.mutedAccountId, mute.mutedAccountId),
+      ),
+    });
 
-    try {
-      const actor = await db.query.accounts.findFirst({
-        where: eq(schema.accounts.id, this.actorId),
-      });
-      if (!actor) {
-        console.error(`Cannot find actor with ID: ${this.actorId}`);
-        throw new Error("Actor not found");
-      }
+    const muteData = {
+      id: mute.id,
+      created: new Date(mute.created),
+      notifications: mute.notifications,
+      duration: mute.duration,
+      accountId: this.actorId,
+      mutedAccountId: mute.mutedAccountId,
+    };
 
-      const existingMute = await db.query.mutes.findFirst({
-        where: and(
-          eq(schema.mutes.accountId, this.actorId),
-          eq(schema.mutes.mutedAccountId, mute.mutedAccountId),
-        ),
-      });
-
-      if (existingMute) {
-        await db
-          .update(schema.mutes)
-          .set({
-            created: new Date(mute.created),
-            notifications: mute.notifications,
-            duration: mute.duration,
-          })
-          .where(
-            and(
-              eq(schema.mutes.accountId, this.actorId),
-              eq(schema.mutes.mutedAccountId, mute.mutedAccountId),
-            ),
-          );
-      } else {
-        await db.insert(schema.mutes).values({
-          id: mute.id, // Assuming you have a function to generate unique IDs
-          accountId: this.actorId,
-          mutedAccountId: mute.mutedAccountId,
-          created: new Date(mute.created),
-          notifications: mute.notifications,
-          duration: mute.duration,
-        });
-      }
-    } catch (error) {
-      console.error(
-        `Failed to import mute relationship for account ID: ${this.actorId} muted account ID: ${mute.mutedAccountId}`,
-        error,
-      );
-      throw error;
+    if (existingMute) {
+      await db
+        .update(schema.mutes)
+        .set(muteData)
+        .where(
+          and(
+            eq(schema.mutes.accountId, this.actorId),
+            eq(schema.mutes.mutedAccountId, mute.mutedAccountId),
+          ),
+        );
+    } else {
+      await db.insert(schema.mutes).values(muteData);
     }
   }
 }
