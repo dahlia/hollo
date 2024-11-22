@@ -19,6 +19,22 @@ To be released.
 [#59]: https://github.com/dahlia/hollo/pull/59
 
 
+Version 0.2.3
+-------------
+
+Released on November 22, 2024.
+
+ -  Fixed a bug where followees and followers that had not been approved
+    follow requests had been shown in the followees and followers lists.
+
+ -  Fixed a bug where followees and followers had been listed in the wrong
+    order in the followees and followers lists.  [[#71]]
+
+ -  Upgrade Fedify to 1.2.7.
+
+[#71]: https://github.com/dahlia/hollo/issues/71
+
+
 Version 0.2.2
 -------------
 
