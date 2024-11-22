@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.2.3
 -------------
 
-To be released.
+Released on November 22, 2024.
 
  -  Fixed a bug where followees and followers that had not been approved
     follow requests had been shown in the followees and followers lists.
