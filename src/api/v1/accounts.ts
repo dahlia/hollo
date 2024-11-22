@@ -11,6 +11,7 @@ import {
   gte,
   ilike,
   inArray,
+  isNotNull,
   isNull,
   lt,
   lte,
@@ -761,7 +762,8 @@ app.post(
 app.get("/:id/followers", async (c) => {
   const accountId = c.req.param("id");
   const followers = await db.query.follows.findMany({
-    where: eq(follows.followingId, accountId),
+    where: and(eq(follows.followingId, accountId), isNotNull(follows.approved)),
+    orderBy: desc(follows.approved),
     with: { follower: { with: { owner: true, successor: true } } },
   });
   return c.json(
@@ -779,7 +781,8 @@ app.get("/:id/followers", async (c) => {
 app.get("/:id/following", async (c) => {
   const accountId = c.req.param("id");
   const followers = await db.query.follows.findMany({
-    where: eq(follows.followerId, accountId),
+    where: and(eq(follows.followerId, accountId), isNotNull(follows.approved)),
+    orderBy: desc(follows.approved),
     with: { following: { with: { owner: true, successor: true } } },
   });
   return c.json(
