@@ -6,7 +6,15 @@ Version 0.2.3
 
 To be released.
 
+ -  Fixed a bug where followees and followers that had not been approved
+    follow requests had been shown in the followees and followers lists.
+
+ -  Fixed a bug where followees and followers had been listed in the wrong
+    order in the followees and followers lists.  [[#71]]
+
  -  Upgrade Fedify to 1.2.7.
+
+[#71]: https://github.com/dahlia/hollo/issues/71
 
 
 Version 0.2.2
