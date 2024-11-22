@@ -6,6 +6,8 @@ Version 0.2.3
 
 To be released.
 
+ -  Upgrade Fedify to 1.2.7.
+
 
 Version 0.2.2
 -------------
