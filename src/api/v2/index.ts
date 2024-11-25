@@ -30,8 +30,8 @@ app.post("/media", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
 app.post(
   "/:actorId/accountExport",
-  // tokenRequired,
-  // scopeRequired(["read:accounts"]),
+  tokenRequired,
+  scopeRequired(["read:accounts"]),
   exportController,
 );
 
