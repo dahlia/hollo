@@ -29,7 +29,43 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
     xss(account.bioHtml ?? ""),
     account.emojis,
   );
+
   const href = account.url ?? account.iri;
+
+  const downloadExport = async () => {
+    // Create a FormData object to mimic form submission
+    const formData = new FormData();
+    formData.append("actorId", "12345"); // Add any required fields
+
+    try {
+      const response = await fetch(`/api/v2/12345/accountExport`, {
+        method: "POST",
+        body: formData, // FormData automatically sets the correct headers
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to export: ${response.statusText}`);
+      }
+
+      // Convert response to a Blob for file download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      // Create an anchor element to trigger the download
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `account_export_12345.tar`;
+      document.body.appendChild(a);
+      a.click();
+
+      // Cleanup: Remove the anchor and revoke the object URL
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting account:", error);
+    }
+  };
+
   return (
     <article>
       <header>
@@ -73,7 +109,7 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
             <a
               href={`/accounts/${account.id}`}
               role="button"
-              style="display: block;"
+              style={{ display: 'block' }}
             >
               Edit
             </a>
@@ -81,7 +117,7 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
               href={`/accounts/${account.id}/migrate`}
               role="button"
               className="contrast"
-              style="display: block;"
+              style={{ display: 'block' }}
             >
               Migrate from/to
             </a>
@@ -90,6 +126,8 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
             </button>
           </div>
         </form>
+        {/* Export Account Button */}
+        <button onClick={downloadExport}>Export Account</button>
       </footer>
     </article>
   );
