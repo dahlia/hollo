@@ -56,7 +56,7 @@ if (driveDisk === "s3" && process.env["ASSET_URL_BASE"] == null) {
 }
 
 export function getAssetUrl(path: string, base: URL | string): string {
-  if (assetUrlBase == null) {
+  if (assetUrlBase == null || assetUrlBase.trim() === "") {
     return new URL(`/assets/${path.replace(/^\/+/, "")}`, base).href;
   }
   return `${assetUrlBase.replace(/\/+$/, "")}/${path.replace(/^\/+/, "")}`;
