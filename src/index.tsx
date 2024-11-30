@@ -1,6 +1,7 @@
 import "./logging";
 import { join } from "node:path";
 import { federation } from "@fedify/fedify/x/hono";
+import { captureException } from "@sentry/core";
 import { Hono } from "hono";
 import { serveStatic } from "hono/bun";
 import { behindProxy } from "x-forwarded-fetch";
@@ -9,9 +10,18 @@ import fedi from "./federation";
 import image from "./image";
 import oauth, { oauthAuthorizationServer } from "./oauth";
 import pages from "./pages";
+import { configureSentry } from "./sentry";
 import { DRIVE_DISK, assetPath } from "./storage";
 
+// biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
+configureSentry(process.env["SENTRY_DSN"]);
+
 const app = new Hono();
+
+app.onError((err, _) => {
+  captureException(err);
+  throw err;
+});
 
 if (DRIVE_DISK === "fs") {
   app.use(

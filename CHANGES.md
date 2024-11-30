@@ -16,6 +16,10 @@ To be released.
      -  Deprecated `S3_URL_BASE` environment variable in favor of
         `ASSET_URL_BASE`.
 
+ -  Added support for Sentry.
+
+     -  Added `SENTRY_DSN` environment variable.
+
  -  Upgrade Fedify to 1.3.0
 
 [#59]: https://github.com/dahlia/hollo/pull/59
