@@ -20,8 +20,11 @@ To be released.
 
      -  Added `SENTRY_DSN` environment variable.
 
+ -  Added pagination to the profile page.  [[#40]]
+
  -  Upgrade Fedify to 1.3.0
 
+[#40]: https://github.com/dahlia/hollo/issues/40
 [#59]: https://github.com/dahlia/hollo/pull/59
 
 
