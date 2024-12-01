@@ -1,4 +1,4 @@
-import { and, desc, eq, or } from "drizzle-orm";
+import { and, desc, eq, lte, or } from "drizzle-orm";
 import { Hono } from "hono";
 import xss from "xss";
 import { Layout } from "../../components/Layout.tsx";
@@ -25,6 +25,8 @@ const profile = new Hono();
 
 profile.route("/:id{[-a-f0-9]+}", profilePost);
 
+const WINDOW = 30;
+
 profile.get<"/:handle">(async (c) => {
   let handle = c.req.param("handle");
   if (handle.startsWith("@")) handle = handle.substring(1);
@@ -33,12 +35,16 @@ profile.get<"/:handle">(async (c) => {
     with: { account: true },
   });
   if (owner == null) return c.notFound();
+  const contStr = c.req.query("cont");
+  const cont = contStr == null || contStr.trim() === "" ? undefined : contStr;
   const postList = await db.query.posts.findMany({
     where: and(
       eq(posts.accountId, owner.id),
       or(eq(posts.visibility, "public"), eq(posts.visibility, "unlisted")),
+      ...(cont == null ? [] : [lte(posts.id, cont)]),
     ),
     orderBy: desc(posts.id),
+    limit: WINDOW + 1,
     with: {
       account: true,
       media: true,
@@ -74,58 +80,63 @@ profile.get<"/:handle">(async (c) => {
       reactions: true,
     },
   });
-  const pinnedPostList = await db.query.pinnedPosts.findMany({
-    where: and(eq(pinnedPosts.accountId, owner.id)),
-    orderBy: desc(pinnedPosts.index),
-    with: {
-      post: {
-        with: {
-          account: true,
-          media: true,
-          poll: { with: { options: true } },
-          sharing: {
-            with: {
-              account: true,
-              media: true,
-              poll: { with: { options: true } },
-              replyTarget: { with: { account: true } },
-              quoteTarget: {
-                with: {
-                  account: true,
-                  media: true,
-                  poll: { with: { options: true } },
-                  replyTarget: { with: { account: true } },
-                  reactions: true,
+  const pinnedPostList =
+    cont == null
+      ? await db.query.pinnedPosts.findMany({
+          where: and(eq(pinnedPosts.accountId, owner.id)),
+          orderBy: desc(pinnedPosts.index),
+          with: {
+            post: {
+              with: {
+                account: true,
+                media: true,
+                poll: { with: { options: true } },
+                sharing: {
+                  with: {
+                    account: true,
+                    media: true,
+                    poll: { with: { options: true } },
+                    replyTarget: { with: { account: true } },
+                    quoteTarget: {
+                      with: {
+                        account: true,
+                        media: true,
+                        poll: { with: { options: true } },
+                        replyTarget: { with: { account: true } },
+                        reactions: true,
+                      },
+                    },
+                    reactions: true,
+                  },
                 },
+                replyTarget: { with: { account: true } },
+                quoteTarget: {
+                  with: {
+                    account: true,
+                    media: true,
+                    poll: { with: { options: true } },
+                    replyTarget: { with: { account: true } },
+                    reactions: true,
+                  },
+                },
+                reactions: true,
               },
-              reactions: true,
             },
           },
-          replyTarget: { with: { account: true } },
-          quoteTarget: {
-            with: {
-              account: true,
-              media: true,
-              poll: { with: { options: true } },
-              replyTarget: { with: { account: true } },
-              reactions: true,
-            },
-          },
-          reactions: true,
-        },
-      },
-    },
-  });
+        })
+      : [];
   const featuredTagList = await db.query.featuredTags.findMany({
     where: eq(featuredTags.accountOwnerId, owner.id),
   });
   const atomUrl = new URL(c.req.url);
   atomUrl.pathname += "/atom.xml";
   atomUrl.search = "";
+  const olderUrl =
+    postList.length > WINDOW ? `?cont=${postList[WINDOW].id}` : undefined;
   return c.html(
     <ProfilePage
       accountOwner={owner}
-      posts={postList}
+      posts={postList.slice(0, WINDOW)}
       pinnedPosts={pinnedPostList
         .map((p) => p.post)
         .filter(
@@ -133,6 +144,7 @@ profile.get<"/:handle">(async (c) => {
         )}
       featuredTags={featuredTagList}
       atomUrl={atomUrl.href}
+      olderUrl={olderUrl}
     />,
   );
 });
@@ -209,6 +221,7 @@ interface ProfilePageProps {
   })[];
   readonly featuredTags: FeaturedTag[];
   readonly atomUrl: string;
+  readonly olderUrl?: string;
 }
 
 function ProfilePage({
@@ -217,6 +230,7 @@ function ProfilePage({
   pinnedPosts,
   featuredTags,
   atomUrl,
+  olderUrl,
 }: ProfilePageProps) {
   return (
     <Layout
@@ -251,6 +265,9 @@ function ProfilePage({
       {posts.map((post) => (
         <PostView post={post} />
       ))}
+      <div style="text-align: right;">
+        {olderUrl && <a href={olderUrl}>Older &rarr;</a>}
+      </div>
     </Layout>
   );
 }
