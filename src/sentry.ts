@@ -5,7 +5,7 @@ import { getGlobalScope, setCurrentClient } from "@sentry/core";
 const logger = getLogger(["hollo", "sentry"]);
 
 export function configureSentry(dsn?: string): BunClient | undefined {
-  if (dsn == null) {
+  if (dsn == null || dsn.trim() === "") {
     logger.debug("SENTRY_DSN is not provided. Sentry will not be initialized.");
     return;
   }
