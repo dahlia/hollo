@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.3.0
 -------------
 
-To be released.
+Released on December 1, 2024.
 
  -  Added support for local filesystem storage for media files.
     You can now configure `DRIVE_DISK=fs` and `FS_ASSET_PATH` to store media
