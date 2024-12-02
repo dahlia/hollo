@@ -33,18 +33,37 @@ export const importController = async (c: Context) => {
 
   const actorId = c.req.param("actorId");
 
+  if (!actorId) {
+    logger.error("Actor ID is missing in the request");
+    return c.json({ error: "Actor ID is required" }, 400);
+  }
+
   try {
-    const importer = new AccountImporter(actorId);
+    // Parse the incoming multipart/form-data
+    const formData = await c.req.formData();
+    const file = formData.get("file");
 
-    // Get the buffer from the request
-    const tarballBuffer = await c.req.arrayBuffer();
-    console.log("🚀 ~ importController ~ tarballBuffer:", tarballBuffer);
-    if (tarballBuffer.byteLength === 0) {
-      return c.json({ error: "No data provided" }, 400);
+    if (!file || !(file instanceof File)) {
+      logger.error("No file uploaded or invalid file data");
+      return c.json({ error: "No file uploaded" }, 400);
     }
-    const buffer = Buffer.from(tarballBuffer);
 
-    return await importer.importData(buffer, c);
+    logger.info(`Received file: ${file.name}, size: ${file.size} bytes`);
+
+    // Read the file content into a buffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    if (buffer.byteLength === 0) {
+      logger.error("Uploaded file is empty");
+      return c.json({ error: "Uploaded file is empty" }, 400);
+    }
+
+    // Pass the buffer to the importer
+    const importer = new AccountImporter(actorId);
+    await importer.importData(buffer, c);
+
+    return c.html("<script>alert('Data imported successfully!');</script>");
   } catch (error) {
     logger.error("Account import failed:", { error });
     return c.json({ error: "Import failed" }, 500);

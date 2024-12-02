@@ -90,6 +90,24 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
             </button>
           </div>
         </form>
+        <div className="grid">
+          <iframe
+            id="hiddenIframe"
+            name="hiddenIframe"
+            style={{ display: "none" }}
+            title="Hidden iframe"
+          />{" "}
+          {/* To prevent users from being redirected to the API endpoint in the browser */}
+          <form
+            action={`/api/v2/${account.id}/accountImport`}
+            method="post"
+            encType="multipart/form-data"
+            target="hiddenIframe"
+          >
+            <input type="file" name="file" accept=".tar,.tar.gz" required />
+            <button type="submit">Import Account</button>
+          </form>
+        </div>
       </footer>
     </article>
   );
