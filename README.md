@@ -3,9 +3,7 @@
   <img src="logo-black.svg" width="50" height="50">
 </picture>
 
-
-Hollo
-=====
+# Hollo
 
 [![Matrix][Matrix badge]][Matrix]
 [![Discord][Discord badge]][Discord]
@@ -17,7 +15,7 @@ Although it is for single-user, it is designed to be federated through
 from other instances, even from other software that supports ActivityPub like
 Mastodon, Misskey, and so on.
 
-Hollo does not have its own web interface.  Instead, it implements
+Hollo does not have its own web interface. Instead, it implements
 Mastodon-compatible APIs so that you can integrate it with the most of
 the [existing Mastodon clients](https://docs.hollo.social/clients/).
 
@@ -30,15 +28,47 @@ the [existing Mastodon clients](https://docs.hollo.social/clients/).
 [Fedify]: https://fedify.dev/
 [ActivityPub]: https://www.w3.org/TR/activitypub/
 
+## Docs
 
-Docs
-----
+- [What is Hollo?](https://docs.hollo.social/intro/)
+- Installation
+  - [Deploy to Railway](https://docs.hollo.social/install/railway/)
+  - [Deploy using Docker](https://docs.hollo.social/install/docker/)
+  - [Manual installation](https://docs.hollo.social/install/manual/)
+  - [Environment variables](https://docs.hollo.social/install/env/)
+  - [Setting up](https://docs.hollo.social/install/setup/)
+- [Tested clients](https://docs.hollo.social/clients/)
 
- -  [What is Hollo?](https://docs.hollo.social/intro/)
- -  Installation
-     -  [Deploy to Railway](https://docs.hollo.social/install/railway/)
-     -  [Deploy using Docker](https://docs.hollo.social/install/docker/)
-     -  [Manual installation](https://docs.hollo.social/install/manual/)
-     -  [Environment variables](https://docs.hollo.social/install/env/)
-     -  [Setting up](https://docs.hollo.social/install/setup/)
- -  [Tested clients](https://docs.hollo.social/clients/)
+## Deployments
+
+### Deploy to Staging Server
+
+To deploy Hollo to the staging server, follow these steps:
+
+1. **Generate an SSH Key**:
+
+   - Generate an SSH key on your local machine:
+     ```bash
+     ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
+     ```
+   - Add the generated public key (`~/.ssh/id_rsa.pub`) to the server's authorized keys.
+
+2. **Connect to the Server**:
+
+   - Use SSH to connect to the server:
+     ```bash
+     ssh username@208.113.133.153
+     ```
+
+3. **Run the Deployment Script**:
+   - Run the deployment script:
+     ```bash
+     /opt/deploy_hollo.sh
+     ```
+   - [Optional] in case you want to deploy a specific branch:
+     ```bash
+     /opt/deploy_hollo.sh branch_name
+     ```
+   - The script will:
+     - Pull the latest changes from the repository.
+     - Restart the application.
