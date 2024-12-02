@@ -59,6 +59,10 @@ export class AccountExporter {
       orderedItems: bookmarks.map((bookmark) => bookmark.postId),
     };
   }
+  private normalizeUrl(path: string): string {
+    const base = homeUrl.endsWith('/') ? homeUrl : `${homeUrl}/`;
+    return new URL(path, base).toString();
+  }
 
   serializeFollowing(followingAccounts: schema.Follow[]) {
     return {
@@ -66,7 +70,7 @@ export class AccountExporter {
       id: "following_accounts.json",
       type: "OrderedCollection",
       orderedItems: followingAccounts.map((account) => ({
-        account: `${homeUrl}/accounts/${account.followingId}`,
+        account: this.normalizeUrl(`accounts/${account.followingId}`),
         showBoosts: account.shares,
         notifyOnNewPosts: account.notify,
         language: account.languages,
@@ -80,14 +84,16 @@ export class AccountExporter {
       id: "followers.json",
       type: "OrderedCollection",
       orderedItems: followers.map((follower) => ({
-        account: `${homeUrl}/accounts/${follower.followerId}`,
+        account: this.normalizeUrl(`accounts/${follower.followerId}`),
         followedSince: follower.created,
         language: follower.languages,
       })),
     };
   }
+  
 
   async exportData(c: Context) {
+    try {
     const account = await this.loadAccount();
     if (!account) return c.json({ error: "Actor not found" }, 404);
 
@@ -135,5 +141,9 @@ export class AccountExporter {
       "Content-Type": "application/x-tar",
       "Content-Disposition": `attachment; filename="account_export_${encodeURIComponent(this.actorId)}.tar"`,
     });
+    } catch (e) {
+      console.error(e);
+      return c.json({ error: "Internal server error occurred" }, 500);
+    }
   }
 }
