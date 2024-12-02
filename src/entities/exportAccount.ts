@@ -15,6 +15,9 @@ export class AccountExporter {
   actorId: string;
 
   constructor(actorId: string) {
+    if (!actorId) {
+      throw new Error("Invalid actorId");
+    }
     this.actorId = actorId;
   }
 
@@ -73,7 +76,7 @@ export class AccountExporter {
         account: this.normalizeUrl(`accounts/${account.followingId}`),
         showBoosts: account.shares,
         notifyOnNewPosts: account.notify,
-        language: account.languages,
+        language: account.languages ?? null,
       })),
     };
   }
@@ -137,7 +140,7 @@ export class AccountExporter {
       bookmarks: serializedBookmarks,
     });
 
-    return c.body(exportTarballStream as any, 200, {
+    return c.body(exportTarballStream, 200, {
       "Content-Type": "application/x-tar",
       "Content-Disposition": `attachment; filename="account_export_${encodeURIComponent(this.actorId)}.tar"`,
     });
