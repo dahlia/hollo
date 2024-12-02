@@ -13,7 +13,7 @@ export const exportController = async (c: Context) => {
   if (owner == null) {
     return c.json({ error: "Unauthorized" }, 401);
   }
-  if (owner.handle !== actorId) {
+  if (owner.id !== actorId) {
     return c.json({ error: "Forbidden" }, 403);
   }
 

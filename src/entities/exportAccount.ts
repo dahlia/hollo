@@ -1,4 +1,3 @@
-// @ts-ignore-next-line
 import { exportActorProfile } from "@interop/wallet-export-ts";
 import { eq } from "drizzle-orm";
 import type { Context } from "hono";
@@ -34,7 +33,7 @@ export class AccountExporter {
   }
 
   async loadFollows(type: "following" | "followers") {
-    const column = type === "following" ? "followerId" : "followingId";
+    const column = type === "following" ? "followingId" : "followerId";
     return db.query.follows.findMany({
       where: eq(schema.follows[column], this.actorId),
     });
@@ -132,10 +131,9 @@ export class AccountExporter {
       bookmarks: serializedBookmarks,
     });
 
-    // @ts-ignore-next-line
-    return c.body(exportTarballStream, 200, {
+    return c.body(exportTarballStream as any, 200, {
       "Content-Type": "application/x-tar",
-      "Content-Disposition": `attachment; filename="account_export_${this.actorId}.tar"`,
+      "Content-Disposition": `attachment; filename="account_export_${encodeURIComponent(this.actorId)}.tar"`,
     });
   }
 }
