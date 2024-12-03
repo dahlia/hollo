@@ -21,6 +21,7 @@ import { type Account, accounts, posts } from "../../schema";
 import { postMedia } from "../v1/media";
 import { exportController } from "./controllers/accountExport";
 import instance from "./instance";
+import { loginRequired } from "../../login";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -30,8 +31,8 @@ app.post("/media", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
 app.post(
   "/:actorId/accountExport",
-  tokenRequired,
-  scopeRequired(["read:accounts"]),
+  // use the same authorization middleare as Edit profile screen
+  loginRequired,
   exportController,
 );
 

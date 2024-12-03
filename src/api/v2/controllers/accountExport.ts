@@ -8,13 +8,8 @@ export const exportController = async (c: Context) => {
   logger.info("Received account export request");
 
   const actorId = c.req.param("actorId");
-  const owner = c.get("token").accountOwner;
-
-  if (owner == null) {
-    return c.json({ error: "Unauthorized" }, 401);
-  }
-  if (owner.id !== actorId) {
-    return c.json({ error: "Forbidden" }, 403);
+  if (!actorId) {
+    return c.json({ error: "Actor ID not provided" }, 400);
   }
 
   try {
