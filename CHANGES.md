@@ -6,6 +6,8 @@ Version 0.4.0
 
 To be released.
 
+ -  The profile page now shows a user's cover image if they have one.
+
 
 Version 0.3.0
 -------------

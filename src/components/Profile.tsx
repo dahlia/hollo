@@ -14,7 +14,14 @@ export function Profile({ accountOwner }: ProfileProps) {
   const bioHtml = renderCustomEmojis(account.bioHtml ?? "", account.emojis);
   const url = account.url ?? account.iri;
   return (
-    <>
+    <div>
+      {account.coverUrl && (
+        <img
+          src={account.coverUrl}
+          alt=""
+          style="margin-bottom: 1em; width: 100%;"
+        />
+      )}
       <hgroup>
         {account.avatarUrl && (
           <img
@@ -67,6 +74,6 @@ export function Profile({ accountOwner }: ProfileProps) {
           </tbody>
         </table>
       )}
-    </>
+    </div>
   );
 }
