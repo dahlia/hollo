@@ -11,9 +11,11 @@ import {
   isActor,
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
-import { and, eq, sql } from "drizzle-orm";
+import { createObjectCsvStringifier } from "csv-writer-portable";
+import { and, count, eq, sql } from "drizzle-orm";
 import { uniq } from "es-toolkit";
 import { Hono } from "hono";
+import { streamText } from "hono/streaming";
 import { AccountForm } from "../components/AccountForm.tsx";
 import { AccountList } from "../components/AccountList.tsx";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
@@ -37,8 +39,13 @@ import {
   type PostVisibility,
   accountOwners,
   accounts as accountsTable,
+  blocks,
+  bookmarks,
   follows,
   instances,
+  listMembers,
+  lists,
+  mutes,
 } from "../schema.ts";
 import { extractCustomEmojis, formatText } from "../text.ts";
 
@@ -422,6 +429,27 @@ accounts.get("/:id/migrate", async (c) => {
       handle: await getActorHandle(new URL(alias)),
     })),
   );
+  const [{ followsCount }] = await db
+    .select({ followsCount: count() })
+    .from(follows)
+    .where(eq(follows.followerId, accountOwner.id));
+  const [{ listsCount }] = await db
+    .select({ listsCount: count() })
+    .from(listMembers)
+    .innerJoin(lists, eq(listMembers.listId, lists.id))
+    .where(eq(lists.accountOwnerId, accountOwner.id));
+  const [{ mutesCount }] = await db
+    .select({ mutesCount: count() })
+    .from(mutes)
+    .where(eq(mutes.accountId, accountOwner.id));
+  const [{ blocksCount }] = await db
+    .select({ blocksCount: count() })
+    .from(blocks)
+    .where(eq(blocks.accountId, accountOwner.id));
+  const [{ bookmarksCount }] = await db
+    .select({ bookmarksCount: count() })
+    .from(bookmarks)
+    .where(eq(bookmarks.accountOwnerId, accountOwner.id));
   const error = c.req.query("error");
   const handle = c.req.query("handle");
   return c.html(
@@ -516,6 +544,80 @@ accounts.get("/:id/migrate", async (c) => {
             </strong>
           </small>
         </form>
+      </article>
+
+      <article>
+        <header>
+          <hgroup>
+            <h2>Export data</h2>
+            <p>
+              Export your account data into CSV files. Note that these files are
+              compatible with Mastodon.
+            </p>
+          </hgroup>
+        </header>
+        <table>
+          <thead>
+            <tr>
+              <th>Category</th>
+              <th>Entries</th>
+              <th>Download</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Follows</td>
+              <td>{followsCount.toLocaleString("en-US")}</td>
+              <td>
+                <a
+                  href={`/accounts/${accountOwner.id}/migrate/following_accounts.csv`}
+                >
+                  CSV
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td>Lists</td>
+              <td>{listsCount.toLocaleString("en-US")}</td>
+              <td>
+                <a href={`/accounts/${accountOwner.id}/migrate/lists.csv`}>
+                  CSV
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td>You mute</td>
+              <td>{mutesCount.toLocaleString("en-US")}</td>
+              <td>
+                <a
+                  href={`/accounts/${accountOwner.id}/migrate/muted_accounts.csv`}
+                >
+                  CSV
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td>You block</td>
+              <td>{blocksCount.toLocaleString("en-US")}</td>
+              <td>
+                <a
+                  href={`/accounts/${accountOwner.id}/migrate/blocked_accounts.csv`}
+                >
+                  CSV
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td>Bookmarks</td>
+              <td>{bookmarksCount.toLocaleString("en-US")}</td>
+              <td>
+                <a href={`/accounts/${accountOwner.id}/migrate/bookmarks.csv`}>
+                  CSV
+                </a>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </article>
     </DashboardLayout>,
   );
@@ -615,6 +717,153 @@ accounts.post("/:id/migrate/to", async (c) => {
     { preferSharedInbox: true, excludeBaseUris: [fedCtx.url] },
   );
   return c.redirect(`/accounts/${accountOwner.id}/migrate`);
+});
+
+accounts.get("/:id/migrate/following_accounts.csv", async (c) => {
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, c.req.param("id")),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+  const csv = createObjectCsvStringifier({
+    header: [
+      { id: "handle", title: "Account address" },
+      { id: "boosts", title: "Show boosts" },
+      { id: "notify", title: "Notify on new posts" },
+      { id: "languages", title: "Languages" },
+    ],
+  });
+  c.header("Content-Type", "text/csv");
+  c.header(
+    "Content-Disposition",
+    'attachment; filename="following_accounts.csv"',
+  );
+  return streamText(c, async (stream) => {
+    await stream.write(csv.getHeaderString() ?? "");
+    const following = await db.query.follows.findMany({
+      with: { following: true },
+      where: eq(follows.followerId, accountOwner.id),
+    });
+    for (const f of following) {
+      const record = {
+        handle: f.following.handle.replace(/^@/, ""),
+        boosts: f.shares,
+        notify: f.notify,
+        languages: (f.languages ?? []).join(", "),
+      };
+      await stream.write(csv.stringifyRecords([record]));
+    }
+  });
+});
+
+accounts.get("/:id/migrate/lists.csv", async (c) => {
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, c.req.param("id")),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+  const csv = createObjectCsvStringifier({
+    header: [
+      { id: "list", title: "list" },
+      { id: "handle", title: "handle" },
+    ],
+  });
+  c.header("Content-Type", "text/csv");
+  c.header("Content-Disposition", 'attachment; filename="lists.csv"');
+  return streamText(c, async (stream) => {
+    const listObjects = await db.query.lists.findMany({
+      with: { members: { with: { account: true } } },
+      where: eq(lists.accountOwnerId, accountOwner.id),
+    });
+    for (const list of listObjects) {
+      const records = list.members.map((m) => ({
+        list: list.title,
+        handle: m.account.handle.replace(/^@/, ""),
+      }));
+      await stream.write(csv.stringifyRecords(records));
+    }
+  });
+});
+
+accounts.get("/:id/migrate/muted_accounts.csv", async (c) => {
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, c.req.param("id")),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+  const csv = createObjectCsvStringifier({
+    header: [
+      { id: "handle", title: "Account address" },
+      { id: "notifications", title: "Hide notifications" },
+    ],
+  });
+  c.header("Content-Type", "text/csv");
+  c.header("Content-Disposition", 'attachment; filename="muted_accounts.csv"');
+  return streamText(c, async (stream) => {
+    await stream.write(csv.getHeaderString() ?? "");
+    const mutedAccounts = await db.query.mutes.findMany({
+      with: { targetAccount: true },
+      where: eq(mutes.accountId, accountOwner.id),
+    });
+    for (const muted of mutedAccounts) {
+      const record = {
+        handle: muted.targetAccount.handle.replace(/^@/, ""),
+        notifications: muted.notifications,
+      };
+      await stream.write(csv.stringifyRecords([record]));
+    }
+  });
+});
+
+accounts.get("/:id/migrate/blocked_accounts.csv", async (c) => {
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, c.req.param("id")),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+  const csv = createObjectCsvStringifier({
+    header: [{ id: "handle", title: "handle" }],
+  });
+  c.header("Content-Type", "text/csv");
+  c.header(
+    "Content-Disposition",
+    'attachment; filename="blocked_accounts.csv"',
+  );
+  return streamText(c, async (stream) => {
+    const blockedAccounts = await db.query.blocks.findMany({
+      with: { blockedAccount: true },
+      where: eq(mutes.accountId, accountOwner.id),
+    });
+    for (const blocked of blockedAccounts) {
+      const record = {
+        handle: blocked.blockedAccount.handle.replace(/^@/, ""),
+      };
+      await stream.write(csv.stringifyRecords([record]));
+    }
+  });
+});
+
+accounts.get("/:id/migrate/bookmarks.csv", async (c) => {
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, c.req.param("id")),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+  const csv = createObjectCsvStringifier({
+    header: [{ id: "iri", title: "iri" }],
+  });
+  c.header("Content-Type", "text/csv");
+  c.header("Content-Disposition", 'attachment; filename="bookmarks.csv"');
+  return streamText(c, async (stream) => {
+    const bookmarkList = await db.query.bookmarks.findMany({
+      with: { post: true },
+      where: eq(bookmarks.accountOwnerId, accountOwner.id),
+    });
+    for (const bookmark of bookmarkList) {
+      const record = { iri: bookmark.post.iri };
+      await stream.write(csv.stringifyRecords([record]));
+    }
+  });
 });
 
 export default accounts;

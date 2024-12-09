@@ -6,6 +6,10 @@ Version 0.4.0
 
 To be released.
 
+ -  Now you can export your data from the administration dashboard in CSV
+    format: follows, lists, accounts you muted, accounts you blocked, and
+    bookmarks.
+
  -  The profile page now shows a user's cover image if they have one.
 
 
