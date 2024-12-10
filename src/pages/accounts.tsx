@@ -1,4 +1,5 @@
 import {
+  type Actor,
   Delete,
   Move,
   type Object,
@@ -11,11 +12,13 @@ import {
   isActor,
 } from "@fedify/fedify";
 import { getLogger } from "@logtape/logtape";
+import { PromisePool } from "@supercharge/promise-pool";
 import { createObjectCsvStringifier } from "csv-writer-portable";
-import { and, count, eq, sql } from "drizzle-orm";
+import { and, count, eq, inArray, sql } from "drizzle-orm";
 import { uniq } from "es-toolkit";
 import { Hono } from "hono";
 import { streamText } from "hono/streaming";
+import neatCsv from "neat-csv";
 import { AccountForm } from "../components/AccountForm.tsx";
 import { AccountList } from "../components/AccountList.tsx";
 import { DashboardLayout } from "../components/DashboardLayout.tsx";
@@ -27,15 +30,19 @@ import db from "../db.ts";
 import federation from "../federation";
 import {
   REMOTE_ACTOR_FETCH_POSTS,
+  blockAccount,
   followAccount,
   persistAccount,
   persistAccountPosts,
   unfollowAccount,
 } from "../federation/account.ts";
+import { isPost, persistPost } from "../federation/post.ts";
 import { loginRequired } from "../login.ts";
 import {
   type Account,
   type AccountOwner,
+  type List,
+  type Post,
   type PostVisibility,
   accountOwners,
   accounts as accountsTable,
@@ -450,8 +457,9 @@ accounts.get("/:id/migrate", async (c) => {
     .select({ bookmarksCount: count() })
     .from(bookmarks)
     .where(eq(bookmarks.accountOwnerId, accountOwner.id));
-  const error = c.req.query("error");
-  const handle = c.req.query("handle");
+  const aliasesError = c.req.query("error");
+  const aliasesHandle = c.req.query("handle");
+  const importDataResult = c.req.query("import-data-result");
   return c.html(
     <DashboardLayout
       title={`Hollo: Migrate ${username} from/to`}
@@ -491,8 +499,8 @@ accounts.get("/:id/migrate", async (c) => {
               name="handle"
               placeholder="@hollo@hollo.social"
               required
-              {...(error === "from"
-                ? { "aria-invalid": "true", value: handle }
+              {...(aliasesError === "from"
+                ? { "aria-invalid": "true", value: aliasesHandle }
                 : {})}
             />
             <button type="submit">Add</button>
@@ -521,8 +529,8 @@ accounts.get("/:id/migrate", async (c) => {
               name="handle"
               placeholder={HOLLO_OFFICIAL_ACCOUNT}
               required
-              {...(error === "to"
-                ? { "aria-invalid": "true", value: handle }
+              {...(aliasesError === "to"
+                ? { "aria-invalid": "true", value: aliasesHandle }
                 : { value: accountOwner.account.successor?.handle })}
               {...(accountOwner.account.successorId == null
                 ? {}
@@ -569,55 +577,89 @@ accounts.get("/:id/migrate", async (c) => {
               <td>Follows</td>
               <td>{followsCount.toLocaleString("en-US")}</td>
               <td>
-                <a
-                  href={`/accounts/${accountOwner.id}/migrate/following_accounts.csv`}
-                >
-                  CSV
-                </a>
+                <a href="migrate/following_accounts.csv">CSV</a>
               </td>
             </tr>
             <tr>
               <td>Lists</td>
               <td>{listsCount.toLocaleString("en-US")}</td>
               <td>
-                <a href={`/accounts/${accountOwner.id}/migrate/lists.csv`}>
-                  CSV
-                </a>
+                <a href="migrate/lists.csv">CSV</a>
               </td>
             </tr>
             <tr>
               <td>You mute</td>
               <td>{mutesCount.toLocaleString("en-US")}</td>
               <td>
-                <a
-                  href={`/accounts/${accountOwner.id}/migrate/muted_accounts.csv`}
-                >
-                  CSV
-                </a>
+                <a href="migrate/muted_accounts.csv">CSV</a>
               </td>
             </tr>
             <tr>
               <td>You block</td>
               <td>{blocksCount.toLocaleString("en-US")}</td>
               <td>
-                <a
-                  href={`/accounts/${accountOwner.id}/migrate/blocked_accounts.csv`}
-                >
-                  CSV
-                </a>
+                <a href="migrate/blocked_accounts.csv">CSV</a>
               </td>
             </tr>
             <tr>
               <td>Bookmarks</td>
               <td>{bookmarksCount.toLocaleString("en-US")}</td>
               <td>
-                <a href={`/accounts/${accountOwner.id}/migrate/bookmarks.csv`}>
-                  CSV
-                </a>
+                <a href="migrate/bookmarks.csv">CSV</a>
               </td>
             </tr>
           </tbody>
         </table>
+      </article>
+
+      <article id="import-data">
+        <header>
+          <hgroup>
+            <h2>Import data</h2>
+            {importDataResult == null ? (
+              <p>
+                Import your account data from CSV files, which are exported from
+                other Hollo or Mastodon instances. The existing data won't be
+                overwritten, but the new data will be <strong>merged</strong>{" "}
+                with the existing data.
+              </p>
+            ) : (
+              <p>{importDataResult}</p>
+            )}
+          </hgroup>
+        </header>
+        <form
+          method="post"
+          action="migrate/import"
+          encType="multipart/form-data"
+          onsubmit={`
+            const [submit] = this.getElementsByTagName('button');
+            submit.disabled = true;
+            submit.textContent = 'Importing… it may take a while…';
+          `}
+        >
+          <fieldset class="grid">
+            <label>
+              Category
+              <select name="category">
+                <option value="following_accounts">Follows</option>
+                <option value="lists">Lists</option>
+                <option value="muted_accounts">Muted accounts</option>
+                <option value="blocked_accounts">Blocked accounts</option>
+                <option value="bookmarks">Bookmarks</option>
+              </select>
+              <small>The category of the data you want to import.</small>
+            </label>
+            <label>
+              CSV file
+              <input type="file" name="file" accept=".csv" />
+              <small>
+                A CSV file exported from other Hollo or Mastodon instances.
+              </small>
+            </label>
+          </fieldset>
+          <button type="submit">Import</button>
+        </form>
       </article>
     </DashboardLayout>,
   );
@@ -747,8 +789,8 @@ accounts.get("/:id/migrate/following_accounts.csv", async (c) => {
     for (const f of following) {
       const record = {
         handle: f.following.handle.replace(/^@/, ""),
-        boosts: f.shares,
-        notify: f.notify,
+        boosts: f.shares ? "true" : "false",
+        notify: f.notify ? "true" : "false",
         languages: (f.languages ?? []).join(", "),
       };
       await stream.write(csv.stringifyRecords([record]));
@@ -808,7 +850,7 @@ accounts.get("/:id/migrate/muted_accounts.csv", async (c) => {
     for (const muted of mutedAccounts) {
       const record = {
         handle: muted.targetAccount.handle.replace(/^@/, ""),
-        notifications: muted.notifications,
+        notifications: muted.notifications ? "true" : "false",
       };
       await stream.write(csv.stringifyRecords([record]));
     }
@@ -864,6 +906,286 @@ accounts.get("/:id/migrate/bookmarks.csv", async (c) => {
       await stream.write(csv.stringifyRecords([record]));
     }
   });
+});
+
+accounts.post("/:id/migrate/import", async (c) => {
+  const accountOwner = await db.query.accountOwners.findFirst({
+    where: eq(accountOwners.id, c.req.param("id")),
+    with: { account: true },
+  });
+  if (accountOwner == null) return c.notFound();
+  const formData = await c.req.formData();
+  const category = formData.get("category");
+  const file = formData.get("file");
+  if (!(file instanceof File)) {
+    return new Response("Invalid file", { status: 400 });
+  }
+  const csv = await neatCsv(await file.text(), {
+    headers:
+      category === "following_accounts" || category === "muted_accounts"
+        ? undefined
+        : false,
+  });
+  const fedCtx = federation.createContext(c.req.raw, undefined);
+  const documentLoader = await fedCtx.getDocumentLoader({
+    username: accountOwner.handle,
+  });
+  let message = "Failed to import data.";
+  if (category === "following_accounts") {
+    const accounts: Record<
+      string,
+      { shares: boolean; notify: boolean; languages?: string[] }
+    > = {};
+    for (const row of csv) {
+      const handle = row["Account address"].trim();
+      const shares = row["Show boosts"].toLowerCase().trim() === "true";
+      const notify = row["Notify on new posts"].toLowerCase().trim() === "true";
+      // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this
+      const languages = row["Languages"].toLowerCase().trim();
+      accounts[handle] = {
+        shares,
+        notify,
+        languages: languages === "" ? undefined : languages.split(/,\s+/g),
+      };
+    }
+    const { results } = await PromisePool.for(
+      globalThis.Object.keys(accounts),
+    ).process(
+      async (handle) =>
+        [
+          handle,
+          await fedCtx.lookupObject(handle, { documentLoader }),
+        ] as const,
+    );
+    let imported = 0;
+    await db.transaction(async (tx) => {
+      for (const [handle, actor] of results) {
+        if (!isActor(actor)) continue;
+        const { shares, notify, languages } = accounts[handle];
+        let target: (Account & { owner: AccountOwner | null }) | null;
+        try {
+          target = await persistAccount(tx, actor, c.req.url, fedCtx);
+        } catch (error) {
+          logger.error("Failed to persist account: {error}", { error });
+          continue;
+        }
+        if (target == null) continue;
+        await followAccount(
+          tx,
+          fedCtx,
+          { ...accountOwner.account, owner: accountOwner },
+          target,
+          { shares, notify, languages },
+        );
+        imported++;
+      }
+    });
+    message = `Followed ${imported} accounts out of ${csv.length} entries.`;
+  } else if (category === "lists") {
+    const accounts: Record<
+      string,
+      (Account & { owner: AccountOwner | null }) | null
+    > = {};
+    for (const row of csv) accounts[row[1].trim()] = null;
+    const existingAccounts = await db.query.accounts.findMany({
+      with: { owner: true },
+      where: inArray(
+        accountsTable.handle,
+        globalThis.Object.keys(accounts).map((handle) =>
+          handle.replace(/^@?/, "@"),
+        ),
+      ),
+    });
+    for (const account of existingAccounts) {
+      accounts[account.handle.replace(/^@/, "")] = account;
+    }
+    const handlesToFetch: string[] = [];
+    for (const handle in accounts) {
+      if (accounts[handle] != null) continue;
+      handlesToFetch.push(handle);
+    }
+    const { results } = await PromisePool.for(handlesToFetch).process(
+      async (handle) =>
+        [
+          handle,
+          await fedCtx.lookupObject(handle, { documentLoader }),
+        ] as const,
+    );
+    for (const [handle, actor] of results) {
+      if (!isActor(actor)) continue;
+      let account: (Account & { owner: AccountOwner | null }) | null;
+      try {
+        account = await persistAccount(db, actor, c.req.url, fedCtx);
+      } catch (error) {
+        logger.error("Failed to persist account: {error}", { error });
+        continue;
+      }
+      if (account == null) continue;
+      accounts[handle] = account;
+    }
+    const listNames = new Set(csv.map((row) => row[0].trim()));
+    const listIds: Record<string, string> = {};
+    for (const listName of listNames) {
+      const result = await db
+        .insert(lists)
+        .values({
+          id: crypto.randomUUID(),
+          title: listName,
+          accountOwnerId: accountOwner.id,
+        })
+        .onConflictDoNothing()
+        .returning();
+      let list: List | undefined;
+      if (result.length < 1) {
+        list = await db.query.lists.findFirst({
+          where: and(
+            eq(lists.accountOwnerId, accountOwner.id),
+            eq(lists.title, listName),
+          ),
+        });
+      } else {
+        list = result[0];
+      }
+      if (list == null) continue;
+      listIds[listName] = list.id;
+    }
+    let imported = 0;
+    const followed = new Set<string>();
+    await db.transaction(async (tx) => {
+      for (const row of csv) {
+        const listId = listIds[row[0].trim()];
+        if (listId == null) continue;
+        const handle = row[1].trim();
+        const account = accounts[handle];
+        if (account == null) continue;
+        if (!followed.has(handle)) {
+          try {
+            await followAccount(
+              tx,
+              fedCtx,
+              { ...accountOwner.account, owner: accountOwner },
+              account,
+            );
+          } catch (error) {
+            logger.error("Failed to follow account: {error}", { error });
+            continue;
+          }
+        }
+        followed.add(handle);
+        await tx
+          .insert(listMembers)
+          .values({
+            listId,
+            accountId: account.id,
+          })
+          .onConflictDoNothing();
+        imported++;
+      }
+    });
+    message = `Imported ${imported} list members out of ${csv.length} entries.`;
+  } else if (category === "muted_accounts") {
+    const accounts = csv
+      .map((row) => row["Account address"].trim())
+      .filter((addr) => addr != null);
+    const notifications = globalThis.Object.fromEntries(
+      csv.map(
+        (row) =>
+          [
+            row["Account address"].trim(),
+            row["Hide notifications"].toLowerCase().trim() === "true",
+          ] as const,
+      ),
+    );
+    const { results } = await PromisePool.for(accounts).process(
+      async (handle) =>
+        [
+          handle,
+          await fedCtx.lookupObject(handle, { documentLoader }),
+        ] as const,
+    );
+    const actors: Record<string, [Actor, boolean]> = {};
+    for (const [handle, actor] of results) {
+      if (isActor(actor)) actors[handle] = [actor, notifications[handle]];
+    }
+    let imported = 0;
+    await db.transaction(async (tx) => {
+      for (const handle in actors) {
+        const [actor, notifications] = actors[handle];
+        let target: Account | null;
+        try {
+          target = await persistAccount(tx, actor, c.req.url, fedCtx);
+        } catch (error) {
+          logger.error("Failed to persist account: {error}", { error });
+          continue;
+        }
+        if (target == null) continue;
+        await tx
+          .insert(mutes)
+          .values({
+            id: crypto.randomUUID(),
+            accountId: accountOwner.id,
+            mutedAccountId: target.id,
+            notifications,
+          })
+          .onConflictDoNothing();
+        imported++;
+      }
+    });
+    message = `Imported ${imported} muted accounts out of ${csv.length} entries.`;
+  } else if (category === "blocked_accounts") {
+    const accounts = csv
+      .map((row) => row[0].trim())
+      .filter((addr) => addr != null);
+    const { results } = await PromisePool.for(accounts).process((handle) =>
+      fedCtx.lookupObject(handle, { documentLoader }),
+    );
+    let blocked = 0;
+    for (const actor of results) {
+      if (!isActor(actor)) continue;
+      await db.transaction(async (tx) => {
+        const target = await persistAccount(tx, actor, c.req.url, fedCtx);
+        if (target == null) return;
+        await blockAccount(tx, fedCtx, accountOwner, target);
+        blocked++;
+      });
+    }
+    message = `Blocked ${blocked} accounts out of ${csv.length} entries.`;
+  } else if (category === "bookmarks") {
+    const iris = csv.map((row) => row[0].trim()).filter((iri) => iri != null);
+    const { results } = await PromisePool.for(iris).process(async (iri) => {
+      try {
+        return await fedCtx.lookupObject(iri, { documentLoader });
+      } catch (error) {
+        logger.error("Failed to lookup object: {error}", { error });
+        return null;
+      }
+    });
+    let imported = 0;
+    await db.transaction(async (tx) => {
+      for (const obj of results) {
+        if (!isPost(obj)) continue;
+        let post: Post | null;
+        try {
+          post = await persistPost(tx, obj, c.req.url, fedCtx);
+        } catch (error) {
+          logger.error("Failed to persist post: {error}", { error });
+          continue;
+        }
+        if (post == null) continue;
+        await tx
+          .insert(bookmarks)
+          .values({ postId: post.id, accountOwnerId: accountOwner.id })
+          .onConflictDoNothing();
+        imported++;
+      }
+    });
+    message = `Imported ${imported} bookmarks out of ${csv.length} entries.`;
+  } else {
+    return new Response("Invalid category", { status: 400 });
+  }
+  return c.redirect(
+    `/accounts/${accountOwner.id}/migrate?import-data-result=${encodeURIComponent(message)}#import-data`,
+  );
 });
 
 export default accounts;
