@@ -63,7 +63,7 @@ import {
   posts,
   reactions,
 } from "../../schema";
-import { formatText } from "../../text";
+import { formatPostContent } from "../../text";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -140,7 +140,9 @@ app.post(
     const id = uuidv7();
     const url = fedCtx.getObjectUri(Note, { username: handle, id });
     const content =
-      data.status == null ? null : await formatText(db, data.status, fmtOpts);
+      data.status == null
+        ? null
+        : await formatPostContent(db, data.status, data.language, fmtOpts);
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
@@ -285,7 +287,9 @@ app.put(
       }),
     };
     const content =
-      data.status == null ? null : await formatText(db, data.status, fmtOpts);
+      data.status == null
+        ? null
+        : await formatPostContent(db, data.status, data.language, fmtOpts);
     const summary =
       data.spoiler_text == null || data.spoiler_text.trim() === ""
         ? null
