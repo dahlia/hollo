@@ -63,7 +63,7 @@ export class AccountExporter {
     };
   }
   private normalizeUrl(path: string): string {
-    const base = homeUrl.endsWith('/') ? homeUrl : `${homeUrl}/`;
+    const base = homeUrl.endsWith("/") ? homeUrl : `${homeUrl}/`;
     return new URL(path, base).toString();
   }
 
@@ -93,60 +93,99 @@ export class AccountExporter {
       })),
     };
   }
-  
 
   async exportData(c: Context) {
     try {
-    const account = await this.loadAccount();
-    if (!account) return c.json({ error: "Actor not found" }, 404);
+      const account = await this.loadAccount();
+      if (!account) return c.json({ error: "Actor not found" }, 404);
 
-    // Load and serialize posts
-    const postsData = await this.loadPosts();
-    const serializedPosts = postsData.map((post) =>
-      serializePost(post, { id: account.owner.id }, c.req.url),
-    );
+      const postsData = await this.loadPosts();
+      const serializedPosts = postsData.map((post) =>
+        serializePost(post, { id: account.owner.id }, c.req.url),
+      );
 
-    // Load and serialize lists
-    const lists = await this.loadLists();
-    console.log("🚀 ~ AccountExporter ~ exportData ~ lists:", lists);
-    const serializedLists = lists.map((list) => serializeList(list));
-    console.log(
-      "🚀 ~ AccountExporter ~ exportData ~ serializedLists:",
-      serializedLists,
-    );
+      const lists = await this.loadLists();
+      const serializedLists = lists.map((list) => serializeList(list));
 
-    // Load and serialize followers
-    const followers = await this.loadFollows("followers");
-    const serializedFollowers = this.serializeFollowers(followers);
+      const followers = await this.loadFollows("followers");
+      const serializedFollowers = this.serializeFollowers(followers);
 
-    // Load and serialize following
-    const followingAccounts = await this.loadFollows("following");
-    const serializedFollowing = this.serializeFollowing(followingAccounts);
+      const followingAccounts = await this.loadFollows("following");
+      const serializedFollowing = this.serializeFollowing(followingAccounts);
 
-    // Load and serialize bookmarks
-    const bookmarks = await this.loadBookmarks();
-    const serializedBookmarks = this.serializeBookmarks(bookmarks);
+      const bookmarks = await this.loadBookmarks();
+      const serializedBookmarks = this.serializeBookmarks(bookmarks);
 
-    // Generate export tarball
-    const exportTarballStream = exportActorProfile({
-      actorProfile: serializeAccount(
-        { ...account, successor: null },
-        c.req.url,
-      ),
-      outbox: serializedPosts,
-      lists: serializedLists,
-      followers: serializedFollowers,
-      followingAccounts: serializedFollowing,
-      bookmarks: serializedBookmarks,
-    });
+      // Initialize export stream
+      const { addMediaFile, finalize } = await exportActorProfile({
+        actorProfile: serializeAccount(
+          { ...account, successor: null },
+          c.req.url,
+        ),
+        outbox: serializedPosts,
+        lists: serializedLists,
+        followers: serializedFollowers,
+        followingAccounts: serializedFollowing,
+        bookmarks: serializedBookmarks,
+      });
 
-    return c.body(exportTarballStream, 200, {
-      "Content-Type": "application/x-tar",
-      "Content-Disposition": `attachment; filename="account_export_${encodeURIComponent(this.actorId)}.tar"`,
-    });
+      // Add media files
+      const mediaPromises = postsData.flatMap((post) => {
+        if (!post.media) return [];
+
+        return post.media.map(async (media: { id: string; url: string }) => {
+          try {
+            const mediaRecord = await this.downloadMedia(media.url);
+            if (!mediaRecord) return;
+
+            const extension = mediaRecord.contentType?.split("/")[1];
+            const fileName = `${media.id}.${extension}`;
+
+            // Add media file to the export stream
+            addMediaFile(fileName, mediaRecord.buffer, mediaRecord.contentType);
+          } catch (error) {
+            console.error(`Error downloading media: ${media.id}`, error);
+          }
+        });
+      });
+
+      // Wait for all media downloads to complete
+      await Promise.all(mediaPromises);
+
+      const exportTarballStream = finalize();
+
+      return c.body(exportTarballStream, 200, {
+        "Content-Type": "application/x-tar",
+        "Content-Disposition": `attachment; filename="account_export_${encodeURIComponent(
+          this.actorId,
+        )}.tar"`,
+      });
     } catch (e) {
       console.error(e);
       return c.json({ error: "Internal server error occurred" }, 500);
+    }
+  }
+
+  private async downloadMedia(
+    mediaUrl: string,
+  ): Promise<null | { buffer: ArrayBuffer; contentType: string }> {
+    if (!mediaUrl) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(mediaUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch media: ${response.statusText}`);
+      }
+
+      return {
+        buffer: await response.arrayBuffer(),
+        contentType: response.headers.get("Content-Type") || "application/bin",
+      }; // Binary data
+    } catch (error) {
+      console.error(`Error downloading media from ${mediaUrl}:`, error);
+      return null;
     }
   }
 }
