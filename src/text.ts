@@ -12,6 +12,8 @@ import { persistAccount } from "./federation/account";
 import { type ASPost, isPost } from "./federation/post";
 import * as schema from "./schema";
 
+const logger = getLogger(["hollo", "text"]);
+
 export interface FormatResult {
   html: string;
   mentions: string[];
@@ -146,7 +148,7 @@ export async function formatText(
     links: [],
   };
   const html = md.render(text, env);
-  getLogger(["hollo", "text"]).debug("Markdown-It environment: {env}", { env });
+  logger.debug("Markdown-It environment: {env}", { env });
   let quoteTarget: ASPost | null = null;
   for (const link of env.links) {
     const object = await lookupObject(link, options);
@@ -236,6 +238,78 @@ export function extractText(html: string | null): string | null {
   if (html == null) return null;
   const $ = cheerio.load(html);
   return $(":root").text();
+}
+
+// biome-ignore lint/complexity/useLiteralKeys: tsc claims about this
+const SEONBI_URL = process.env["SEONBI_URL"];
+
+export async function formatPostContent(
+  db: PgDatabase<
+    PostgresJsQueryResultHKT,
+    typeof schema,
+    ExtractTablesWithRelations<typeof schema>
+  >,
+  text: string,
+  language: string | undefined,
+  options: {
+    url: URL | string;
+    contextLoader?: DocumentLoader;
+    documentLoader?: DocumentLoader;
+  },
+): Promise<FormatResult> {
+  const result = await formatText(db, text, options);
+  if (
+    SEONBI_URL != null &&
+    (language === "ko" || language?.startsWith("ko-"))
+  ) {
+    const response = await fetch(SEONBI_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        content: result.html,
+        contentType: "text/html",
+        quote: "HorizontalCornerBrackets",
+        cite: "AngleQuotes",
+        arrow: {
+          bidirArrow: true,
+          doubleArrow: true,
+        },
+        ellipsis: true,
+        emDash: true,
+        stop: "Horizontal",
+        hanja: {
+          rendering: "HanjaInRuby",
+          reading: {
+            initialSoundLaw: true,
+            useDictionaries: ["kr-stdict"],
+            dictionary: {},
+          },
+        },
+      }),
+    });
+    try {
+      const seonbiResult = await response.json();
+      if (seonbiResult.success) {
+        result.html = seonbiResult.content;
+        if (
+          Array.isArray(seonbiResult.warnings) &&
+          seonbiResult.warnings.length > 0
+        ) {
+          logger.warn("Seonbi warnings: {warnings}", {
+            warnings: seonbiResult.warnings,
+          });
+        }
+      } else {
+        logger.error("Seonbi failed to format post content: {message}", {
+          message: seonbiResult.message,
+        });
+      }
+    } catch (error) {
+      logger.error("Failed to format post content with Seonbi: {error}", {
+        error,
+      });
+    }
+  }
+  return result;
 }
 
 // cSpell: ignore linkify
