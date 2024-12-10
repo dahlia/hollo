@@ -32,10 +32,10 @@ import { getPostRelations, serializePost } from "../../entities/status";
 import { federation } from "../../federation";
 import {
   REMOTE_ACTOR_FETCH_POSTS,
+  blockAccount,
   followAccount,
   persistAccount,
   persistAccountPosts,
-  removeFollower,
   unfollowAccount,
 } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
@@ -1037,25 +1037,8 @@ app.post(
       with: { owner: true },
     });
     if (acct == null) return c.json({ error: "Record not found" }, 404);
-    await db.insert(blocks).values({
-      accountId: owner.id,
-      blockedAccountId: id,
-    });
-    if (acct.owner == null) {
-      const fedCtx = federation.createContext(c.req.raw, undefined);
-      await unfollowAccount(db, fedCtx, { ...owner.account, owner }, acct);
-      await removeFollower(db, fedCtx, { ...owner.account, owner }, acct);
-      await fedCtx.sendActivity(
-        { username: owner.handle },
-        { id: new URL(acct.iri), inboxId: new URL(acct.inboxUrl) },
-        new Block({
-          id: new URL(`#block/${acct.id}`, owner.account.iri),
-          actor: new URL(owner.account.iri),
-          object: new URL(acct.iri),
-        }),
-        { excludeBaseUris: [new URL(fedCtx.url)] },
-      );
-    }
+    const fedCtx = federation.createContext(c.req.raw, undefined);
+    await blockAccount(db, fedCtx, owner, acct);
     const result = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
       with: {
