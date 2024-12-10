@@ -41,7 +41,6 @@ import { loginRequired } from "../login.ts";
 import {
   type Account,
   type AccountOwner,
-  type List,
   type Post,
   type PostVisibility,
   accountOwners,
@@ -1026,24 +1025,23 @@ accounts.post("/:id/migrate/import", async (c) => {
     const listNames = new Set(csv.map((row) => row[0].trim()));
     const listIds: Record<string, string> = {};
     for (const listName of listNames) {
-      const result = await db
-        .insert(lists)
-        .values({
-          id: crypto.randomUUID(),
-          title: listName,
-          accountOwnerId: accountOwner.id,
-        })
-        .onConflictDoNothing()
-        .returning();
-      let list: List | undefined;
-      if (result.length < 1) {
-        list = await db.query.lists.findFirst({
-          where: and(
-            eq(lists.accountOwnerId, accountOwner.id),
-            eq(lists.title, listName),
-          ),
-        });
-      } else {
+      let list = await db.query.lists.findFirst({
+        where: and(
+          eq(lists.accountOwnerId, accountOwner.id),
+          eq(lists.title, listName),
+        ),
+      });
+      if (list == null) {
+        const result = await db
+          .insert(lists)
+          .values({
+            id: crypto.randomUUID(),
+            title: listName,
+            accountOwnerId: accountOwner.id,
+          })
+          .onConflictDoNothing()
+          .returning();
+        if (result.length < 1) continue;
         list = result[0];
       }
       if (list == null) continue;
