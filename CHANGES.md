@@ -1,5 +1,43 @@
 # Hollo changelog
 
+## Version 0.3.1
+
+Released on December 13, 2024.
+
+- Fixed a bug where `Undo(Like)` activities on a `Question` object had not
+  been handled correctly.
+
+- Fixed a bug where `EmojiReact` activities on a `Question` object had not
+  been handled correctly.
+
+- Fixed a bug where `Undo(EmojiReact)` activities on a `Question` object had
+  not been handled correctly.
+
+## Version 0.3.0
+
+Released on December 1, 2024.
+
+- Added support for local filesystem storage for media files.
+  You can now configure `DRIVE_DISK=fs` and `FS_ASSET_PATH` to store media
+  files in the local filesystem. [[#59]]
+
+  - Added `DRIVE_DISK` environment variable.
+  - Added `FS_ASSET_PATH` environment variable.
+  - Added `ASSET_URL_BASE` environment variable to replace `S3_URL_BASE`.
+  - Deprecated `S3_URL_BASE` environment variable in favor of
+    `ASSET_URL_BASE`.
+
+- Added support for Sentry.
+
+  - Added `SENTRY_DSN` environment variable.
+
+- Added pagination to the profile page. [[#40]]
+
+- Upgrade Fedify to 1.3.0
+
+[#40]: https://github.com/dahlia/hollo/issues/40
+[#59]: https://github.com/dahlia/hollo/pull/59
+
 ## Version 0.2.4
 
 Released on December 13, 2024.
