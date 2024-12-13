@@ -2,7 +2,7 @@
 
 ## Version 0.2.4
 
-To be released.
+Released on December 13, 2024.
 
 - Fixed a bug where `Undo(Like)` activities on a `Question` object had not
   been handled correctly.
