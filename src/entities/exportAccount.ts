@@ -75,6 +75,7 @@ export class AccountExporter {
       type: "OrderedCollection",
       orderedItems: followingAccounts.map((account) => ({
         account: this.normalizeUrl(`accounts/${account.followingId}`),
+        account: this.normalizeUrl(`accounts/${account.followingId}`),
         showBoosts: account.shares,
         notifyOnNewPosts: account.notify,
         language: account.languages ?? null,
@@ -94,6 +95,7 @@ export class AccountExporter {
       })),
     };
   }
+  
 
   async exportData(c: Context) {
     try {
