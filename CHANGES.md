@@ -4,6 +4,15 @@
 
 To be released.
 
+- Fixed a bug where `Undo(Like)` activities on a `Question` object had not
+  been handled correctly.
+
+- Fixed a bug where `EmojiReact` activities on a `Question` object had not
+  been handled correctly.
+
+- Fixed a bug where `Undo(EmojiReact)` activities on a `Question` object had
+  not been handled correctly.
+
 ## Version 0.2.3
 
 Released on November 22, 2024.
