@@ -37,6 +37,7 @@ export class AccountExporter {
 
   async loadFollows(type: "following" | "followers") {
     const column = type === "following" ? "followingId" : "followerId";
+    const column = type === "following" ? "followingId" : "followerId";
     return db.query.follows.findMany({
       where: eq(schema.follows[column], this.actorId),
     });
