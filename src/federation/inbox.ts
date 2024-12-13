@@ -577,6 +577,7 @@ export async function onUnliked(
     type === "object" &&
     (parsed.class === Note ||
       parsed.class === Article ||
+      parsed.class === Question ||
       parsed.class === ChatMessage)
   ) {
     const actor = await like.getActor();
@@ -614,6 +615,7 @@ export async function onEmojiReactionAdded(
     object?.type !== "object" ||
     (object.class !== Note &&
       object.class !== Article &&
+      object.class !== Question &&
       object.class !== ChatMessage)
   ) {
     inboxLogger.debug("Unsupported object on EmojiReact: {objectId}", {
@@ -679,6 +681,7 @@ export async function onEmojiReactionRemoved(
     post?.type !== "object" ||
     (post.class !== Note &&
       post.class !== Article &&
+      post.class !== Question &&
       post.class !== ChatMessage)
   ) {
     return;
