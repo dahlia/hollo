@@ -6,6 +6,15 @@ Version 0.3.1
 
 To be released.
 
+ -  Fixed a bug where `Undo(Like)` activities on a `Question` object had not
+    been handled correctly.
+
+ -  Fixed a bug where `EmojiReact` activities on a `Question` object had not
+    been handled correctly.
+
+ -  Fixed a bug where `Undo(EmojiReact)` activities on a `Question` object had
+    not been handled correctly.
+
 
 Version 0.3.0
 -------------
@@ -32,6 +41,21 @@ Released on December 1, 2024.
 
 [#40]: https://github.com/dahlia/hollo/issues/40
 [#59]: https://github.com/dahlia/hollo/pull/59
+
+
+Version 0.2.4
+-------------
+
+Released on December 13, 2024.
+
+ -  Fixed a bug where `Undo(Like)` activities on a `Question` object had not
+    been handled correctly.
+
+ -  Fixed a bug where `EmojiReact` activities on a `Question` object had not
+    been handled correctly.
+
+ -  Fixed a bug where `Undo(EmojiReact)` activities on a `Question` object had
+    not been handled correctly.
 
 
 Version 0.2.3
