@@ -1,5 +1,15 @@
 # Hollo changelog
 
+## Version 0.4.0
+
+To be released.
+
+- Now you can import and export your data from the administration dashboard
+  in CSV format: follows, lists, accounts you muted, accounts you blocked,
+  and bookmarks.
+
+- The profile page now shows a user's cover image if they have one.
+
 ## Version 0.3.1
 
 Released on December 13, 2024.
