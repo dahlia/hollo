@@ -20,7 +20,7 @@
     "@fedify/postgres": "^0.2.1",
     "@hexagon/base64": "^2.0.4",
     "@hono/zod-validator": "^0.2.1",
-    "@interop/wallet-export-ts": "^0.1.4",
+    "@interop/wallet-export-ts": "^0.1.5",
     "@js-temporal/polyfill": "^0.4.4",
     "@logtape/logtape": "^0.8.0",
     "@logtape/sentry": "^0.1.0",
