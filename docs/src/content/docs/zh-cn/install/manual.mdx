@@ -20,14 +20,16 @@ Hollo 可以手动安装在您的服务器上。本指南将引导您完成在�
 开始之前，请确保您的服务器上安装了以下软件：
 
  -  [Git]
- -  [Bun]
+ -  [Node.js]
+ -  [pnpm]
  -  [ffmpeg]
  -  [PostgreSQL]
  -  L7 负载均衡器（例如，[nginx]，[Caddy]）
  -  指向您服务器的域名
 
 [Git]: https://git-scm.com/
-[Bun]: https://bun.sh/
+[Node.js]: https://nodejs.org/
+[pnpm]: https://pnpm.io/
 [ffmpeg]: https://www.ffmpeg.org/
 [PostgreSQL]: https://www.postgresql.org/
 [nginx]: https://nginx.org/
@@ -47,10 +49,10 @@ import { Steps } from "@astrojs/starlight/components";
     cd hollo/
     ~~~~
 
- 2. 使用 Bun 安装依赖项：
+ 2. 使用 pnpm 安装依赖项：
 
     ~~~~ sh frame="none"
-    bun install
+    pnpm install
     ~~~~
 
  3. 为 Hollo 创建 PostgreSQL 用户和数据库：
@@ -84,7 +86,7 @@ import { Steps } from "@astrojs/starlight/components";
 要启动服务端，请运行以下命令：
 
 ~~~~ sh frame="none"
-bun prod
+pnpm run prod
 ~~~~
 
 
@@ -103,12 +105,12 @@ bun prod
  2. 重新安装依赖项：
 
     ~~~~ sh frame="none"
-    bun install
+    pnpm install
     ~~~~
 
  3. 重启服务端：
 
     ~~~~ sh frame="none"
-    bun prod
+    pnpm run prod
     ~~~~
 </Steps>

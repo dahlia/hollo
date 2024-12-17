@@ -6,6 +6,9 @@ Version 0.4.0
 
 To be released.
 
+ -  Hollo is now powered by Node.js 23+ instead of Bun for more efficient
+    memory usage.
+
  -  Now you can import and export your data from the administration dashboard
     in CSV format: follows, lists, accounts you muted, accounts you blocked,
     and bookmarks.

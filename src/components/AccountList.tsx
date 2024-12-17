@@ -1,3 +1,4 @@
+import { escape } from "es-toolkit";
 import xss from "xss";
 import type { Account, AccountOwner } from "../schema";
 import { renderCustomEmojis } from "../text";
@@ -21,10 +22,7 @@ interface AccountItemProps {
 }
 
 function AccountItem({ accountOwner: { account } }: AccountItemProps) {
-  const nameHtml = renderCustomEmojis(
-    Bun.escapeHTML(account.name),
-    account.emojis,
-  );
+  const nameHtml = renderCustomEmojis(escape(account.name), account.emojis);
   const bioHtml = renderCustomEmojis(
     xss(account.bioHtml ?? ""),
     account.emojis,

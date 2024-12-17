@@ -1,4 +1,5 @@
 import { mkdtemp } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ffmpeg from "fluent-ffmpeg";
@@ -62,11 +63,11 @@ export function calculateThumbnailSize(
 }
 
 export async function makeVideoScreenshot(
-  fileBuffer: ArrayBuffer,
-): Promise<ArrayBuffer> {
+  videoData: Uint8Array,
+): Promise<Uint8Array> {
   const tmpDir = await mkdtemp(join(tmpdir(), "hollo-"));
   const inFile = join(tmpDir, "video");
-  await Bun.write(inFile, fileBuffer);
+  await writeFile(inFile, videoData);
   await new Promise((resolve) =>
     ffmpeg(inFile)
       .on("end", resolve)
@@ -76,6 +77,6 @@ export async function makeVideoScreenshot(
         folder: tmpDir,
       }),
   );
-  const screenshot = Bun.file(join(tmpDir, "screenshot.png"));
-  return await screenshot.arrayBuffer();
+  const screenshot = await readFile(join(tmpDir, "screenshot.png"));
+  return new Uint8Array(screenshot.buffer);
 }

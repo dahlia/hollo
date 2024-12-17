@@ -393,12 +393,12 @@ export async function persistPost(
     let thumbnail: Thumbnail;
     let metadata: { width?: number; height?: number };
     try {
-      const fileBuffer = await response.arrayBuffer();
-      let imageBuffer: ArrayBuffer = fileBuffer;
+      const imageData = new Uint8Array(await response.arrayBuffer());
+      let imageBytes: Uint8Array = imageData;
       if (mediaType.startsWith("video/")) {
-        imageBuffer = await makeVideoScreenshot(fileBuffer);
+        imageBytes = await makeVideoScreenshot(imageData);
       }
-      const image = sharp(imageBuffer);
+      const image = sharp(imageBytes);
       metadata = await image.metadata();
       thumbnail = await uploadThumbnail(id, image, baseUrl);
     } catch {

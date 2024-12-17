@@ -1,3 +1,4 @@
+import { escape } from "es-toolkit";
 import { Hono } from "hono";
 import { Layout } from "../../components/Layout.tsx";
 import db from "../../db.ts";
@@ -32,7 +33,7 @@ homePage.get("/", async (c) => {
       {owners.map((owner) => {
         const url = owner.account.url ?? owner.account.iri;
         const nameHtml = renderCustomEmojis(
-          Bun.escapeHTML(owner.account.name),
+          escape(owner.account.name),
           owner.account.emojis,
         );
         const bioHtml = renderCustomEmojis(

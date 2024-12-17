@@ -1,4 +1,4 @@
-FROM docker.io/oven/bun:1.1.38-alpine
+FROM docker.io/node:23.4-alpine
 
 LABEL org.opencontainers.image.title="Hollo"
 LABEL org.opencontainers.image.description="Federated single-user \
@@ -7,11 +7,11 @@ LABEL org.opencontainers.image.url="https://docs.hollo.social/"
 LABEL org.opencontainers.image.source="https://github.com/dahlia/hollo"
 LABEL org.opencontainers.image.licenses="AGPL-3.0-only"
 
-RUN apk add --no-cache ffmpeg jq libstdc++
+RUN apk add --no-cache ffmpeg jq libstdc++ pnpm
 
-COPY bun.lockb package.json /app/
+COPY pnpm-lock.yaml package.json /app/
 WORKDIR /app/
-RUN bun install --frozen-lockfile --no-cache
+RUN pnpm install --frozen-lockfile --prod
 
 COPY . /app/
 
@@ -24,4 +24,4 @@ RUN \
   fi
 
 EXPOSE 3000
-CMD ["bun", "run", "prod"]
+CMD ["pnpm", "run", "prod"]

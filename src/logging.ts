@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { Writable } from "node:stream";
 import {
   type LogLevel,
   configure,
@@ -7,37 +8,16 @@ import {
   parseLogLevel,
 } from "@logtape/logtape";
 import { getSentrySink } from "@logtape/sentry";
-import type { FileSink } from "bun";
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const LOG_LEVEL: LogLevel = parseLogLevel(process.env["LOG_LEVEL"] ?? "info");
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const LOG_QUERY: boolean = process.env["LOG_QUERY"] === "true";
 
-let writer: FileSink | undefined = undefined;
-const stdout = new WritableStream({
-  start() {
-    writer = Bun.stderr.writer();
-  },
-  write(chunk) {
-    writer?.write(chunk);
-  },
-  close() {
-    if (
-      writer != null &&
-      "close" in writer &&
-      typeof writer.close === "function"
-    ) {
-      writer.close();
-    }
-  },
-  abort() {},
-});
-
 await configure({
   contextLocalStorage: new AsyncLocalStorage(),
   sinks: {
-    console: getStreamSink(stdout, {
+    console: getStreamSink(Writable.toWeb(process.stderr) as WritableStream, {
       formatter: getAnsiColorFormatter({
         timestamp: "time",
       }),
