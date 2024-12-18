@@ -6,6 +6,7 @@ import {
   lookupObject,
 } from "@fedify/fedify";
 import { zValidator } from "@hono/zod-validator";
+import { exportActorProfile } from "@interop/wallet-export-ts";
 import { getLogger } from "@logtape/logtape";
 import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
 import { Hono } from "hono";
@@ -19,13 +20,22 @@ import { persistPost } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type Account, accounts, posts } from "../../schema";
 import { postMedia } from "../v1/media";
+import { exportController } from "./controllers/accountExport";
 import instance from "./instance";
+import { loginRequired } from "../../login";
 
 const app = new Hono<{ Variables: Variables }>();
 
 app.route("/instance", instance);
 
 app.post("/media", tokenRequired, scopeRequired(["write:media"]), postMedia);
+
+app.post(
+  "/:actorId/accountExport",
+  // use the same authorization middleare as Edit profile screen
+  loginRequired,
+  exportController,
+);
 
 app.get(
   "/search",

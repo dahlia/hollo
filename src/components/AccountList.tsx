@@ -27,7 +27,9 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
     xss(account.bioHtml ?? ""),
     account.emojis,
   );
+
   const href = account.url ?? account.iri;
+
   return (
     <article>
       <header>
@@ -71,7 +73,7 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
             <a
               href={`/accounts/${account.id}`}
               role="button"
-              style="display: block;"
+              style={{ display: "block" }}
             >
               Edit
             </a>
@@ -79,7 +81,7 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
               href={`/accounts/${account.id}/migrate`}
               role="button"
               className="contrast"
-              style="display: block;"
+              style={{ display: "block" }}
             >
               Migrate from/to
             </a>
@@ -87,6 +89,10 @@ function AccountItem({ accountOwner: { account } }: AccountItemProps) {
               Delete
             </button>
           </div>
+        </form>
+        {/* Export Account Button */}
+        <form action={`/api/v2/${account.id}/accountExport`} method="post">
+          <button type="submit">Export Account</button>
         </form>
       </footer>
     </article>
