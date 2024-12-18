@@ -23,12 +23,21 @@ export async function uploadThumbnail(
   thumbnailArea = DEFAULT_THUMBNAIL_AREA,
 ): Promise<Thumbnail> {
   const originalMetadata = await original.metadata();
-  const thumbnailSize = calculateThumbnailSize(
-    originalMetadata.width!,
-    originalMetadata.height!,
-    thumbnailArea,
-  );
-  const thumbnail = await original.resize(thumbnailSize).webp().toBuffer();
+  let width = originalMetadata.width!;
+  let height = originalMetadata.height!;
+  if (originalMetadata.orientation !== 1) {
+    // biome-ignore lint/style/noParameterAssign:
+    original = original.clone();
+    original.rotate();
+    if (originalMetadata.orientation !== 3) {
+      [width, height] = [height, width];
+    }
+  }
+  const thumbnailSize = calculateThumbnailSize(width, height, thumbnailArea);
+  const thumbnail = await original
+    .resize(thumbnailSize)
+    .webp({ nearLossless: true })
+    .toBuffer();
   const content = new Uint8Array(thumbnail);
   try {
     await disk.put(`media/${id}/thumbnail.webp`, content, {

@@ -16,6 +16,23 @@ To be released.
  -  The profile page now shows a user's cover image if they have one.
 
 
+Version 0.3.2
+-------------
+
+Released on December 18, 2024.
+
+ -  Fixed a bug where generated thumbnails had not copied the EXIF orientation
+    metadata from the original image.  [[#76]]
+
+ -  Fixed a bug where looking up remote Hubzilla actors and objects had failed.
+    [[#78]]
+
+ -  Upgrade Fedify to 1.3.2.
+
+[#76]: https://github.com/dahlia/hollo/issues/76
+[#78]: https://github.com/dahlia/hollo/issues/78
+
+
 Version 0.3.1
 -------------
 
@@ -52,7 +69,7 @@ Released on December 1, 2024.
 
  -  Added pagination to the profile page.  [[#40]]
 
- -  Upgrade Fedify to 1.3.0
+ -  Upgrade Fedify to 1.3.0.
 
 [#40]: https://github.com/dahlia/hollo/issues/40
 [#59]: https://github.com/dahlia/hollo/pull/59

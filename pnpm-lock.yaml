@@ -18,8 +18,8 @@ importers:
         specifier: ^3.577.0
         version: 3.713.0
       '@fedify/fedify':
-        specifier: ^1.3.1
-        version: 1.3.1(web-streams-polyfill@3.3.3)
+        specifier: ^1.3.2
+        version: 1.3.2(web-streams-polyfill@3.3.3)
       '@fedify/markdown-it-hashtag':
         specifier: 0.2.0
         version: 0.2.0
@@ -834,8 +834,8 @@ packages:
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
 
-  '@fedify/fedify@1.3.1':
-    resolution: {integrity: sha512-1qsCD7kvvij1Ix+PwS98CliDi7+N5ge8z35s+4K4pbsXQkFWNMhMd5w7cAe4cIrMClIyZGTnAYnFLvr+x4BoYQ==}
+  '@fedify/fedify@1.3.2':
+    resolution: {integrity: sha512-LBVdt9mWUt2kcYebAbs12UiwPR2bjPR6vl183b9Km9cjf7/d1eNKaTTMQVKJMsGUuMNHYAZYtHaA2r7aC1jFBw==}
     engines: {bun: '>=1.1.0', deno: '>=2.0.0', node: '>=20.0.0'}
 
   '@fedify/markdown-it-hashtag@0.2.0':
@@ -3290,7 +3290,7 @@ snapshots:
 
   '@fastify/busboy@2.1.1': {}
 
-  '@fedify/fedify@1.3.1(web-streams-polyfill@3.3.3)':
+  '@fedify/fedify@1.3.2(web-streams-polyfill@3.3.3)':
     dependencies:
       '@deno/shim-crypto': 0.3.1
       '@deno/shim-deno': 0.18.2
@@ -3323,7 +3323,7 @@ snapshots:
   '@fedify/postgres@0.2.2(web-streams-polyfill@3.3.3)':
     dependencies:
       '@deno/shim-deno': 0.18.2
-      '@fedify/fedify': 1.3.1(web-streams-polyfill@3.3.3)
+      '@fedify/fedify': 1.3.2(web-streams-polyfill@3.3.3)
       '@js-temporal/polyfill': 0.4.4
       postgres: 3.4.5
     transitivePeerDependencies:
