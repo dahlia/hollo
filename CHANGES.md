@@ -6,6 +6,11 @@ Version 0.3.2
 
 To be released.
 
+ -  Fixed a bug where generated thumbnails had not copied the EXIF orientation
+    metadata from the original image.  [[#76]]
+
+[#76]: https://github.com/dahlia/hollo/issues/76
+
 
 Version 0.3.1
 -------------
