@@ -15,6 +15,11 @@ To be released.
 
  -  The profile page now shows a user's cover image if they have one.
 
+ -  Fixed a bug where a server error occurred when an invalid UUID was input via
+    URL or form data.  [[#65]]
+
+[#65]: https://github.com/dahlia/hollo/issues/65
+
 
 Version 0.3.2
 -------------

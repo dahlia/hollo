@@ -57,6 +57,7 @@ import {
 } from "../../schema";
 import { disk, getAssetUrl } from "../../storage";
 import { extractCustomEmojis, formatText } from "../../text";
+import { type Uuid, isUuid, uuid } from "../../uuid";
 import { timelineQuerySchema } from "./timelines";
 
 const app = new Hono<{ Variables: Variables }>();
@@ -265,7 +266,7 @@ app.get(
         422,
       );
     }
-    const ids = c.req.queries("id[]") ?? [];
+    const ids = (c.req.queries("id[]") ?? []).filter(isUuid);
     const accountList =
       ids.length > 0
         ? await db.query.accounts.findMany({
@@ -448,7 +449,7 @@ app.get(
         422,
       );
     }
-    const ids: string[] = c.req.queries("id[]") ?? [];
+    const ids: Uuid[] = (c.req.queries("id[]") ?? []).filter(isUuid);
     const result: {
       id: string;
       accounts: ReturnType<typeof serializeAccount>[];
@@ -488,6 +489,7 @@ app.get(
 
 app.get("/:id", async (c) => {
   const id = c.req.param("id");
+  if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
   const account = await db.query.accounts.findFirst({
     where: eq(accounts.id, id),
     with: { owner: true, successor: true },
@@ -518,6 +520,8 @@ app.get(
     ),
   ),
   async (c) => {
+    const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const tokenOwner = c.get("token").accountOwner;
     if (tokenOwner == null) {
       return c.json(
@@ -525,7 +529,6 @@ app.get(
         422,
       );
     }
-    const id = c.req.param("id");
     const account = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
       with: {
@@ -687,6 +690,8 @@ app.post(
   tokenRequired,
   scopeRequired(["write:follows"]),
   async (c) => {
+    const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
@@ -694,7 +699,6 @@ app.post(
         422,
       );
     }
-    const id = c.req.param("id");
     const following = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
       with: { owner: true },
@@ -740,6 +744,8 @@ app.post(
   tokenRequired,
   scopeRequired(["write:follows"]),
   async (c) => {
+    const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
@@ -747,7 +753,6 @@ app.post(
         422,
       );
     }
-    const id = c.req.param("id");
     const following = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
       with: { owner: true },
@@ -782,6 +787,7 @@ app.post(
 
 app.get("/:id/followers", async (c) => {
   const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.json({ error: "Record not found" }, 404);
   const followers = await db.query.follows.findMany({
     where: and(eq(follows.followingId, accountId), isNotNull(follows.approved)),
     orderBy: desc(follows.approved),
@@ -801,6 +807,7 @@ app.get("/:id/followers", async (c) => {
 
 app.get("/:id/following", async (c) => {
   const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.json({ error: "Record not found" }, 404);
   const followers = await db.query.follows.findMany({
     where: and(eq(follows.followerId, accountId), isNotNull(follows.approved)),
     orderBy: desc(follows.approved),
@@ -823,6 +830,8 @@ app.get(
   tokenRequired,
   scopeRequired(["read:lists"]),
   async (c) => {
+    const accountId = c.req.param("id");
+    if (!isUuid(accountId)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
@@ -838,7 +847,7 @@ app.get(
           db
             .select({ id: listMembers.listId })
             .from(listMembers)
-            .where(eq(listMembers.accountId, c.req.param("id"))),
+            .where(eq(listMembers.accountId, accountId)),
         ),
       ),
     });
@@ -853,8 +862,8 @@ app.get(
   zValidator(
     "query",
     z.object({
-      max_id: z.string().uuid().optional(),
-      since_id: z.string().uuid().optional(),
+      max_id: uuid.optional(),
+      since_id: uuid.optional(),
       limit: z
         .string()
         .default("40")
@@ -911,15 +920,15 @@ app.post(
     }),
   ),
   async (c) => {
+    const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
-
     if (owner == null) {
       return c.json(
         { error: "This method requires an authenticated user" },
         422,
       );
     }
-    const id = c.req.param("id");
     const { notifications, duration } = c.req.valid("json");
     const account = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
@@ -983,6 +992,8 @@ app.post(
   tokenRequired,
   scopeRequired(["write:mutes"]),
   async (c) => {
+    const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
@@ -990,7 +1001,6 @@ app.post(
         422,
       );
     }
-    const id = c.req.param("id");
     await db
       .delete(mutes)
       .where(and(eq(mutes.accountId, owner.id), eq(mutes.mutedAccountId, id)));
@@ -1024,6 +1034,8 @@ app.post(
   tokenRequired,
   scopeRequired(["read:blocks"]),
   async (c) => {
+    const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
@@ -1031,7 +1043,6 @@ app.post(
         422,
       );
     }
-    const id = c.req.param("id");
     const acct = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
       with: { owner: true },
@@ -1069,6 +1080,8 @@ app.post(
   tokenRequired,
   scopeRequired(["read:blocks"]),
   async (c) => {
+    const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
@@ -1076,7 +1089,6 @@ app.post(
         422,
       );
     }
-    const id = c.req.param("id");
     const acct = await db.query.accounts.findFirst({
       where: eq(accounts.id, id),
       with: { owner: true },

@@ -54,6 +54,7 @@ import {
   mutes,
 } from "../schema.ts";
 import { extractCustomEmojis, formatText } from "../text.ts";
+import { type Uuid, isUuid } from "../uuid.ts";
 
 const HOLLO_OFFICIAL_ACCOUNT = "@hollo@hollo.social";
 
@@ -219,8 +220,10 @@ accounts.get("/new", (c) => {
 });
 
 accounts.get("/:id", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -280,8 +283,10 @@ function AccountPage(props: AccountPageProps) {
 }
 
 accounts.post("/:id", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -327,7 +332,6 @@ accounts.post("/:id", async (c) => {
   const bioResult = await formatText(db, bio ?? "", fmtOpts);
   const nameEmojis = await extractCustomEmojis(db, name);
   const emojis = { ...nameEmojis, ...bioResult.emojis };
-  const accountId = c.req.param("id");
   await db.transaction(async (tx) => {
     await tx
       .update(accountsTable)
@@ -377,6 +381,7 @@ accounts.post("/:id", async (c) => {
 
 accounts.post("/:id/delete", async (c) => {
   const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
     where: eq(accountOwners.id, accountId),
   });
@@ -415,16 +420,16 @@ accounts.post("/:id/delete", async (c) => {
   );
   await db.transaction(async (tx) => {
     await tx.delete(accountOwners).where(eq(accountOwners.id, accountId));
-    await tx
-      .delete(accountsTable)
-      .where(eq(accountsTable.id, c.req.param("id")));
+    await tx.delete(accountsTable).where(eq(accountsTable.id, accountId));
   });
   return c.redirect("/accounts");
 });
 
 accounts.get("/:id/migrate", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: { with: { successor: true } } },
   });
   if (accountOwner == null) return c.notFound();
@@ -665,8 +670,10 @@ accounts.get("/:id/migrate", async (c) => {
 });
 
 accounts.post("/:id/migrate/from", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -702,8 +709,10 @@ accounts.post("/:id/migrate/from", async (c) => {
 });
 
 accounts.post("/:id/migrate/to", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -761,8 +770,10 @@ accounts.post("/:id/migrate/to", async (c) => {
 });
 
 accounts.get("/:id/migrate/following_accounts.csv", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -798,8 +809,10 @@ accounts.get("/:id/migrate/following_accounts.csv", async (c) => {
 });
 
 accounts.get("/:id/migrate/lists.csv", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -827,8 +840,10 @@ accounts.get("/:id/migrate/lists.csv", async (c) => {
 });
 
 accounts.get("/:id/migrate/muted_accounts.csv", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -857,8 +872,10 @@ accounts.get("/:id/migrate/muted_accounts.csv", async (c) => {
 });
 
 accounts.get("/:id/migrate/blocked_accounts.csv", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -885,8 +902,10 @@ accounts.get("/:id/migrate/blocked_accounts.csv", async (c) => {
 });
 
 accounts.get("/:id/migrate/bookmarks.csv", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -908,8 +927,10 @@ accounts.get("/:id/migrate/bookmarks.csv", async (c) => {
 });
 
 accounts.post("/:id/migrate/import", async (c) => {
+  const accountId = c.req.param("id");
+  if (!isUuid(accountId)) return c.notFound();
   const accountOwner = await db.query.accountOwners.findFirst({
-    where: eq(accountOwners.id, c.req.param("id")),
+    where: eq(accountOwners.id, accountId),
     with: { account: true },
   });
   if (accountOwner == null) return c.notFound();
@@ -1023,7 +1044,7 @@ accounts.post("/:id/migrate/import", async (c) => {
       accounts[handle] = account;
     }
     const listNames = new Set(csv.map((row) => row[0].trim()));
-    const listIds: Record<string, string> = {};
+    const listIds: Record<string, Uuid> = {};
     for (const listName of listNames) {
       let list = await db.query.lists.findFirst({
         where: and(

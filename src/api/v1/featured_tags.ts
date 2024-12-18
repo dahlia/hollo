@@ -10,13 +10,13 @@ import {
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import { Hono } from "hono";
-import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
 import db from "../../db";
 import { serializeFeaturedTag } from "../../entities/tag";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import type * as schema from "../../schema";
 import { featuredTags, posts } from "../../schema";
+import { type Uuid, isUuid, uuidv7 } from "../../uuid";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -65,6 +65,10 @@ app.delete(
   tokenRequired,
   scopeRequired(["write:accounts"]),
   async (c) => {
+    const featuredTagId = c.req.param("id");
+    if (!isUuid(featuredTagId)) {
+      return c.json({ error: "Record not found" }, 404);
+    }
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json({ error: "The access token is invalid." }, 401);
@@ -74,7 +78,7 @@ app.delete(
       .where(
         and(
           eq(featuredTags.accountOwnerId, owner.id),
-          eq(featuredTags.id, c.req.param("id")),
+          eq(featuredTags.id, featuredTagId),
         ),
       )
       .returning();
@@ -89,7 +93,7 @@ async function getFeaturedTagStats(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
-  ownerId: string,
+  ownerId: Uuid,
 ): Promise<Record<string, { posts: number; lastPublished: Date | null }>> {
   const result = await db
     .select({

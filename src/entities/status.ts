@@ -20,12 +20,13 @@ import {
   pollVotes,
   posts,
 } from "../schema";
+import type { Uuid } from "../uuid";
 import { serializeAccount } from "./account";
 import { serializeEmojis, serializeReactions } from "./emoji";
 import { serializeMedium } from "./medium";
 import { serializePoll } from "./poll";
 
-export function getPostRelations(ownerId: string) {
+export function getPostRelations(ownerId: Uuid) {
   return {
     account: { with: { owner: true, successor: true } },
     application: true,

@@ -41,7 +41,6 @@ import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
 import sharp from "sharp";
 // @ts-ignore: No type definitions available
 import { isSSRFSafeURL } from "ssrfcheck";
-import { uuidv7 } from "uuidv7-js";
 import { type Thumbnail, makeVideoScreenshot, uploadThumbnail } from "../media";
 import { fetchPreviewCard } from "../previewcard";
 import {
@@ -66,6 +65,7 @@ import {
 } from "../schema";
 import type * as schema from "../schema";
 import { extractPreviewLink } from "../text";
+import { type Uuid, uuidv7 } from "../uuid";
 import { persistAccount, persistAccountByIri } from "./account";
 import { iterateCollection } from "./collection";
 import { toDate, toTemporalInstant } from "./date";
@@ -121,7 +121,7 @@ export async function persistPost(
         });
   logger.debug("Persisted account: {account}", { account });
   if (account == null) return null;
-  let replyTargetId: string | null = null;
+  let replyTargetId: Uuid | null = null;
   if (object.replyTargetId != null) {
     if (
       options.replyTarget != null &&
@@ -182,7 +182,7 @@ export async function persistPost(
       objectLink = tag.href;
     }
   }
-  let quoteTargetId: string | null = null;
+  let quoteTargetId: Uuid | null = null;
   if (objectLink == null && object.quoteUrl != null) {
     objectLink = object.quoteUrl;
   }
@@ -234,7 +234,7 @@ export async function persistPost(
     applicationId: null,
     replyTargetId,
     sharingId: null,
-    quoteTargetId: quoteTargetId,
+    quoteTargetId,
     visibility: to.has(PUBLIC_COLLECTION.href)
       ? "public"
       : cc.has(PUBLIC_COLLECTION.href)
@@ -621,7 +621,7 @@ export async function updatePostStats(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
-  { id }: { id: string },
+  { id }: { id: Uuid },
 ): Promise<void> {
   const repliesCount = db
     .select({ cnt: count() })

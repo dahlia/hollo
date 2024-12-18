@@ -18,6 +18,7 @@ import { persistAccount } from "../../federation/account";
 import { persistPost } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type Account, accounts, posts } from "../../schema";
+import { uuid } from "../../uuid";
 import { postMedia } from "../v1/media";
 import instance from "./instance";
 
@@ -38,7 +39,7 @@ app.get(
       type: z.enum(["accounts", "hashtags", "statuses"]).optional(),
       resolve: z.enum(["true", "false"]).default("false"),
       following: z.enum(["true", "false"]).default("false"),
-      account_id: z.string().optional(),
+      account_id: uuid.optional(),
       limit: z
         .string()
         .regex(/\d+/)

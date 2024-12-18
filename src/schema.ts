@@ -22,6 +22,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import type { PreviewCard } from "./previewcard";
+import type { Uuid } from "./uuid";
 
 const currentTimestamp = sql`CURRENT_TIMESTAMP`;
 
@@ -62,7 +63,7 @@ export const accountTypeEnum = pgEnum("account_type", [
 export type AccountType = (typeof accountTypeEnum.enumValues)[number];
 
 export const accounts = pgTable("accounts", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").$type<Uuid>().primaryKey(),
   iri: text("iri").notNull().unique(),
   type: accountTypeEnum("type").notNull(),
   name: varchar("name", { length: 100 }).notNull(),
@@ -85,9 +86,9 @@ export const accounts = pgTable("accounts", {
     .$type<Record<string, string>>(),
   emojis: jsonb("emojis").notNull().default({}).$type<Record<string, string>>(),
   sensitive: boolean("sensitive").notNull().default(false),
-  successorId: uuid("successor_id").references((): AnyPgColumn => accounts.id, {
-    onDelete: "cascade",
-  }),
+  successorId: uuid("successor_id")
+    .$type<Uuid>()
+    .references((): AnyPgColumn => accounts.id, { onDelete: "cascade" }),
   aliases: text("aliases").array().notNull().default(sql`(ARRAY[]::text[])`),
   instanceHost: text("instance_host")
     .notNull()
@@ -136,6 +137,7 @@ export type PostVisibility = (typeof postVisibilityEnum.enumValues)[number];
 
 export const accountOwners = pgTable("account_owners", {
   id: uuid("id")
+    .$type<Uuid>()
     .primaryKey()
     .references(() => accounts.id, { onDelete: "cascade" }),
   handle: text("handle").notNull().unique(),
@@ -193,9 +195,11 @@ export const follows = pgTable(
   {
     iri: text("iri").notNull().unique(),
     followingId: uuid("following_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     followerId: uuid("follower_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     shares: boolean("shares").notNull().default(true),
@@ -265,7 +269,7 @@ export const scopeEnum = pgEnum("scope", [
 export type Scope = (typeof scopeEnum.enumValues)[number];
 
 export const applications = pgTable("applications", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").$type<Uuid>().primaryKey(),
   name: varchar("name", { length: 256 }).notNull(),
   redirectUris: text("redirect_uris").array().notNull(),
   scopes: scopeEnum("scopes").array().notNull(),
@@ -294,11 +298,12 @@ export type GrantType = (typeof grantTypeEnum.enumValues)[number];
 export const accessTokens = pgTable("access_tokens", {
   code: text("code").primaryKey(),
   applicationId: uuid("application_id")
+    .$type<Uuid>()
     .notNull()
     .references(() => applications.id, { onDelete: "cascade" }),
-  accountOwnerId: uuid("account_owner_id").references(() => accountOwners.id, {
-    onDelete: "cascade",
-  }),
+  accountOwnerId: uuid("account_owner_id")
+    .$type<Uuid>()
+    .references(() => accountOwners.id, { onDelete: "cascade" }),
   grant_type: grantTypeEnum("grant_type")
     .notNull()
     .default("authorization_code"),
@@ -333,33 +338,32 @@ export type PostType = (typeof postTypeEnum.enumValues)[number];
 export const posts = pgTable(
   "posts",
   {
-    id: uuid("id").primaryKey(),
+    id: uuid("id").$type<Uuid>().primaryKey(),
     iri: text("iri").notNull().unique(),
     type: postTypeEnum("type").notNull(),
     accountId: uuid("actor_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    applicationId: uuid("application_id").references(() => applications.id, {
-      onDelete: "set null",
-    }),
-    replyTargetId: uuid("reply_target_id").references(
-      (): AnyPgColumn => posts.id,
-      { onDelete: "set null" },
-    ),
-    sharingId: uuid("sharing_id").references((): AnyPgColumn => posts.id, {
-      onDelete: "cascade",
-    }),
-    quoteTargetId: uuid("quote_target_id").references(
-      (): AnyPgColumn => posts.id,
-      { onDelete: "set null" },
-    ),
+    applicationId: uuid("application_id")
+      .$type<Uuid>()
+      .references(() => applications.id, { onDelete: "set null" }),
+    replyTargetId: uuid("reply_target_id")
+      .$type<Uuid>()
+      .references((): AnyPgColumn => posts.id, { onDelete: "set null" }),
+    sharingId: uuid("sharing_id")
+      .$type<Uuid>()
+      .references((): AnyPgColumn => posts.id, { onDelete: "cascade" }),
+    quoteTargetId: uuid("quote_target_id")
+      .$type<Uuid>()
+      .references((): AnyPgColumn => posts.id, { onDelete: "set null" }),
     visibility: postVisibilityEnum("visibility").notNull(),
     summary: text("summary"),
     contentHtml: text("content_html"),
     content: text("content"),
-    pollId: uuid("poll_id").references(() => polls.id, {
-      onDelete: "set null",
-    }),
+    pollId: uuid("poll_id")
+      .$type<Uuid>()
+      .references(() => polls.id, { onDelete: "set null" }),
     language: text("language"),
     tags: jsonb("tags").notNull().default({}).$type<Record<string, string>>(),
     emojis: jsonb("emojis")
@@ -445,8 +449,10 @@ export const postRelations = relations(posts, ({ one, many }) => ({
 export const media = pgTable(
   "media",
   {
-    id: uuid("id").primaryKey(),
-    postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
+    id: uuid("id").$type<Uuid>().primaryKey(),
+    postId: uuid("post_id")
+      .$type<Uuid>()
+      .references(() => posts.id, { onDelete: "cascade" }),
     type: text("type").notNull(),
     url: text("url").notNull(),
     width: integer("width").notNull(),
@@ -476,7 +482,7 @@ export const mediumRelations = relations(media, ({ one }) => ({
 }));
 
 export const polls = pgTable("polls", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").$type<Uuid>().primaryKey(),
   multiple: boolean("multiple").notNull().default(false),
   votersCount: bigint("voters_count", { mode: "number" }).notNull().default(0),
   expires: timestamp("expires", { withTimezone: true }).notNull(),
@@ -500,7 +506,9 @@ export const pollRelations = relations(polls, ({ one, many }) => ({
 export const pollOptions = pgTable(
   "poll_options",
   {
-    pollId: uuid("poll_id").references(() => polls.id, { onDelete: "cascade" }),
+    pollId: uuid("poll_id")
+      .$type<Uuid>()
+      .references(() => polls.id, { onDelete: "cascade" }),
     index: integer("index").notNull(),
     title: text("title").notNull(),
     votesCount: bigint("votes_count", { mode: "number" }).notNull().default(0),
@@ -527,10 +535,12 @@ export const pollVotes = pgTable(
   "poll_votes",
   {
     pollId: uuid("poll_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => polls.id, { onDelete: "cascade" }),
     optionIndex: integer("option_index").notNull(),
     accountId: uuid("account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
@@ -571,9 +581,11 @@ export const mentions = pgTable(
   "mentions",
   {
     postId: uuid("post_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => posts.id, { onDelete: "cascade" }),
     accountId: uuid("account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
   },
@@ -601,8 +613,9 @@ export const pinnedPosts = pgTable(
   "pinned_posts",
   {
     index: bigserial("index", { mode: "number" }).notNull().primaryKey(),
-    postId: uuid("post_id").notNull(),
+    postId: uuid("post_id").$type<Uuid>().notNull(),
     accountId: uuid("account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
@@ -637,9 +650,11 @@ export const likes = pgTable(
   "likes",
   {
     postId: uuid("post_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => posts.id, { onDelete: "cascade" }),
     accountId: uuid("account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
@@ -670,9 +685,11 @@ export const reactions = pgTable(
   "reactions",
   {
     postId: uuid("post_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => posts.id, { onDelete: "cascade" }),
     accountId: uuid("account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     emoji: text("emoji").notNull(),
@@ -707,9 +724,11 @@ export const bookmarks = pgTable(
   "bookmarks",
   {
     postId: uuid("post_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => posts.id, { onDelete: "cascade" }),
     accountOwnerId: uuid("account_owner_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accountOwners.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
@@ -744,6 +763,7 @@ export const markers = pgTable(
   "markers",
   {
     accountOwnerId: uuid("account_owner_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accountOwners.id, { onDelete: "cascade" }),
     type: markerTypeEnum("type").notNull(),
@@ -771,8 +791,9 @@ export const markerRelations = relations(markers, ({ one }) => ({
 export const featuredTags = pgTable(
   "featured_tags",
   {
-    id: uuid("id").primaryKey(),
+    id: uuid("id").$type<Uuid>().primaryKey(),
     accountOwnerId: uuid("account_owner_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accountOwners.id, { onDelete: "cascade" }),
     name: text("name").notNull(),
@@ -803,8 +824,9 @@ export type ListRepliesPolicy =
   (typeof listRepliesPolicyEnum.enumValues)[number];
 
 export const lists = pgTable("lists", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").$type<Uuid>().primaryKey(),
   accountOwnerId: uuid("account_owner_id")
+    .$type<Uuid>()
     .notNull()
     .references(() => accountOwners.id, { onDelete: "cascade" }),
   title: text("title").notNull(),
@@ -832,9 +854,11 @@ export const listMembers = pgTable(
   "list_members",
   {
     listId: uuid("list_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => lists.id, { onDelete: "cascade" }),
     accountId: uuid("account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
@@ -863,11 +887,13 @@ export const listMemberRelations = relations(listMembers, ({ one }) => ({
 export const mutes = pgTable(
   "mutes",
   {
-    id: uuid("id").primaryKey(),
+    id: uuid("id").$type<Uuid>().primaryKey(),
     accountId: uuid("account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     mutedAccountId: uuid("muted_account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     notifications: boolean("notifications").notNull().default(true),
@@ -903,9 +929,11 @@ export const blocks = pgTable(
   "blocks",
   {
     accountId: uuid("account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     blockedAccountId: uuid("blocked_account_id")
+      .$type<Uuid>()
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     created: timestamp("created", { withTimezone: true })
@@ -946,12 +974,14 @@ export type CustomEmoji = typeof customEmojis.$inferSelect;
 export type NewCustomEmoji = typeof customEmojis.$inferInsert;
 
 export const reports = pgTable("reports", {
-  id: uuid("id").primaryKey(),
+  id: uuid("id").$type<Uuid>().primaryKey(),
   iri: text("iri").notNull().unique(),
   accountId: uuid("account_id")
+    .$type<Uuid>()
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
   targetAccountId: uuid("target_account_id")
+    .$type<Uuid>()
     .notNull()
     .references(() => accounts.id, { onDelete: "cascade" }),
   created: timestamp("created", { withTimezone: true })
@@ -959,7 +989,11 @@ export const reports = pgTable("reports", {
     .default(currentTimestamp),
   comment: text("comment").notNull(),
   // No relationship, we're just storing a set of Post IDs in here:
-  posts: uuid("posts").array().notNull().default(sql`'{}'::uuid[]`),
+  posts: uuid("posts")
+    .array()
+    .$type<Uuid[]>()
+    .notNull()
+    .default(sql`'{}'::uuid[]`),
 });
 
 export type Report = typeof reports.$inferSelect;

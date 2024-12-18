@@ -9,10 +9,13 @@ import { federation } from "../../federation";
 import { toUpdate } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { pollOptions, pollVotes, polls } from "../../schema";
+import { isUuid } from "../../uuid";
 
 const app = new Hono<{ Variables: Variables }>();
 
 app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
+  const pollId = c.req.param("id");
+  if (!isUuid(pollId)) return c.json({ error: "Record not found" }, 404);
   const owner = c.get("token").accountOwner;
   if (owner == null) return c.json({ error: "Unauthorized" }, 401);
   const poll = await db.query.polls.findFirst({
@@ -20,7 +23,7 @@ app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
       options: { orderBy: pollOptions.index },
       votes: { where: eq(pollVotes.accountId, owner.id) },
     },
-    where: eq(polls.id, c.req.param("id")),
+    where: eq(polls.id, pollId),
   });
   if (poll == null) return c.json({ error: "Record not found" }, 404);
   return c.json(serializePoll(poll, owner));
@@ -45,6 +48,8 @@ app.post(
     }),
   ),
   async (c) => {
+    const pollId = c.req.param("id");
+    if (!isUuid(pollId)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json({ error: "The access token is invalid" }, 401);
@@ -68,7 +73,7 @@ app.post(
           },
         },
       },
-      where: eq(polls.id, c.req.param("id")),
+      where: eq(polls.id, pollId),
     });
     if (poll == null) return c.json({ error: "Record not found" }, 404);
     if (poll.expires <= new Date()) {
@@ -139,7 +144,7 @@ app.post(
           },
         },
       },
-      where: eq(polls.id, c.req.param("id")),
+      where: eq(polls.id, pollId),
     });
     if (poll == null) throw new Error("Record not found");
     const fedCtx = federation.createContext(c.req.raw, undefined);

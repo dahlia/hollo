@@ -13,12 +13,14 @@ import {
   accountOwners,
   posts,
 } from "../../schema.ts";
+import { isUuid } from "../../uuid.ts";
 
 const profilePost = new Hono();
 
 profilePost.get<"/:handle{@[^/]+}/:id{[-a-f0-9]+}">(async (c) => {
   let handle = c.req.param("handle");
   const postId = c.req.param("id");
+  if (!isUuid(postId)) return c.notFound();
   if (handle.startsWith("@")) handle = handle.substring(1);
   const post = await db.query.posts.findFirst({
     where: and(

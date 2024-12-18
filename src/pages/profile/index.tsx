@@ -19,6 +19,7 @@ import {
   pinnedPosts,
   posts,
 } from "../../schema.ts";
+import { isUuid } from "../../uuid.ts";
 import profilePost from "./profilePost.tsx";
 
 const profile = new Hono();
@@ -37,6 +38,7 @@ profile.get<"/:handle">(async (c) => {
   if (owner == null) return c.notFound();
   const contStr = c.req.query("cont");
   const cont = contStr == null || contStr.trim() === "" ? undefined : contStr;
+  if (cont != null && !isUuid(cont)) return c.notFound();
   const postList = await db.query.posts.findMany({
     where: and(
       eq(posts.accountId, owner.id),

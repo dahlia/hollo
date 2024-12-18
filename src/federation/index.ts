@@ -58,6 +58,7 @@ import {
   posts,
   reports,
 } from "../schema";
+import { isUuid } from "../uuid";
 import { toTemporalInstant } from "./date";
 import { toEmoji } from "./emoji";
 import {
@@ -511,6 +512,7 @@ federation.setObjectDispatcher(
       with: { account: true },
     });
     if (owner == null) return null;
+    if (!isUuid(values.id)) return null;
     const post = await db.query.posts.findFirst({
       where: and(
         eq(posts.id, values.id),
@@ -532,7 +534,13 @@ federation.setObjectDispatcher(
       if (keyOwner?.id == null) return null;
       const found = await db.query.follows.findFirst({
         where: and(
-          eq(follows.followerId, keyOwner.id.href),
+          inArray(
+            follows.followerId,
+            db
+              .select({ id: accounts.id })
+              .from(accounts)
+              .where(eq(accounts.iri, keyOwner.id.href)),
+          ),
           eq(follows.followingId, owner.id),
         ),
       });
@@ -563,6 +571,7 @@ federation.setObjectDispatcher(
 );
 
 federation.setObjectDispatcher(Flag, "/reports/{id}", async (ctx, { id }) => {
+  if (!isUuid(id)) return null;
   const report = await db.query.reports.findFirst({
     where: eq(reports.id, id),
     with: {

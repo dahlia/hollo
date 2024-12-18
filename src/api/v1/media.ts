@@ -2,13 +2,13 @@ import { eq } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import mime from "mime";
 import sharp from "sharp";
-import { uuidv7 } from "uuidv7-js";
 import { db } from "../../db";
 import { serializeMedium } from "../../entities/medium";
 import { makeVideoScreenshot, uploadThumbnail } from "../../media";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { media } from "../../schema";
 import { disk, getAssetUrl } from "../../storage";
+import { isUuid, uuidv7 } from "../../uuid";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -69,8 +69,10 @@ export async function postMedia(c: Context<{ Variables: Variables }>) {
 app.post("/", tokenRequired, scopeRequired(["write:media"]), postMedia);
 
 app.get("/:id", async (c) => {
+  const mediumId = c.req.param("id");
+  if (!isUuid(mediumId)) return c.json({ error: "Not found" }, 404);
   const medium = await db.query.media.findFirst({
-    where: eq(media.id, c.req.param("id")),
+    where: eq(media.id, mediumId),
   });
   if (medium == null) return c.json({ error: "Not found" }, 404);
   return c.json(serializeMedium(medium));
@@ -78,6 +80,7 @@ app.get("/:id", async (c) => {
 
 app.put("/:id", tokenRequired, scopeRequired(["write:media"]), async (c) => {
   const mediumId = c.req.param("id");
+  if (!isUuid(mediumId)) return c.json({ error: "Not found" }, 404);
   let description: string | undefined;
   try {
     const json = await c.req.json();

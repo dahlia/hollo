@@ -39,6 +39,7 @@ import {
   posts,
   reactions,
 } from "../schema";
+import { isUuid } from "../uuid";
 import {
   persistAccount,
   removeFollower,
@@ -540,6 +541,7 @@ export async function onLiked(
     if (account == null) return;
     // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
     const postId = parsed.values["id"];
+    if (!isUuid(postId)) return;
     await db.transaction(async (tx) => {
       await tx
         .insert(likes)
@@ -592,6 +594,7 @@ export async function onUnliked(
     if (account == null) return;
     // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
     const postId = parsed.values["id"];
+    if (!isUuid(postId)) return;
     await db.transaction(async (tx) => {
       await tx
         .delete(likes)
@@ -630,6 +633,7 @@ export async function onEmojiReactionAdded(
     return;
   }
   const { username, id } = object.values;
+  if (!isUuid(id)) return;
   const emoji = react.content.toString().trim();
   if (emoji === "") return;
   const actor = await react.getActor();
@@ -693,6 +697,7 @@ export async function onEmojiReactionRemoved(
     return;
   }
   const { username, id } = post.values;
+  if (!isUuid(id)) return;
   await db
     .delete(reactions)
     .where(

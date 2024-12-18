@@ -1,13 +1,13 @@
 import { zValidator } from "@hono/zod-validator";
 import { and, eq, inArray } from "drizzle-orm";
 import { Hono } from "hono";
-import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
 import { db } from "../../db";
 import { serializeAccount } from "../../entities/account";
 import { serializeList } from "../../entities/list";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { listMembers, lists } from "../../schema";
+import { isUuid, uuid, uuidv7 } from "../../uuid";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -55,15 +55,14 @@ app.post(
 );
 
 app.get("/:id", tokenRequired, scopeRequired(["read:lists"]), async (c) => {
+  const listId = c.req.param("id");
+  if (!isUuid(listId)) return c.json({ error: "Record not found" }, 404);
   const owner = c.get("token").accountOwner;
   if (owner == null) {
     return c.json({ error: "The access token is invalid" }, 401);
   }
   const list = await db.query.lists.findFirst({
-    where: and(
-      eq(lists.accountOwnerId, owner.id),
-      eq(lists.id, c.req.param("id")),
-    ),
+    where: and(eq(lists.accountOwnerId, owner.id), eq(lists.id, listId)),
   });
   if (list == null) return c.json({ error: "Record not found" }, 404);
   return c.json(serializeList(list));
@@ -75,6 +74,8 @@ app.put(
   scopeRequired(["write:lists"]),
   zValidator("json", listSchema),
   async (c) => {
+    const listId = c.req.param("id");
+    if (!isUuid(listId)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json({ error: "The access token is invalid" }, 401);
@@ -87,12 +88,7 @@ app.put(
         repliesPolicy: input.replies_policy,
         exclusive: input.exclusive,
       })
-      .where(
-        and(
-          eq(lists.accountOwnerId, owner.id),
-          eq(lists.id, c.req.param("id")),
-        ),
-      )
+      .where(and(eq(lists.accountOwnerId, owner.id), eq(lists.id, listId)))
       .returning();
     if (result.length < 1) return c.json({ error: "Record not found" }, 404);
     return c.json(serializeList(result[0]));
@@ -100,15 +96,15 @@ app.put(
 );
 
 app.delete("/:id", tokenRequired, scopeRequired(["write:lists"]), async (c) => {
+  const listId = c.req.param("id");
+  if (!isUuid(listId)) return c.json({ error: "Record not found" }, 404);
   const owner = c.get("token").accountOwner;
   if (owner == null) {
     return c.json({ error: "The access token is invalid" }, 401);
   }
   const result = await db
     .delete(lists)
-    .where(
-      and(eq(lists.accountOwnerId, owner.id), eq(lists.id, c.req.param("id"))),
-    )
+    .where(and(eq(lists.accountOwnerId, owner.id), eq(lists.id, listId)))
     .returning();
   if (result.length < 1) return c.json({ error: "Record not found" }, 404);
   return c.json({});
@@ -119,15 +115,14 @@ app.get(
   tokenRequired,
   scopeRequired(["read:lists"]),
   async (c) => {
+    const listId = c.req.param("id");
+    if (!isUuid(listId)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json({ error: "The access token is invalid" }, 401);
     }
     const list = await db.query.lists.findFirst({
-      where: and(
-        eq(lists.accountOwnerId, owner.id),
-        eq(lists.id, c.req.param("id")),
-      ),
+      where: and(eq(lists.accountOwnerId, owner.id), eq(lists.id, listId)),
     });
     if (list == null) return c.json({ error: "Record not found" }, 404);
     // TODO: pagination
@@ -141,7 +136,7 @@ app.get(
 );
 
 const membersSchema = z.object({
-  account_ids: z.array(z.string().uuid()).min(1),
+  account_ids: z.array(uuid).min(1),
 });
 
 app.post(
@@ -150,15 +145,14 @@ app.post(
   scopeRequired(["write:lists"]),
   zValidator("json", membersSchema),
   async (c) => {
+    const listId = c.req.param("id");
+    if (!isUuid(listId)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json({ error: "The access token is invalid" }, 401);
     }
     const list = await db.query.lists.findFirst({
-      where: and(
-        eq(lists.accountOwnerId, owner.id),
-        eq(lists.id, c.req.param("id")),
-      ),
+      where: and(eq(lists.accountOwnerId, owner.id), eq(lists.id, listId)),
     });
     if (list == null) return c.json({ error: "Record not found" }, 404);
     const accountIds = c.req.valid("json").account_ids;
@@ -175,15 +169,14 @@ app.delete(
   scopeRequired(["write:lists"]),
   zValidator("json", membersSchema),
   async (c) => {
+    const listId = c.req.param("id");
+    if (!isUuid(listId)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json({ error: "The access token is invalid" }, 401);
     }
     const list = await db.query.lists.findFirst({
-      where: and(
-        eq(lists.accountOwnerId, owner.id),
-        eq(lists.id, c.req.param("id")),
-      ),
+      where: and(eq(lists.accountOwnerId, owner.id), eq(lists.id, listId)),
     });
     if (list == null) return c.json({ error: "Record not found" }, 404);
     const accountIds = c.req.valid("json").account_ids;

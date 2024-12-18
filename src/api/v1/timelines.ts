@@ -28,15 +28,16 @@ import {
   mutes,
   posts,
 } from "../../schema";
+import { isUuid, uuid } from "../../uuid";
 
 const app = new Hono<{ Variables: Variables }>();
 
 app.use(tokenRequired);
 
 export const timelineQuerySchema = z.object({
-  max_id: z.string().uuid().optional(),
-  since_id: z.string().uuid().optional(),
-  min_id: z.string().uuid().optional(),
+  max_id: uuid.optional(),
+  since_id: uuid.optional(),
+  min_id: uuid.optional(),
   limit: z
     .string()
     .default("20")
@@ -369,6 +370,8 @@ app.get(
   scopeRequired(["read:lists"]),
   zValidator("query", publicTimelineQuerySchema),
   async (c) => {
+    const listId = c.req.param("list_id");
+    if (!isUuid(listId)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
@@ -378,10 +381,7 @@ app.get(
     }
     const query = c.req.valid("query");
     const list = await db.query.lists.findFirst({
-      where: and(
-        eq(lists.id, c.req.param("list_id")),
-        eq(lists.accountOwnerId, owner.id),
-      ),
+      where: and(eq(lists.id, listId), eq(lists.accountOwnerId, owner.id)),
     });
     if (list == null) return c.json({ error: "Record not found" }, 404);
     const timeline = await db.query.posts.findMany({

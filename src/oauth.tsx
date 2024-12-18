@@ -20,6 +20,7 @@ import {
   scopeEnum,
 } from "./schema";
 import { renderCustomEmojis } from "./text";
+import { uuid } from "./uuid";
 
 export type Variables = {
   token: AccessToken & {
@@ -248,8 +249,8 @@ app.post(
   zValidator(
     "form",
     z.object({
-      account_id: z.string().uuid(),
-      application_id: z.string().uuid(),
+      account_id: uuid,
+      application_id: uuid,
       redirect_uri: z.string().url(),
       scopes: scopesSchema,
       state: z.string().optional(),

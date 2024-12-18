@@ -1,5 +1,6 @@
 import xss from "xss";
 import type { Account, AccountOwner, Block, Follow, Mute } from "../schema";
+import type { Uuid } from "../uuid";
 import { serializeEmojis } from "./emoji";
 
 export function serializeAccount(
@@ -83,7 +84,7 @@ export function serializeRelationship(
     blocks: Block[];
     blockedBy: Block[];
   },
-  currentAccountOwner: { id: string },
+  currentAccountOwner: { id: Uuid },
 ): Record<string, unknown> {
   const following = account.followers.find(
     (f) => f.followerId === currentAccountOwner.id,

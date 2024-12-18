@@ -22,7 +22,6 @@ import {
 } from "drizzle-orm";
 import { type Context, Hono } from "hono";
 import type { TypedResponse } from "hono/types";
-import { uuidv7 } from "uuidv7-js";
 import { z } from "zod";
 import { db } from "../../db";
 import {
@@ -64,12 +63,13 @@ import {
   reactions,
 } from "../../schema";
 import { formatPostContent } from "../../text";
+import { type Uuid, isUuid, uuid, uuidv7 } from "../../uuid";
 
 const app = new Hono<{ Variables: Variables }>();
 
 const statusSchema = z.object({
   status: z.string().min(1).optional(),
-  media_ids: z.array(z.string().uuid()).optional(),
+  media_ids: z.array(uuid).optional(),
   poll: z
     .object({
       options: z.array(z.string()),
@@ -97,8 +97,8 @@ app.post(
     "json",
     statusSchema.merge(
       z.object({
-        in_reply_to_id: z.string().uuid().optional(),
-        quote_id: z.string().uuid().optional(),
+        in_reply_to_id: uuid.optional(),
+        quote_id: uuid.optional(),
         visibility: z
           .enum(["public", "unlisted", "private", "direct"])
           .optional(),
@@ -161,7 +161,7 @@ app.post(
     if (content?.previewLink != null) {
       previewCard = await fetchPreviewCard(content.previewLink);
     }
-    let quoteTargetId: string | null = null;
+    let quoteTargetId: Uuid | null = null;
     if (data.quote_id != null) quoteTargetId = data.quote_id;
     else if (content?.quoteTarget != null) {
       const quoted = await persistPost(
@@ -277,6 +277,7 @@ app.put(
       );
     }
     const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const data = c.req.valid("json");
     const fedCtx = federation.createContext(c.req.raw, undefined);
     const fmtOpts = {
@@ -358,6 +359,7 @@ app.get("/:id", tokenRequired, scopeRequired(["read:statuses"]), async (c) => {
     return c.json({ error: "This method requires an authenticated user" }, 422);
   }
   const id = c.req.param("id");
+  if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
   const post = await db.query.posts.findFirst({
     where: eq(posts.id, id),
     with: getPostRelations(owner.id),
@@ -379,6 +381,7 @@ app.delete(
       );
     }
     const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, id),
       with: getPostRelations(owner.id),
@@ -423,6 +426,7 @@ app.get(
   scopeRequired(["read:statuses"]),
   async (c) => {
     const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, id),
     });
@@ -448,6 +452,7 @@ app.get(
       );
     }
     const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, id),
       with: getPostRelations(owner.id),
@@ -563,6 +568,7 @@ app.post(
       );
     }
     const postId = c.req.param("id");
+    if (!isUuid(postId)) return c.json({ error: "Record not found" }, 404);
     let like: Like;
     try {
       const result = await db
@@ -617,6 +623,7 @@ app.post(
       );
     }
     const postId = c.req.param("id");
+    if (!isUuid(postId)) return c.json({ error: "Record not found" }, 404);
     const result = await db
       .delete(likes)
       .where(and(eq(likes.postId, postId), eq(likes.accountId, owner.id)))
@@ -670,6 +677,7 @@ app.get(
       );
     }
     const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
     const likeList = await db.query.likes.findMany({
       where: eq(likes.postId, id),
       with: { account: { with: { owner: true, successor: true } } },
@@ -705,6 +713,9 @@ app.post(
       );
     }
     const originalPostId = c.req.param("id");
+    if (!isUuid(originalPostId)) {
+      return c.json({ error: "Record not found" }, 404);
+    }
     const contentType = c.req.header("Content-Type");
     let data: z.infer<typeof reblogSchema>;
     if (contentType?.match(/^application\/json(\s*;|$)/)) {
@@ -781,6 +792,9 @@ app.post(
       );
     }
     const originalPostId = c.req.param("id");
+    if (!isUuid(originalPostId)) {
+      return c.json({ error: "Record not found" }, 404);
+    }
     const postList = await db.query.posts.findMany({
       where: and(
         eq(posts.accountId, owner.id),
@@ -841,6 +855,7 @@ app.post(
       );
     }
     const postId = c.req.param("id");
+    if (!isUuid(postId)) return c.json({ error: "Record not found" }, 404);
     try {
       await db.insert(bookmarks).values({
         postId,
@@ -870,6 +885,7 @@ app.post(
       );
     }
     const postId = c.req.param("id");
+    if (!isUuid(postId)) return c.json({ error: "Record not found" }, 404);
     const result = await db
       .delete(bookmarks)
       .where(
@@ -903,6 +919,7 @@ app.post(
       );
     }
     const postId = c.req.param("id");
+    if (!isUuid(postId)) return c.json({ error: "Record not found" }, 404);
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, postId),
     });
@@ -961,6 +978,7 @@ app.post(
       );
     }
     const postId = c.req.param("id");
+    if (!isUuid(postId)) return c.json({ error: "Record not found" }, 404);
     const result = await db
       .delete(pinnedPosts)
       .where(
@@ -1008,6 +1026,7 @@ async function addEmojiReaction(
   }
   const fedCtx = federation.createContext(c.req.raw, undefined);
   const postId = c.req.param("id");
+  if (!isUuid(postId)) return c.json({ error: "Record not found" }, 404);
   let emoji = c.req.param("emoji");
   const url = new URL(c.req.url);
   if (emoji.endsWith(`@${url.host}`)) emoji = emoji.replace(/@[^@]+$/, "");
@@ -1141,6 +1160,7 @@ async function removeEmojiReaction(
   }
   const fedCtx = federation.createContext(c.req.raw, undefined);
   const postId = c.req.param("id");
+  if (!isUuid(postId)) return c.json({ error: "Record not found" }, 404);
   let emoji = c.req.param("emoji");
   const url = new URL(c.req.url);
   if (emoji.endsWith(`@${url.host}`)) emoji = emoji.replace(/@[^@]+$/, "");

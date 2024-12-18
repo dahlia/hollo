@@ -12,12 +12,13 @@ import replaceLink from "markdown-it-replace-link";
 import { persistAccount } from "./federation/account";
 import { type ASPost, isPost } from "./federation/post";
 import * as schema from "./schema";
+import type { Uuid } from "./uuid";
 
 const logger = getLogger(["hollo", "text"]);
 
 export interface FormatResult {
   html: string;
-  mentions: string[];
+  mentions: Uuid[];
   hashtags: string[];
   emojis: Record<string, string>;
   previewLink: string | null;
@@ -53,7 +54,7 @@ export async function formatText(
   draft.render(text, draftEnv);
 
   // Collect already persisted accounts:
-  const handles: Record<string, { id: string; href: string }> = {};
+  const handles: Record<string, { id: Uuid; href: string }> = {};
   const handleList =
     draftEnv.mentions.length > 0
       ? await db

@@ -36,6 +36,7 @@ import {
   posts,
   reactions,
 } from "../../schema";
+import type { Uuid } from "../../uuid";
 
 const logger = getLogger(["hollo", "notifications"]);
 
@@ -514,11 +515,11 @@ app.get(
       )
       .orderBy(desc(sql`q.created`))
       .limit(limit)) as {
-      id: string;
+      id: Uuid;
       type: NotificationType;
       created: Date | string;
-      accountId: string;
-      postId: string | null;
+      accountId: Uuid;
+      postId: Uuid | null;
       emoji: string | null;
       customEmoji: string | null;
     }[];

@@ -11,6 +11,7 @@ import { federation } from "../../federation";
 import { updateAccountStats } from "../../federation/account";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { accounts, blocks, follows, mutes } from "../../schema";
+import { isUuid } from "../../uuid";
 
 const app = new Hono<{ Variables: Variables }>();
 
@@ -40,6 +41,8 @@ app.post(
   tokenRequired,
   scopeRequired(["write:follows"]),
   async (c) => {
+    const followerId = c.req.param("account_id");
+    if (!isUuid(followerId)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
@@ -47,7 +50,6 @@ app.post(
         422,
       );
     }
-    const followerId = c.req.param("account_id");
     const follower = await db.query.accounts.findFirst({
       where: eq(accounts.id, followerId),
       with: { owner: true },
@@ -113,6 +115,8 @@ app.post(
   tokenRequired,
   scopeRequired(["write:follows"]),
   async (c) => {
+    const followerId = c.req.param("account_id");
+    if (!isUuid(followerId)) return c.json({ error: "Record not found" }, 404);
     const owner = c.get("token").accountOwner;
     if (owner == null) {
       return c.json(
@@ -120,7 +124,6 @@ app.post(
         422,
       );
     }
-    const followerId = c.req.param("account_id");
     const follower = await db.query.accounts.findFirst({
       where: eq(accounts.id, followerId),
       with: { owner: true },

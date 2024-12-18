@@ -1,12 +1,9 @@
 import * as vocab from "@fedify/fedify/vocab";
-import { Hono } from "hono";
-
 import { zValidator } from "@hono/zod-validator";
+import { and, eq, inArray, notInArray } from "drizzle-orm";
+import { Hono } from "hono";
 import { z } from "zod";
 import { db } from "../../db";
-
-import { and, eq, inArray, notInArray } from "drizzle-orm";
-import { uuidv7 } from "uuidv7-js";
 import { serializeReport } from "../../entities/report";
 import federation from "../../federation";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
@@ -18,13 +15,14 @@ import {
   posts,
   reports,
 } from "../../schema";
+import { uuid, uuidv7 } from "../../uuid";
 
 const app = new Hono<{ Variables: Variables }>();
 
 const reportSchema = z.object({
   comment: z.string().trim().min(1).max(1000).optional().default(""),
-  account_id: z.string().uuid(),
-  status_ids: z.array(z.string().uuid()).min(1).optional(),
+  account_id: uuid,
+  status_ids: z.array(uuid).min(1).optional(),
   // discarded by defined by the Mastodon API:
   category: z.string().optional(),
   rule_ids: z.array(z.string()).optional(),
