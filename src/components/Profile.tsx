@@ -1,3 +1,4 @@
+import { escape } from "es-toolkit";
 import type { Account, AccountOwner } from "../schema";
 import { renderCustomEmojis } from "../text";
 
@@ -7,10 +8,7 @@ export interface ProfileProps {
 
 export function Profile({ accountOwner }: ProfileProps) {
   const account = accountOwner.account;
-  const nameHtml = renderCustomEmojis(
-    Bun.escapeHTML(account.name),
-    account.emojis,
-  );
+  const nameHtml = renderCustomEmojis(escape(account.name), account.emojis);
   const bioHtml = renderCustomEmojis(account.bioHtml ?? "", account.emojis);
   const url = account.url ?? account.iri;
   return (

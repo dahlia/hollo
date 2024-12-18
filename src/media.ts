@@ -1,4 +1,5 @@
 import { mkdtemp } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ffmpeg from "fluent-ffmpeg";
@@ -22,12 +23,21 @@ export async function uploadThumbnail(
   thumbnailArea = DEFAULT_THUMBNAIL_AREA,
 ): Promise<Thumbnail> {
   const originalMetadata = await original.metadata();
-  const thumbnailSize = calculateThumbnailSize(
-    originalMetadata.width!,
-    originalMetadata.height!,
-    thumbnailArea,
-  );
-  const thumbnail = await original.resize(thumbnailSize).webp().toBuffer();
+  let width = originalMetadata.width!;
+  let height = originalMetadata.height!;
+  if (originalMetadata.orientation !== 1) {
+    // biome-ignore lint/style/noParameterAssign:
+    original = original.clone();
+    original.rotate();
+    if (originalMetadata.orientation !== 3) {
+      [width, height] = [height, width];
+    }
+  }
+  const thumbnailSize = calculateThumbnailSize(width, height, thumbnailArea);
+  const thumbnail = await original
+    .resize(thumbnailSize)
+    .webp({ nearLossless: true })
+    .toBuffer();
   const content = new Uint8Array(thumbnail);
   try {
     await disk.put(`media/${id}/thumbnail.webp`, content, {
@@ -62,11 +72,11 @@ export function calculateThumbnailSize(
 }
 
 export async function makeVideoScreenshot(
-  fileBuffer: ArrayBuffer,
-): Promise<ArrayBuffer> {
+  videoData: Uint8Array,
+): Promise<Uint8Array> {
   const tmpDir = await mkdtemp(join(tmpdir(), "hollo-"));
   const inFile = join(tmpDir, "video");
-  await Bun.write(inFile, fileBuffer);
+  await writeFile(inFile, videoData);
   await new Promise((resolve) =>
     ffmpeg(inFile)
       .on("end", resolve)
@@ -76,6 +86,6 @@ export async function makeVideoScreenshot(
         folder: tmpDir,
       }),
   );
-  const screenshot = Bun.file(join(tmpDir, "screenshot.png"));
-  return await screenshot.arrayBuffer();
+  const screenshot = await readFile(join(tmpDir, "screenshot.png"));
+  return new Uint8Array(screenshot.buffer);
 }

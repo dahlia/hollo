@@ -6,6 +6,7 @@ import * as cheerio from "cheerio";
 import { type ExtractTablesWithRelations, inArray } from "drizzle-orm";
 import type { PgDatabase } from "drizzle-orm/pg-core";
 import type { PostgresJsQueryResultHKT } from "drizzle-orm/postgres-js";
+import { escape } from "es-toolkit";
 import MarkdownIt from "markdown-it";
 import replaceLink from "markdown-it-replace-link";
 import { persistAccount } from "./federation/account";
@@ -109,7 +110,7 @@ export async function formatText(
       },
       label(handle: string) {
         const bareHandle = handle.replaceAll(/(?:^@)|(?:@[^@]+$)/g, "");
-        return `@<span>${Bun.escapeHTML(bareHandle)}</span>`;
+        return `@<span>${escape(bareHandle)}</span>`;
       },
     })
     .use(hashtag, {
@@ -127,7 +128,7 @@ export async function formatText(
         };
       },
       label(tag: string) {
-        return `#<span>${Bun.escapeHTML(tag.substring(1))}</span>`;
+        return `#<span>${escape(tag.substring(1))}</span>`;
       },
     })
     // biome-ignore lint/suspicious/noExplicitAny: untyped

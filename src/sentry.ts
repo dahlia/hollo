@@ -1,10 +1,10 @@
 import { getLogger } from "@logtape/logtape";
-import { type BunClient, init, initOpenTelemetry } from "@sentry/bun";
 import { getGlobalScope, setCurrentClient } from "@sentry/core";
+import { type NodeClient, init, initOpenTelemetry } from "@sentry/node";
 
 const logger = getLogger(["hollo", "sentry"]);
 
-export function configureSentry(dsn?: string): BunClient | undefined {
+export function configureSentry(dsn?: string): NodeClient | undefined {
   if (dsn == null || dsn.trim() === "") {
     logger.debug("SENTRY_DSN is not provided. Sentry will not be initialized.");
     return;

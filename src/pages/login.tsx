@@ -1,4 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
+import { verify } from "argon2";
 import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { getSignedCookie, setSignedCookie } from "hono/cookie";
@@ -44,7 +45,7 @@ login.post("/", async (c) => {
   });
   if (
     credential == null ||
-    !(await Bun.password.verify(password, credential.passwordHash, "argon2id"))
+    !(await verify(credential.passwordHash, password))
   ) {
     return c.html(
       <LoginPage

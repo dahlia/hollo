@@ -1,6 +1,7 @@
 import { base64 } from "@hexagon/base64";
 import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
+import { escape } from "es-toolkit";
 import { type Context, Hono } from "hono";
 import { cors } from "hono/cors";
 import { createMiddleware } from "hono/factory";
@@ -192,7 +193,7 @@ function AuthorizationPage(props: AuthorizationPageProps) {
         <p>Choose an account to authorize:</p>
         {props.accountOwners.map((accountOwner, i) => {
           const accountName = renderCustomEmojis(
-            Bun.escapeHTML(accountOwner.account.name),
+            escape(accountOwner.account.name),
             accountOwner.account.emojis,
           );
           return (

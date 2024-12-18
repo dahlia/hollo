@@ -132,13 +132,13 @@ Released on November 3, 2024.
 - Added `PORT` and `ALLOW_PRIVATE_ADDRESS` environment variables.
   [[#53] by Helge Krueger]
 
- -  On creating a new account, the user now can choose to follow the official
-    Hollo account.
+- On creating a new account, the user now can choose to follow the official
+  Hollo account.
 
- -  Added a favicon.
+- Added a favicon.
 
- -  Added `PORT` and `ALLOW_PRIVATE_ADDRESS` environment variables.
-    [[#53] by Helge Krueger]
+- Added `PORT` and `ALLOW_PRIVATE_ADDRESS` environment variables.
+  [[#53] by Helge Krueger]
 
 [#38]: https://github.com/dahlia/hollo/issues/38
 [#41]: https://github.com/dahlia/hollo/pull/41

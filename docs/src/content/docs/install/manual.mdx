@@ -26,14 +26,16 @@ Before you start, make sure you have the following software installed on your
 server:
 
  -  [Git]
- -  [Bun]
+ -  [Node.js]
+ -  [pnpm]
  -  [ffmpeg]
  -  [PostgreSQL]
  -  L7 load balancer (e.g., [nginx], [Caddy])
  -  A domain name pointing to your server
 
 [Git]: https://git-scm.com/
-[Bun]: https://bun.sh/
+[Node.js]: https://nodejs.org/
+[pnpm]: https://pnpm.io/
 [ffmpeg]: https://www.ffmpeg.org/
 [PostgreSQL]: https://www.postgresql.org/
 [nginx]: https://nginx.org/
@@ -53,10 +55,10 @@ import { Steps } from "@astrojs/starlight/components";
     cd hollo/
     ~~~~
 
- 2. Install the dependencies using Bun:
+ 2. Install the dependencies using pnpm:
 
     ~~~~ sh frame="none"
-    bun install
+    pnpm install
     ~~~~
 
  3. Create a PostgreSQL user and database for Hollo:
@@ -92,7 +94,7 @@ Starting the server
 To start the server, run the following command:
 
 ~~~~ sh frame="none"
-bun prod
+pnpm run prod
 ~~~~
 
 
@@ -112,12 +114,12 @@ dependencies:
  2. Reinstall the dependencies:
 
     ~~~~ sh frame="none"
-    bun install
+    pnpm install
     ~~~~
 
  3. Restart the server:
 
     ~~~~ sh frame="none"
-    bun prod
+    pnpm run prod
     ~~~~
 </Steps>

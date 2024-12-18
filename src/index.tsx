@@ -1,9 +1,10 @@
 import "./logging";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { federation } from "@fedify/fedify/x/hono";
+import { serve } from "@hono/node-server";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { captureException } from "@sentry/core";
 import { Hono } from "hono";
-import { serveStatic } from "hono/bun";
 import { behindProxy } from "x-forwarded-fetch";
 import api from "./api";
 import fedi from "./federation";
@@ -27,7 +28,7 @@ if (DRIVE_DISK === "fs") {
   app.use(
     "/assets/*",
     serveStatic({
-      root: assetPath,
+      root: relative(process.cwd(), assetPath!),
       rewriteRequestPath: (path) => path.substring("/assets".length),
     }),
   );
@@ -36,9 +37,8 @@ if (DRIVE_DISK === "fs") {
 app.use(
   "/public/*",
   serveStatic({
-    root: join(import.meta.dirname, "public"),
+    root: relative(process.cwd(), join(import.meta.dirname, "public")),
     rewriteRequestPath: (path) => path.substring("/public".length),
-    onNotFound: (path) => console.debug({ path }),
   }),
 );
 
@@ -61,7 +61,7 @@ if (!Number.isInteger(PORT)) {
   process.exit(1);
 }
 
-export default {
+serve({
   fetch: BEHIND_PROXY ? behindProxy(app.fetch.bind(app)) : app.fetch.bind(app),
   port: PORT,
-};
+});

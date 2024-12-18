@@ -25,14 +25,16 @@ Hollo는 수동으로도 설치할 수 있습니다.
 시작하기에 앞서, 서버에 다음 소프트웨어가 설치되어 있는지 확인하세요:
 
  -  [Git]
- -  [Bun]
+ -  [Node.js]
+ -  [pnpm]
  -  [ffmpeg]
  -  [PostgreSQL]
  -  L7 로드 밸런서 (e.g., [nginx], [Caddy])
  -  여러분의 서버를 가리키고 있는 도메인 이름
 
 [Git]: https://git-scm.com/
-[Bun]: https://bun.sh/
+[Node.js]: https://nodejs.org/
+[pnpm]: https://pnpm.io/
 [ffmpeg]: https://www.ffmpeg.org/
 [PostgreSQL]: https://www.postgresql.org/
 [nginx]: https://nginx.org/
@@ -52,10 +54,10 @@ import { Steps } from "@astrojs/starlight/components";
     cd hollo/
     ~~~~
 
- 2. Bun으로 의존성을 설치합니다:
+ 2. pnpm으로 의존성을 설치합니다:
 
     ~~~~ sh frame="none"
-    bun install
+    pnpm install
     ~~~~
 
  3. Hollo에서 쓸 PostgreSQL 사용자와 데이터베이스를 만듭니다:
@@ -90,7 +92,7 @@ Hollo가 설치되었다면, 설정을 해야 합니다.
 서버를 시작하려면 다음 명령을 실행하세요:
 
 ~~~~ sh frame="none"
-bun prod
+pnpm run prod
 ~~~~
 
 
@@ -110,12 +112,12 @@ GitHub 저장소에서 최신 코드를 받고 의존성을 다시 설치하면 
  2. 의존성을 재설치합니다:
 
     ~~~~ sh frame="none"
-    bun install
+    pnpm install
     ~~~~
 
  3. 서버를 다시 시작합니다:
 
     ~~~~ sh frame="none"
-    bun prod
+    pnpm run prod
     ~~~~
 </Steps>

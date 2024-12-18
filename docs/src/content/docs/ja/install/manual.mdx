@@ -24,14 +24,16 @@ Holloは手動でインストールすることもできます。
 始める前に、サーバーに以下のソフトウェアがインストールされていることを確認してください：
 
  -  [Git]
- -  [Bun]
+ -  [Node.js]
+ -  [pnpm]
  -  [ffmpeg]
  -  [PostgreSQL]
  - L7ロードバランサー（例：[nginx]、[Caddy]）
  - あなたのサーバーを指しているドメイン名
 
 [Git]: https://git-scm.com/
-[Bun]: https://bun.sh/
+[Node.js]: https://nodejs.org/
+[pnpm]: https://pnpm.io/
 [ffmpeg]: https://www.ffmpeg.org/
 [PostgreSQL]: https://www.postgresql.org/
 [nginx]: https://nginx.org/
@@ -51,10 +53,10 @@ import { Steps } from "@astrojs/starlight/components";
     cd hollo/
     ~~~~
 
- 2. Bunで依存関係をインストールします：
+ 2. pnpmで依存関係をインストールします：
 
     ~~~~ sh frame="none"
-    bun install
+    pnpm install
     ~~~~
 
  3. HolloのためにPostgreSQLユーザーとデータベースを作成します：
@@ -89,7 +91,7 @@ Holloをインストールしたら、設定を行う必要があります。
 サーバーを起動する準備が整ったら、以下のコマンドを実行します：
 
 ~~~~ sh frame="none"
-bun prod
+pnpm run prod
 ~~~~
 
 
@@ -106,15 +108,15 @@ GitHubリポジトリから最新のコードを取得し、依存関係を再�
     git pull
     ~~~~
 
- 2. Bunで依存関係を再インストールします：
+ 2. pnpmで依存関係を再インストールします：
 
     ~~~~ sh frame="none"
-    bun install
+    pnpm install
     ~~~~
 
  3. サーバーを再起動します：
 
     ~~~~ sh frame="none"
-    bun prod
+    pnpm run prod
     ~~~~
 </Steps>
