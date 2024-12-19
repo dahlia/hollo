@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.3.3
 -------------
 
-To be released.
+Released on December 19, 2024.
 
  -  Fixed a bug where generated thumbnails had been cropped incorrectly
     if the original image had not the EXIF orientation metadata.  [[#76]]
