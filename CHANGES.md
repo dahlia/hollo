@@ -21,6 +21,15 @@ To be released.
 [#65]: https://github.com/dahlia/hollo/issues/65
 
 
+Version 0.3.3
+-------------
+
+Released on December 19, 2024.
+
+ -  Fixed a bug where generated thumbnails had been cropped incorrectly
+    if the original image had not the EXIF orientation metadata.  [[#76]]
+
+
 Version 0.3.2
 -------------
 
