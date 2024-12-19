@@ -24,7 +24,10 @@ export async function uploadThumbnail(
   const originalMetadata = await original.metadata();
   let width = originalMetadata.width!;
   let height = originalMetadata.height!;
-  if (originalMetadata.orientation !== 1) {
+  if (
+    originalMetadata.orientation != null &&
+    originalMetadata.orientation !== 1
+  ) {
     // biome-ignore lint/style/noParameterAssign:
     original = original.clone();
     original.rotate();

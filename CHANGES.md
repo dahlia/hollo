@@ -6,6 +6,9 @@ Version 0.3.3
 
 To be released.
 
+ -  Fixed a bug where generated thumbnails had been cropped incorrectly
+    if the original image had not the EXIF orientation metadata.  [[#76]]
+
 
 Version 0.3.2
 -------------
