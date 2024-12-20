@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.3.4
 -------------
 
-To be released.
+Released on December 20, 2024.
 
  -  Fixed a bug where deleting a post had not been propagated to the
     peers.
