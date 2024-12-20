@@ -6,6 +6,9 @@ Version 0.3.4
 
 To be released.
 
+ -  Fixed a bug where deleting a post had not been propagated to the
+    peers.
+
 
 Version 0.3.3
 -------------
