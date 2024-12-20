@@ -5,6 +5,7 @@ import {
   Collection,
   type Context,
   Create,
+  Delete,
   Document,
   type DocumentLoader,
   Emoji,
@@ -861,13 +862,12 @@ export function toDelete(
   deleted: Date = new Date(),
 ) {
   const object = toObject(post, ctx);
-  return new Update({
+  return new Delete({
     id: new URL(`#delete-${deleted.toString()}`, object.id!),
     actor: object.attributionId,
     tos: object.toIds,
     ccs: object.ccIds,
     object: new Tombstone({ id: object.id }),
-    published: object.updated,
   });
 }
 

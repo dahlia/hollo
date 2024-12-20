@@ -21,6 +21,15 @@ To be released.
 [#65]: https://github.com/dahlia/hollo/issues/65
 
 
+Version 0.3.4
+-------------
+
+Released on December 20, 2024.
+
+ -  Fixed a bug where deleting a post had not been propagated to the
+    peers.
+
+
 Version 0.3.3
 -------------
 
