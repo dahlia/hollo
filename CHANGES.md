@@ -18,6 +18,9 @@ To be released.
  -  Fixed a bug where a server error occurred when an invalid UUID was input via
     URL or form data.  [[#65]]
 
+ -  Added `LOG_FILE` environment variable to specify the file path to write
+    structured logs.  The logs are written in JSON Lines format.
+
 [#65]: https://github.com/dahlia/hollo/issues/65
 
 
