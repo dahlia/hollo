@@ -389,6 +389,7 @@ export const posts = pgTable(
     ),
     uniquePollId: unique().on(table.pollId),
     sharingIdIdx: index().on(table.sharingId),
+    actorIdIdx: index().on(table.accountId),
     actorIdSharingIdIdx: index().on(table.accountId, table.sharingId),
     replyTargetIdIdx: index().on(table.replyTargetId),
     visibilityAccountIdIdx: index().on(table.visibility, table.accountId),
@@ -942,6 +943,8 @@ export const blocks = pgTable(
   },
   (table) => ({
     pk: primaryKey({ columns: [table.accountId, table.blockedAccountId] }),
+    accountIdIdx: index().on(table.accountId),
+    blockedAccountIdIdx: index().on(table.blockedAccountId),
   }),
 );
 
