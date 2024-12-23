@@ -23,6 +23,8 @@ To be released.
 
  -  Improved the performance of recipients gathering during sending activities.
 
+ -  For the sake of concision, now log sink for Sentry is removed.
+
 [#65]: https://github.com/dahlia/hollo/issues/65
 
 

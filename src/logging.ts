@@ -8,7 +8,6 @@ import {
   getStreamSink,
   parseLogLevel,
 } from "@logtape/logtape";
-import { getSentrySink } from "@logtape/sentry";
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 const LOG_LEVEL: LogLevel = parseLogLevel(process.env["LOG_LEVEL"] ?? "info");
@@ -25,7 +24,6 @@ await configure({
         timestamp: "time",
       }),
     }),
-    sentry: getSentrySink(),
     file:
       LOG_FILE == null
         ? () => undefined
@@ -38,27 +36,27 @@ await configure({
     {
       category: "fedify",
       lowestLevel: LOG_LEVEL,
-      sinks: ["console", "sentry", "file"],
+      sinks: ["console", "file"],
     },
     {
       category: ["fedify", "runtime", "docloader"],
       lowestLevel: "warning",
-      sinks: ["console", "sentry", "file"],
+      sinks: ["console", "file"],
     },
     {
       category: "hollo",
       lowestLevel: LOG_LEVEL,
-      sinks: ["console", "sentry", "file"],
+      sinks: ["console", "file"],
     },
     {
       category: "drizzle-orm",
       lowestLevel: LOG_QUERY ? "debug" : "fatal",
-      sinks: ["console", "sentry", "file"],
+      sinks: ["console", "file"],
     },
     {
       category: ["logtape", "meta"],
       lowestLevel: "warning",
-      sinks: ["console", "sentry", "file"],
+      sinks: ["console", "file"],
     },
   ],
 });
