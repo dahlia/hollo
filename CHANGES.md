@@ -21,6 +21,8 @@ To be released.
  -  Added `LOG_FILE` environment variable to specify the file path to write
     structured logs.  The logs are written in JSON Lines format.
 
+ -  Improved the performance of recipients gathering during sending activities.
+
 [#65]: https://github.com/dahlia/hollo/issues/65
 
 

@@ -180,9 +180,9 @@ federation
       const owner = await db.query.accountOwners.findFirst({
         where: eq(accountOwners.handle, identifier),
       });
-      if (owner == null || cursor == null) return null;
-      const offset = Number.parseInt(cursor);
-      if (!Number.isInteger(offset)) return null;
+      if (owner == null) return null;
+      const offset = cursor == null ? undefined : Number.parseInt(cursor);
+      if (offset != null && !Number.isInteger(offset)) return null;
       const followers = await db.query.accounts.findMany({
         where: and(
           inArray(
@@ -203,17 +203,19 @@ federation
         ),
         offset,
         orderBy: accounts.id,
-        limit: 41,
+        limit: offset == null ? undefined : 41,
       });
+      const items = offset == null ? followers : followers.slice(0, 40);
       return {
-        items: followers.slice(0, 40).map((f) => ({
+        items: items.map((f) => ({
           id: new URL(f.iri),
           inboxId: new URL(f.inboxUrl),
           endpoints: {
             sharedInbox: f.sharedInboxUrl ? new URL(f.sharedInboxUrl) : null,
           },
         })),
-        nextCursor: followers.length > 40 ? `${offset + 40}` : null,
+        nextCursor:
+          offset != null && followers.length > 40 ? `${offset + 40}` : null,
       };
     },
   )
