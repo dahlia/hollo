@@ -173,6 +173,8 @@ federation
     ];
   });
 
+const followersLogger = getLogger(["hollo", "federation", "followers"]);
+
 federation
   .setFollowersDispatcher(
     "/@{identifier}/followers",
@@ -181,6 +183,10 @@ federation
         where: eq(accountOwners.handle, identifier),
       });
       if (owner == null) return null;
+      followersLogger.debug(
+        "Gathering followers for {identifier} with cursor {cursor} and filter {filter}...",
+        { identifier, cursor, filter },
+      );
       const offset = cursor == null ? undefined : Number.parseInt(cursor);
       if (offset != null && !Number.isInteger(offset)) return null;
       const followers = await db.query.accounts.findMany({
@@ -206,7 +212,7 @@ federation
         limit: offset == null ? undefined : 41,
       });
       const items = offset == null ? followers : followers.slice(0, 40);
-      return {
+      const result = {
         items: items.map((f) => ({
           id: new URL(f.iri),
           inboxId: new URL(f.inboxUrl),
@@ -217,6 +223,11 @@ federation
         nextCursor:
           offset != null && followers.length > 40 ? `${offset + 40}` : null,
       };
+      followersLogger.debug(
+        "Gathered {followers} followers for {identifier} with cursor {cursor} and filter {filter}.",
+        { followers: result.items.length, identifier, cursor, filter },
+      );
+      return result;
     },
   )
   .setFirstCursor(async (_ctx, _identifier) => "0")
@@ -421,7 +432,7 @@ federation.setFeaturedTagsDispatcher(
   },
 );
 
-const inboxLogger = getLogger(["hollo", "inbox"]);
+const inboxLogger = getLogger(["hollo", "federation", "inbox"]);
 
 federation
   .setInboxListeners("/@{identifier}/inbox", "/inbox")
