@@ -71,6 +71,7 @@ import { persistAccount, persistAccountByIri } from "./account";
 import { iterateCollection } from "./collection";
 import { toDate, toTemporalInstant } from "./date";
 import { toEmoji } from "./emoji";
+import { appendPostToTimelines } from "./timeline";
 
 const logger = getLogger(["hollo", "federation", "post"]);
 
@@ -100,10 +101,10 @@ export async function persistPost(
     replyTarget?: Post;
     skipUpdate?: boolean;
   } = {},
-): Promise<Post | null> {
+): Promise<(Post & { mentions: Mention[] }) | null> {
   if (object.id == null) return null;
   const existingPost = await db.query.posts.findFirst({
-    with: { account: { with: { owner: true } } },
+    with: { account: { with: { owner: true } }, mentions: true },
     where: eq(posts.iri, object.id.href),
   });
   if (options.skipUpdate && existingPost != null) return existingPost;
@@ -123,6 +124,7 @@ export async function persistPost(
   logger.debug("Persisted account: {account}", { account });
   if (account == null) return null;
   let replyTargetId: Uuid | null = null;
+  let replyTargetObj: Post | null = null;
   if (object.replyTargetId != null) {
     if (
       options.replyTarget != null &&
@@ -144,7 +146,7 @@ export async function persistPost(
         logger.debug("Persisting the reply target...");
         const replyTarget = await object.getReplyTarget(options);
         if (isPost(replyTarget)) {
-          const replyTargetObj = await persistPost(db, replyTarget, baseUrl, {
+          replyTargetObj = await persistPost(db, replyTarget, baseUrl, {
             ...options,
             skipUpdate: true,
           });
@@ -296,63 +298,65 @@ export async function persistPost(
         multiple = true;
       }
     }
-    if (options.length < 1 || object.endTime == null) return post;
-    if (post.pollId == null) {
-      const [poll] = await db
-        .insert(polls)
-        .values({
-          id: uuidv7(),
-          multiple,
-          votersCount: object.voters ?? 0,
-          expires: toDate(object.endTime),
-        })
-        .returning();
-      await db.insert(pollOptions).values(
-        options.map(([title, votesCount], index) => ({
-          pollId: poll.id,
-          index,
-          title,
-          votesCount,
-        })),
-      );
-      await db
-        .update(posts)
-        .set({ pollId: poll.id })
-        .where(eq(posts.id, post.id));
-    } else {
-      const [poll] = await db
-        .update(polls)
-        .set({
-          multiple,
-          votersCount: object.voters ?? 0,
-          expires: toDate(object.endTime),
-        })
-        .where(eq(polls.id, post.pollId))
-        .returning();
-      for (let index = 0; index < options.length; index++) {
-        const [title, votesCount] = options[index];
-        await db
-          .insert(pollOptions)
-          .values({ pollId: poll.id, index, title, votesCount })
-          .onConflictDoUpdate({
-            target: [pollOptions.pollId, pollOptions.index],
-            set: { title, votesCount },
-            setWhere: and(
-              eq(pollOptions.pollId, poll.id),
-              eq(pollOptions.index, index),
-            ),
-          });
-      }
-      await db
-        .delete(pollOptions)
-        .where(
-          and(
-            eq(pollOptions.pollId, post.pollId),
-            gte(pollOptions.index, options.length),
-          ),
+    if (options.length > 0 && object.endTime != null) {
+      if (post.pollId == null) {
+        const [poll] = await db
+          .insert(polls)
+          .values({
+            id: uuidv7(),
+            multiple,
+            votersCount: object.voters ?? 0,
+            expires: toDate(object.endTime),
+          })
+          .returning();
+        await db.insert(pollOptions).values(
+          options.map(([title, votesCount], index) => ({
+            pollId: poll.id,
+            index,
+            title,
+            votesCount,
+          })),
         );
+        await db
+          .update(posts)
+          .set({ pollId: poll.id })
+          .where(eq(posts.id, post.id));
+      } else {
+        const [poll] = await db
+          .update(polls)
+          .set({
+            multiple,
+            votersCount: object.voters ?? 0,
+            expires: toDate(object.endTime),
+          })
+          .where(eq(polls.id, post.pollId))
+          .returning();
+        for (let index = 0; index < options.length; index++) {
+          const [title, votesCount] = options[index];
+          await db
+            .insert(pollOptions)
+            .values({ pollId: poll.id, index, title, votesCount })
+            .onConflictDoUpdate({
+              target: [pollOptions.pollId, pollOptions.index],
+              set: { title, votesCount },
+              setWhere: and(
+                eq(pollOptions.pollId, poll.id),
+                eq(pollOptions.index, index),
+              ),
+            });
+        }
+        await db
+          .delete(pollOptions)
+          .where(
+            and(
+              eq(pollOptions.pollId, post.pollId),
+              gte(pollOptions.index, options.length),
+            ),
+          );
+      }
     }
   }
+  const mentionRows: Mention[] = [];
   await db.delete(mentions).where(eq(mentions.postId, post.id));
   for await (const tag of object.getTags(options)) {
     if (tag instanceof vocab.Mention && tag.name != null && tag.href != null) {
@@ -363,10 +367,14 @@ export async function persistPost(
         options,
       );
       if (account == null) continue;
-      await db.insert(mentions).values({
-        accountId: account.id,
-        postId: post.id,
-      });
+      const result = await db
+        .insert(mentions)
+        .values({
+          accountId: account.id,
+          postId: post.id,
+        })
+        .returning();
+      mentionRows.push(...result);
     }
   }
   await db.delete(media).where(eq(media.postId, post.id));
@@ -443,7 +451,13 @@ export async function persistPost(
       });
     }
   }
-  return post;
+  await appendPostToTimelines(db, {
+    ...post,
+    sharing: null,
+    mentions: mentionRows,
+    replyTarget: replyTargetObj,
+  });
+  return { ...post, mentions: mentionRows };
 }
 
 export async function persistSharingPost(
@@ -511,6 +525,12 @@ export async function persistSharingPost(
     .update(posts)
     .set({ sharesCount: sql`coalesce(${posts.sharesCount}, 0) + 1` })
     .where(eq(posts.id, originalPost.id));
+  await appendPostToTimelines(db, {
+    ...result[0],
+    sharing: originalPost,
+    mentions: [],
+    replyTarget: null,
+  });
   return result[0] ?? null;
 }
 

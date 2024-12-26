@@ -39,10 +39,12 @@ import {
   toDelete,
   toUpdate,
 } from "../../federation/post";
+import { appendPostToTimelines } from "../../federation/timeline";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type PreviewCard, fetchPreviewCard } from "../../previewcard";
 import {
   type Like,
+  type Mention,
   type NewBookmark,
   type NewLike,
   type NewPinnedPost,
@@ -197,29 +199,32 @@ app.post(
           ),
         );
       }
-      await tx.insert(posts).values({
-        id,
-        iri: url.href,
-        type: poll == null ? "Note" : "Question",
-        accountId: owner.id,
-        applicationId: token.applicationId,
-        replyTargetId: data.in_reply_to_id,
-        quoteTargetId,
-        sharingId: null,
-        visibility: data.visibility ?? owner.visibility,
-        summary,
-        content: data.status,
-        contentHtml: content?.html,
-        language: data.language ?? owner.language,
-        pollId: poll == null ? null : poll.id,
-        tags,
-        emojis,
-        sensitive: data.sensitive,
-        url: url.href,
-        previewCard,
-        idempotenceKey: idempotencyKey,
-        published: sql`CURRENT_TIMESTAMP`,
-      });
+      const insertedRows = await tx
+        .insert(posts)
+        .values({
+          id,
+          iri: url.href,
+          type: poll == null ? "Note" : "Question",
+          accountId: owner.id,
+          applicationId: token.applicationId,
+          replyTargetId: data.in_reply_to_id,
+          quoteTargetId,
+          sharingId: null,
+          visibility: data.visibility ?? owner.visibility,
+          summary,
+          content: data.status,
+          contentHtml: content?.html,
+          language: data.language ?? owner.language,
+          pollId: poll == null ? null : poll.id,
+          tags,
+          emojis,
+          sensitive: data.sensitive,
+          url: url.href,
+          previewCard,
+          idempotenceKey: idempotencyKey,
+          published: sql`CURRENT_TIMESTAMP`,
+        })
+        .returning();
       if (data.media_ids != null && data.media_ids.length > 0) {
         for (const mediaId of data.media_ids) {
           const result = await tx
@@ -233,15 +238,30 @@ app.post(
           }
         }
       }
+      let mentionObjects: Mention[] = [];
       if (mentionedIds.length > 0) {
-        await tx.insert(mentions).values(
-          mentionedIds.map((accountId) => ({
-            postId: id,
-            accountId,
-          })),
-        );
+        mentionObjects = await tx
+          .insert(mentions)
+          .values(
+            mentionedIds.map((accountId) => ({
+              postId: id,
+              accountId,
+            })),
+          )
+          .returning();
       }
       await updateAccountStats(tx, owner);
+      await appendPostToTimelines(tx, {
+        ...insertedRows[0],
+        sharing: null,
+        mentions: mentionObjects,
+        replyTarget:
+          insertedRows[0].replyTargetId == null
+            ? null
+            : ((await db.query.posts.findFirst({
+                where: eq(posts.id, insertedRows[0].replyTargetId),
+              })) ?? null),
+      });
     });
     const post = (await db.query.posts.findFirst({
       where: eq(posts.id, id),
@@ -728,7 +748,7 @@ app.post(
     const visibility = data.visibility;
     const originalPost = await db.query.posts.findFirst({
       where: eq(posts.id, originalPostId),
-      with: { account: true },
+      with: { account: true, mentions: true },
     });
     if (
       originalPost == null ||
@@ -742,23 +762,32 @@ app.post(
     const url = fedCtx.getObjectUri(Note, { username: owner.handle, id });
     const published = new Date();
     await db.transaction(async (tx) => {
-      await tx.insert(posts).values({
-        ...originalPost,
-        id,
-        iri: url.href,
-        accountId: owner.id,
-        applicationId: token.applicationId,
-        replyTargetId: null,
-        sharingId: originalPostId,
-        visibility,
-        url: url.href,
-        published,
-        updated: published,
-      } satisfies NewPost);
+      const insertedRows = await tx
+        .insert(posts)
+        .values({
+          ...originalPost,
+          id,
+          iri: url.href,
+          accountId: owner.id,
+          applicationId: token.applicationId,
+          replyTargetId: null,
+          sharingId: originalPostId,
+          visibility,
+          url: url.href,
+          published,
+          updated: published,
+        } satisfies NewPost)
+        .returning();
       await tx
         .update(posts)
         .set({ sharesCount: sql`coalesce(${posts.sharesCount}, 0) + 1` })
         .where(eq(posts.id, originalPostId));
+      await appendPostToTimelines(tx, {
+        ...insertedRows[0],
+        sharing: originalPost,
+        mentions: [],
+        replyTarget: null,
+      });
     });
     const post = await db.query.posts.findFirst({
       where: eq(posts.id, id),

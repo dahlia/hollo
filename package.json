@@ -9,7 +9,8 @@
     "dev": "pnpm run migrate && tsx watch --env-file-if-exists=.env src/index.tsx",
     "check": "tsc && biome check .",
     "migrate": "drizzle-kit migrate",
-    "migrate:generate": "drizzle-kit generate"
+    "migrate:generate": "drizzle-kit generate",
+    "rebuild-timelines": "tsx --env-file-if-exists=.env scripts/rebuild-timelines.ts"
   },
   "dependencies": {
     "@aws-sdk/credential-providers": "^3.716.0",

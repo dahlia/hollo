@@ -9,6 +9,13 @@ To be released.
  -  Hollo is now powered by Node.js 23+ instead of Bun for more efficient
     memory usage.
 
+ -  Added an experimental feature flag `TIMELINE_INBOXES` to store all posts
+    visible to your timeline in the database, rather than filtering them
+    in real-time as they are displayed.  This is useful for relatively
+    larger instances with many incoming posts, but as of now it may have
+    several bugs.  It is expected to be the default behavior in the future
+    after it is stabilized.
+
  -  Now you can import and export your data from the administration dashboard
     in CSV format: follows, lists, accounts you muted, accounts you blocked,
     and bookmarks.

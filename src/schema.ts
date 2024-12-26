@@ -999,3 +999,67 @@ export const reportRelations = relations(reports, ({ one }) => ({
     references: [accounts.id],
   }),
 }));
+
+export const timelinePosts = pgTable(
+  "timeline_posts",
+  {
+    accountId: uuid("account_id")
+      .$type<Uuid>()
+      .notNull()
+      .references(() => accountOwners.id, { onDelete: "cascade" }),
+    postId: uuid("post_id")
+      .$type<Uuid>()
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.postId] }),
+    index().on(table.accountId, table.postId),
+  ],
+);
+
+export type TimelinePost = typeof timelinePosts.$inferSelect;
+export type NewTimelinePost = typeof timelinePosts.$inferInsert;
+
+export const timelinePostRelations = relations(timelinePosts, ({ one }) => ({
+  account: one(accountOwners, {
+    fields: [timelinePosts.accountId],
+    references: [accountOwners.id],
+  }),
+  post: one(posts, {
+    fields: [timelinePosts.postId],
+    references: [posts.id],
+  }),
+}));
+
+export const listPosts = pgTable(
+  "list_posts",
+  {
+    listId: uuid("list_id")
+      .$type<Uuid>()
+      .notNull()
+      .references(() => lists.id, { onDelete: "cascade" }),
+    postId: uuid("post_id")
+      .$type<Uuid>()
+      .notNull()
+      .references(() => posts.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.listId, table.postId] }),
+    index().on(table.listId, table.postId),
+  ],
+);
+
+export type ListPost = typeof listPosts.$inferSelect;
+export type NewListPost = typeof listPosts.$inferInsert;
+
+export const listPostRelations = relations(listPosts, ({ one }) => ({
+  list: one(lists, {
+    fields: [listPosts.listId],
+    references: [lists.id],
+  }),
+  post: one(posts, {
+    fields: [listPosts.postId],
+    references: [posts.id],
+  }),
+}));

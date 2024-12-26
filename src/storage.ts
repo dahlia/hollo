@@ -84,7 +84,8 @@ switch (DRIVE_DISK) {
     driver = new FSDriver({
       location: isAbsolute(assetPath)
         ? assetPath
-        : join(dirname(import.meta.dir), assetPath),
+        : // @ts-ignore: Don't know why, but TS can't find ImportMeta.dir on CI
+          join(dirname(import.meta.dir), assetPath),
       visibility: "public",
     });
     break;
