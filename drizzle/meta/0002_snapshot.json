@@ -1,7 +1,5 @@
 {
-  "id": "14e386a0-1163-4887-ab18-e638a4e624f4",
-  "prevId": "ca693333-cc5c-41b8-a4c1-8b750472348b",
-  "version": "6",
+  "version": "7",
   "dialect": "postgresql",
   "tables": {
     "public.account_owners": {
@@ -38,19 +36,22 @@
         "account_owners_id_accounts_id_fk": {
           "name": "account_owners_id_accounts_id_fk",
           "tableFrom": "account_owners",
-          "tableTo": "accounts",
           "columnsFrom": [
             "id"
           ],
+          "tableTo": "accounts",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.accounts": {
       "name": "accounts",
@@ -177,19 +178,22 @@
       "uniqueConstraints": {
         "accounts_iri_unique": {
           "name": "accounts_iri_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "iri"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "accounts_handle_unique": {
           "name": "accounts_handle_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "handle"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.credentials": {
       "name": "credentials",
@@ -218,7 +222,10 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {
@@ -236,8 +243,14 @@
   },
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "14e386a0-1163-4887-ab18-e638a4e624f4",
+  "prevId": "ca693333-cc5c-41b8-a4c1-8b750472348b",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

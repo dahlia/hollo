@@ -407,6 +407,13 @@
       "when": 1734864498702,
       "tag": "0057_indices",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1735184446143,
+      "tag": "0058_update-drizzle-orm",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,5 @@
 {
-  "id": "4fcd84bc-ecc6-477d-b933-b59dcf4a8723",
-  "prevId": "95d10117-8b1c-420b-8311-a7580980630d",
-  "version": "6",
+  "version": "7",
   "dialect": "postgresql",
   "tables": {
     "public.access_tokens": {
@@ -39,19 +37,22 @@
         "access_tokens_application_id_applications_id_fk": {
           "name": "access_tokens_application_id_applications_id_fk",
           "tableFrom": "access_tokens",
-          "tableTo": "applications",
           "columnsFrom": [
             "application_id"
           ],
+          "tableTo": "applications",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.account_owners": {
       "name": "account_owners",
@@ -87,19 +88,22 @@
         "account_owners_id_accounts_id_fk": {
           "name": "account_owners_id_accounts_id_fk",
           "tableFrom": "account_owners",
-          "tableTo": "accounts",
           "columnsFrom": [
             "id"
           ],
+          "tableTo": "accounts",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "no action"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.accounts": {
       "name": "accounts",
@@ -226,19 +230,22 @@
       "uniqueConstraints": {
         "accounts_iri_unique": {
           "name": "accounts_iri_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "iri"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "accounts_handle_unique": {
           "name": "accounts_handle_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "handle"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.applications": {
       "name": "applications",
@@ -300,12 +307,15 @@
       "uniqueConstraints": {
         "applications_client_id_unique": {
           "name": "applications_client_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "client_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.credentials": {
       "name": "credentials",
@@ -334,7 +344,10 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {
@@ -386,8 +399,14 @@
   },
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "4fcd84bc-ecc6-477d-b933-b59dcf4a8723",
+  "prevId": "95d10117-8b1c-420b-8311-a7580980630d",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

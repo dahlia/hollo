@@ -212,9 +212,8 @@ app.post(
         contentHtml: content?.html,
         language: data.language ?? owner.language,
         pollId: poll == null ? null : poll.id,
-        // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
-        tags: sql`${tags}::jsonb`,
-        emojis: sql`${emojis}::jsonb`,
+        tags,
+        emojis,
         sensitive: data.sensitive,
         url: url.href,
         previewCard,
@@ -317,9 +316,8 @@ app.put(
           sensitive: data.sensitive,
           summary,
           language: data.language ?? owner.language,
-          // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
-          tags: sql`${tags}::jsonb`,
-          emojis: sql`${emojis}::jsonb`,
+          tags,
+          emojis,
           previewCard,
           updated: new Date(),
         })

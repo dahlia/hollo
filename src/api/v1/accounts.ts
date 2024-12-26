@@ -197,7 +197,7 @@ app.patch(
       .update(accounts)
       .set({
         name,
-        emojis: sql`${emojis}::jsonb`,
+        emojis,
         bioHtml: bioResult == null ? account.bioHtml : bioResult.html,
         avatarUrl,
         coverUrl,

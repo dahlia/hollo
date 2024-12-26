@@ -252,9 +252,8 @@ export async function persistPost(
           ? object.summary.language.compact()
           : null,
     previewCard,
-    // https://github.com/drizzle-team/drizzle-orm/issues/724#issuecomment-1650670298
-    tags: sql`${tags}::jsonb`,
-    emojis: sql`${emojis}::jsonb`,
+    tags,
+    emojis,
     sensitive: object.sensitive ?? false,
     url: object.url instanceof Link ? object.url.href?.href : object.url?.href,
     repliesCount: replies?.totalItems ?? 0,

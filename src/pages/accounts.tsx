@@ -14,7 +14,7 @@ import {
 import { getLogger } from "@logtape/logtape";
 import { PromisePool } from "@supercharge/promise-pool";
 import { createObjectCsvStringifier } from "csv-writer-portable";
-import { and, count, eq, inArray, sql } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { uniq } from "es-toolkit";
 import { Hono } from "hono";
 import { streamText } from "hono/streaming";
@@ -131,7 +131,7 @@ accounts.post("/", async (c) => {
         instanceHost: fedCtx.host,
         type: "Person",
         name,
-        emojis: sql`${emojis}::jsonb`,
+        emojis,
         handle: `@${username}@${fedCtx.host}`,
         bioHtml: bioResult.html,
         url: fedCtx.getActorUri(username).href,
@@ -337,7 +337,7 @@ accounts.post("/:id", async (c) => {
       .update(accountsTable)
       .set({
         name,
-        emojis: sql`${emojis}::jsonb`,
+        emojis,
         bioHtml: bioResult.html,
         protected: protected_,
       })

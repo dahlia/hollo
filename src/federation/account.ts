@@ -160,6 +160,7 @@ export async function persistAccount(
     aliases: actor?.aliasIds?.map((alias) => alias.href) ?? [],
     instanceHost: actor.id.host,
     fieldHtmls,
+    emojis,
     published: toDate(actor.published),
   };
   await db
@@ -168,14 +169,10 @@ export async function persistAccount(
       id: uuidv7(),
       iri: actor.id.href,
       ...values,
-      emojis: sql`${emojis}::jsonb`,
     })
     .onConflictDoUpdate({
       target: schema.accounts.iri,
-      set: {
-        ...values,
-        emojis: sql`${emojis}::jsonb`,
-      },
+      set: values,
       setWhere: eq(schema.accounts.iri, actor.id.href),
     });
   const account = await db.query.accounts.findFirst({

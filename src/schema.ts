@@ -210,13 +210,10 @@ export const follows = pgTable(
       .default(currentTimestamp),
     approved: timestamp("approved", { withTimezone: true }),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.followingId, table.followerId] }),
-    selfCheck: check(
-      "ck_follows_self",
-      sql`${table.followingId} != ${table.followerId}`,
-    ),
-  }),
+  (table) => [
+    primaryKey({ columns: [table.followingId, table.followerId] }),
+    check("ck_follows_self", sql`${table.followingId} != ${table.followerId}`),
+  ],
 );
 
 export type Follow = typeof follows.$inferSelect;
@@ -382,24 +379,21 @@ export const posts = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    uniqueIdAccountId: unique("posts_id_actor_id_unique").on(
-      table.id,
-      table.accountId,
-    ),
-    uniquePollId: unique().on(table.pollId),
-    sharingIdIdx: index().on(table.sharingId),
-    actorIdIdx: index().on(table.accountId),
-    actorIdSharingIdIdx: index().on(table.accountId, table.sharingId),
-    replyTargetIdIdx: index().on(table.replyTargetId),
-    visibilityAccountIdIdx: index().on(table.visibility, table.accountId),
-    visibilityAccountIdSharingIdIdx: index()
+  (table) => [
+    unique("posts_id_actor_id_unique").on(table.id, table.accountId),
+    unique().on(table.pollId),
+    index().on(table.sharingId),
+    index().on(table.accountId),
+    index().on(table.accountId, table.sharingId),
+    index().on(table.replyTargetId),
+    index().on(table.visibility, table.accountId),
+    index()
       .on(table.visibility, table.accountId, table.sharingId)
       .where(isNotNull(table.sharingId)),
-    visibilityAccountIdReplyTargetIdIdx: index()
+    index()
       .on(table.visibility, table.accountId, table.replyTargetId)
       .where(isNotNull(table.replyTargetId)),
-  }),
+  ],
 );
 
 export type Post = typeof posts.$inferSelect;
@@ -467,9 +461,7 @@ export const media = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    postIdIdx: index().on(table.postId),
-  }),
+  (table) => [index().on(table.postId)],
 );
 
 export type Medium = typeof media.$inferSelect;
@@ -514,11 +506,11 @@ export const pollOptions = pgTable(
     title: text("title").notNull(),
     votesCount: bigint("votes_count", { mode: "number" }).notNull().default(0),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.pollId, table.index] }),
-    uniquePollIdTitle: unique().on(table.pollId, table.title),
-    pollIdIndexIdx: index().on(table.pollId, table.index),
-  }),
+  (table) => [
+    primaryKey({ columns: [table.pollId, table.index] }),
+    unique().on(table.pollId, table.title),
+    index().on(table.pollId, table.index),
+  ],
 );
 
 export type PollOption = typeof pollOptions.$inferSelect;
@@ -548,16 +540,16 @@ export const pollVotes = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    pk: primaryKey({
+  (table) => [
+    primaryKey({
       columns: [table.pollId, table.optionIndex, table.accountId],
     }),
-    pollIdOptionIndex: foreignKey({
+    foreignKey({
       columns: [table.pollId, table.optionIndex],
       foreignColumns: [pollOptions.pollId, pollOptions.index],
     }),
-    pollIdAccountIdIdx: index().on(table.pollId, table.accountId),
-  }),
+    index().on(table.pollId, table.accountId),
+  ],
 );
 
 export type PollVote = typeof pollVotes.$inferSelect;
@@ -590,10 +582,10 @@ export const mentions = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.postId, table.accountId] }),
-    postIdAccountIdIdx: index().on(table.postId, table.accountId),
-  }),
+  (table) => [
+    primaryKey({ columns: [table.postId, table.accountId] }),
+    index().on(table.postId, table.accountId),
+  ],
 );
 
 export type Mention = typeof mentions.$inferSelect;
@@ -623,14 +615,14 @@ export const pinnedPosts = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    uniquePostIdAccountId: unique().on(table.postId, table.accountId),
-    postReference: foreignKey({
+  (table) => [
+    unique().on(table.postId, table.accountId),
+    foreignKey({
       columns: [table.postId, table.accountId],
       foreignColumns: [posts.id, posts.accountId],
     }).onDelete("cascade"),
-    accountIdPostIdIdx: index().on(table.accountId, table.postId),
-  }),
+    index().on(table.accountId, table.postId),
+  ],
 );
 
 export const pinnedPostRelations = relations(pinnedPosts, ({ one }) => ({
@@ -662,10 +654,10 @@ export const likes = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.postId, table.accountId] }),
-    accountIdPostIdIdx: index().on(table.accountId, table.postId),
-  }),
+  (table) => [
+    primaryKey({ columns: [table.postId, table.accountId] }),
+    index().on(table.accountId, table.postId),
+  ],
 );
 
 export type Like = typeof likes.$inferSelect;
@@ -700,11 +692,11 @@ export const reactions = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.postId, table.accountId, table.emoji] }),
-    postIdIdx: index().on(table.postId),
-    postIdAccountIdIdx: index().on(table.postId, table.accountId),
-  }),
+  (table) => [
+    primaryKey({ columns: [table.postId, table.accountId, table.emoji] }),
+    index().on(table.postId),
+    index().on(table.postId, table.accountId),
+  ],
 );
 
 export type Reaction = typeof reactions.$inferSelect;
@@ -736,10 +728,10 @@ export const bookmarks = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.postId, table.accountOwnerId] }),
-    postIdAccountOwnerIdIdx: index().on(table.postId, table.accountOwnerId),
-  }),
+  (table) => [
+    primaryKey({ columns: [table.postId, table.accountOwnerId] }),
+    index().on(table.postId, table.accountOwnerId),
+  ],
 );
 
 export type Bookmark = typeof bookmarks.$inferSelect;
@@ -774,9 +766,7 @@ export const markers = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.accountOwnerId, table.type] }),
-  }),
+  (table) => [primaryKey({ columns: [table.accountOwnerId, table.type] })],
 );
 
 export type Marker = typeof markers.$inferSelect;
@@ -800,9 +790,7 @@ export const featuredTags = pgTable(
     name: text("name").notNull(),
     created: timestamp("created", { withTimezone: true }),
   },
-  (table) => ({
-    uniqueAccountOwnerIdName: unique().on(table.accountOwnerId, table.name),
-  }),
+  (table) => [unique().on(table.accountOwnerId, table.name)],
 );
 
 export type FeaturedTag = typeof featuredTags.$inferSelect;
@@ -866,9 +854,7 @@ export const listMembers = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.listId, table.accountId] }),
-  }),
+  (table) => [primaryKey({ columns: [table.listId, table.accountId] })],
 );
 
 export type ListMember = typeof listMembers.$inferSelect;
@@ -903,11 +889,12 @@ export const mutes = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    uniqueAccountIdMutedAccountId: unique(
-      "mutes_account_id_muted_account_id_unique",
-    ).on(table.accountId, table.mutedAccountId),
-  }),
+  (table) => [
+    unique("mutes_account_id_muted_account_id_unique").on(
+      table.accountId,
+      table.mutedAccountId,
+    ),
+  ],
 );
 
 export type Mute = typeof mutes.$inferSelect;
@@ -941,11 +928,11 @@ export const blocks = pgTable(
       .notNull()
       .default(currentTimestamp),
   },
-  (table) => ({
-    pk: primaryKey({ columns: [table.accountId, table.blockedAccountId] }),
-    accountIdIdx: index().on(table.accountId),
-    blockedAccountIdIdx: index().on(table.blockedAccountId),
-  }),
+  (table) => [
+    primaryKey({ columns: [table.accountId, table.blockedAccountId] }),
+    index().on(table.accountId),
+    index().on(table.blockedAccountId),
+  ],
 );
 
 export type Block = typeof blocks.$inferSelect;
