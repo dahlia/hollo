@@ -61,6 +61,7 @@ export function serializeAccountOwner(
 ): Record<string, unknown> {
   return {
     ...serializeAccount(accountOwner.account, baseUrl),
+    discoverable: accountOwner.discoverable,
     source: accountOwner && {
       note: accountOwner.bio,
       privacy: accountOwner.visibility,

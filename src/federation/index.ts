@@ -153,6 +153,7 @@ federation
             icon: new Image({ url: new URL(url) }),
           }),
       ),
+      discoverable: owner.discoverable,
     });
   })
   .mapHandle((_, handle) => handle)

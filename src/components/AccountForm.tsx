@@ -12,6 +12,7 @@ export interface AccountFormProps {
     name?: string;
     bio?: string;
     protected?: boolean;
+    discoverable?: boolean;
     language?: string;
     visibility?: PostVisibility;
     news?: boolean;
@@ -87,6 +88,17 @@ export function AccountForm(props: AccountFormProps) {
           />{" "}
           Protect your account &mdash; only approved followers can see your
           posts
+        </label>
+      </fieldset>
+      <fieldset>
+        <label>
+          <input
+            type="checkbox"
+            name="discoverable"
+            value="true"
+            checked={props.values?.discoverable}
+          />{" "}
+          Allow your account to be discovered in the public directory
         </label>
       </fieldset>
       <fieldset class="grid">

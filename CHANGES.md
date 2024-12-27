@@ -20,6 +20,8 @@ To be released.
     in CSV format: follows, lists, accounts you muted, accounts you blocked,
     and bookmarks.
 
+ -  You can now make your profile [`discoverable`].
+
  -  The profile page now shows a user's cover image if they have one.
 
  -  Fixed a bug where a server error occurred when an invalid UUID was input via
@@ -32,6 +34,7 @@ To be released.
 
  -  For the sake of concision, now log sink for Sentry is removed.
 
+[discoverable]: https://docs.joinmastodon.org/spec/activitypub/#discoverable
 [#65]: https://github.com/dahlia/hollo/issues/65
 
 

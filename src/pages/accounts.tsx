@@ -77,6 +77,7 @@ accounts.post("/", async (c) => {
   const name = form.get("name")?.toString()?.trim();
   const bio = form.get("bio")?.toString()?.trim();
   const protected_ = form.get("protected") != null;
+  const discoverable = form.get("discoverable") != null;
   const language = form.get("language")?.toString()?.trim();
   const visibility = form
     .get("visibility")
@@ -91,6 +92,7 @@ accounts.post("/", async (c) => {
           name,
           bio,
           protected: protected_,
+          discoverable,
           language,
           visibility,
           news,
@@ -157,6 +159,7 @@ accounts.post("/", async (c) => {
         bio: bio ?? "",
         language: language ?? "en",
         visibility: visibility ?? "public",
+        discoverable,
       })
       .returning();
     return [account[0], owner[0]];
@@ -270,6 +273,8 @@ function AccountPage(props: AccountPageProps) {
           bio: props.values?.bio ?? props.accountOwner.bio ?? undefined,
           protected:
             props.values?.protected ?? props.accountOwner.account.protected,
+          discoverable:
+            props.values?.discoverable ?? props.accountOwner.discoverable,
           language: props.values?.language ?? props.accountOwner.language,
           visibility: props.values?.visibility ?? props.accountOwner.visibility,
           news: props.values?.news ?? props.news,
@@ -294,6 +299,7 @@ accounts.post("/:id", async (c) => {
   const name = form.get("name")?.toString()?.trim();
   const bio = form.get("bio")?.toString()?.trim();
   const protected_ = form.get("protected") != null;
+  const discoverable = form.get("discoverable") != null;
   const language = form.get("language")?.toString()?.trim();
   const visibility = form
     .get("visibility")
@@ -344,7 +350,7 @@ accounts.post("/:id", async (c) => {
       .where(eq(accountsTable.id, accountId));
     await tx
       .update(accountOwners)
-      .set({ bio, language, visibility })
+      .set({ bio, language, visibility, discoverable })
       .where(eq(accountOwners.id, accountId));
   });
   await fedCtx.sendActivity(

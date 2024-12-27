@@ -1,0 +1,1 @@
+ALTER TABLE "account_owners" ADD COLUMN "discoverable" boolean DEFAULT false NOT NULL;

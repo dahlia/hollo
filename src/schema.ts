@@ -154,6 +154,7 @@ export const accountOwners = pgTable("account_owners", {
   followedTags: text("followed_tags").array().notNull().default([]),
   visibility: postVisibilityEnum("visibility").notNull().default("public"),
   language: text("language").notNull().default("en"),
+  discoverable: boolean().notNull().default(false),
 });
 
 export type AccountOwner = typeof accountOwners.$inferSelect;
