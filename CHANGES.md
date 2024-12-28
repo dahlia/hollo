@@ -9,7 +9,10 @@ To be released.
  -  Fixed a bug where validation check for the account username had not been
     performed correctly.  [[#80]]
 
+ -  Documented the `TZ` environment variable.  [[#82]]
+
 [#80]: https://github.com/dahlia/hollo/issues/80
+[#82]: https://github.com/dahlia/hollo/issues/82
 
 
 Version 0.3.4
