@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.3.5
 -------------
 
-To be released.
+Released on December 28, 2024.
 
  -  Fixed a bug where validation check for the account username had not been
     performed correctly.  [[#80]]
