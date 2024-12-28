@@ -6,6 +6,11 @@ Version 0.3.5
 
 To be released.
 
+ -  Fixed a bug where validation check for the account username had not been
+    performed correctly.  [[#80]]
+
+[#80]: https://github.com/dahlia/hollo/issues/80
+
 
 Version 0.3.4
 -------------

@@ -39,7 +39,7 @@ export function AccountForm(props: AccountFormProps) {
             readOnly={props.readOnly?.username}
             value={props.values?.username}
             aria-invalid={props.errors?.username != null ? true : undefined}
-            pattern="^[\\p{L}\\p{N}._\\-]+$"
+            pattern="^[\p{L}\p{N}._\-]+$"
           />
           <small>
             {props.errors?.username == null
