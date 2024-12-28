@@ -38,6 +38,20 @@ To be released.
 [#65]: https://github.com/dahlia/hollo/issues/65
 
 
+Version 0.3.5
+-------------
+
+Released on December 28, 2024.
+
+ -  Fixed a bug where validation check for the account username had not been
+    performed correctly.  [[#80]]
+
+ -  Documented the `TZ` environment variable.  [[#82]]
+
+[#80]: https://github.com/dahlia/hollo/issues/80
+[#82]: https://github.com/dahlia/hollo/issues/82
+
+
 Version 0.3.4
 -------------
 
