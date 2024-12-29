@@ -27,6 +27,9 @@ To be released.
  -  Fixed a bug where a server error occurred when an invalid UUID was input via
     URL or form data.  [[#65]]
 
+ -  Fixed a bug where the same post could be shared multiple times by the same
+    account.
+
  -  Added `LOG_FILE` environment variable to specify the file path to write
     structured logs.  The logs are written in JSON Lines format.
 
