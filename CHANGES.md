@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.4.0
 -------------
 
-To be released.
+Released on December 30, 2024.
 
  -  Hollo is now powered by Node.js 23+ instead of Bun for more efficient
     memory usage.
