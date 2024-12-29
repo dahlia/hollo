@@ -24,6 +24,9 @@ To be released.
 
  -  The profile page now shows a user's cover image if they have one.
 
+ -  Added `GET /api/v1/statuses/:id/reblogged_by` API to Mastodon comapatiblity
+    layer.  This API returns a list of accounts that have shared a post.
+
  -  Fixed a bug where a server error occurred when an invalid UUID was input via
     URL or form data.  [[#65]]
 

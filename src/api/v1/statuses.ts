@@ -869,6 +869,49 @@ app.post(
   },
 );
 
+app.get(
+  "/:id/reblogged_by",
+  tokenRequired,
+  scopeRequired(["read:statuses"]),
+  async (c) => {
+    const owner = c.get("token").accountOwner;
+    if (owner == null) {
+      return c.json(
+        { error: "This method requires an authenticated user" },
+        422,
+      );
+    }
+    const id = c.req.param("id");
+    if (!isUuid(id)) return c.json({ error: "Record not found" }, 404);
+    const post = await db.query.posts.findFirst({
+      with: {
+        shares: {
+          with: {
+            account: {
+              with: {
+                owner: true,
+                successor: true,
+              },
+            },
+          },
+        },
+      },
+      where: eq(posts.id, id),
+    });
+    if (post == null) return c.json({ error: "Record not found" }, 404);
+    return c.json(
+      post.shares.map((s) =>
+        s.account.owner == null
+          ? serializeAccount(s.account, c.req.url)
+          : serializeAccountOwner(
+              { ...s.account.owner, account: s.account },
+              c.req.url,
+            ),
+      ),
+    );
+  },
+);
+
 app.post(
   "/:id/bookmark",
   tokenRequired,
