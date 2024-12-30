@@ -7,6 +7,16 @@ Version 0.5.0
 To be released.
 
 
+Version 0.4.1
+-------------
+
+Released on December 31, 2024.
+
+ -  Upgrade Fedify to 1.3.3.
+
+ -  Fixed an interoperability issue with GoToSocial.
+
+
 Version 0.4.0
 -------------
 
@@ -46,7 +56,7 @@ Released on December 30, 2024.
 
  -  For the sake of concision, now log sink for Sentry is removed.
 
-[discoverable]: https://docs.joinmastodon.org/spec/activitypub/#discoverable
+[`discoverable`]: https://docs.joinmastodon.org/spec/activitypub/#discoverable
 [#65]: https://github.com/dahlia/hollo/issues/65
 
 
