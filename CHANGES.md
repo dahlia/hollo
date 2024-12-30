@@ -6,6 +6,8 @@ Version 0.4.2
 
 To be released.
 
+ -  Prefer IPv6 to IPv4 addresses when connecting to remote servers.
+
 
 Version 0.4.1
 -------------

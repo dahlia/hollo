@@ -5,8 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prod": "pnpm run migrate && tsx --env-file-if-exists=.env src/index.tsx",
-    "dev": "pnpm run migrate && tsx watch --env-file-if-exists=.env src/index.tsx",
+    "prod": "pnpm run migrate && tsx --env-file-if-exists=.env --dns-result-order=ipv6first src/index.tsx",
+    "dev": "pnpm run migrate && tsx watch --env-file-if-exists=.env --dns-result-order=ipv6first src/index.tsx",
     "check": "tsc && biome check .",
     "migrate": "drizzle-kit migrate",
     "migrate:generate": "drizzle-kit generate",
