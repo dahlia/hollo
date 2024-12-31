@@ -7,6 +7,14 @@ Version 0.5.0
 To be released.
 
 
+Version 0.4.2
+-------------
+
+Released on December 31, 2024.
+
+ -  Prefer IPv6 to IPv4 addresses when connecting to remote servers.
+
+
 Version 0.4.1
 -------------
 
