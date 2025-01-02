@@ -217,7 +217,7 @@ export async function persistAccountPosts(
     typeof schema,
     ExtractTablesWithRelations<typeof schema>
   >,
-  account: schema.Account,
+  account: schema.Account & { owner: schema.AccountOwner | null },
   fetchPosts: number,
   baseUrl: URL | string,
   options: {

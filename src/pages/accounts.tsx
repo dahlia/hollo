@@ -176,7 +176,7 @@ accounts.post("/", async (c) => {
           await followAccount(tx, fedCtx, { ...account, owner }, following);
           await persistAccountPosts(
             tx,
-            account,
+            { ...account, owner },
             REMOTE_ACTOR_FETCH_POSTS,
             c.req.url,
             {

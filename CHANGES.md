@@ -6,6 +6,15 @@ Version 0.5.0
 
 To be released.
 
+ -  The number of shares and likes became more accurate.
+
+     -  The `Note` objects now have `shares` and `likes` collections with
+        their `totalItems` numbers.
+     -  When a remote `Note` is persisted, now the `totalItems` numbers of
+        `shares` and `likes` are also persisted.
+     -  When a `Announce(Note)` or `Undo(Announce(Note))` activity is received,
+        now it is forwarded to the followers as well if the activity is signed.
+
 
 Version 0.4.2
 -------------

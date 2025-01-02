@@ -97,11 +97,17 @@ export async function persistPost(
   options: {
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
-    account?: Account;
+    account?: Account & { owner: AccountOwner | null };
     replyTarget?: Post;
     skipUpdate?: boolean;
   } = {},
-): Promise<(Post & { mentions: Mention[] }) | null> {
+): Promise<
+  | (Post & {
+      account: Account & { owner: AccountOwner | null };
+      mentions: Mention[];
+    })
+  | null
+> {
   if (object.id == null) return null;
   const existingPost = await db.query.posts.findFirst({
     with: { account: { with: { owner: true } }, mentions: true },
@@ -218,6 +224,8 @@ export async function persistPost(
   const to = new Set(object.toIds.map((url) => url.href));
   const cc = new Set(object.ccIds.map((url) => url.href));
   const replies = await object.getReplies(options);
+  const shares = await object.getShares(options);
+  const likes = await object.getLikes(options);
   const previewLink =
     object.content == null
       ? null
@@ -259,8 +267,8 @@ export async function persistPost(
     sensitive: object.sensitive ?? false,
     url: object.url instanceof Link ? object.url.href?.href : object.url?.href,
     repliesCount: replies?.totalItems ?? 0,
-    sharesCount: 0, // TODO
-    likesCount: 0, // TODO
+    sharesCount: shares?.totalItems ?? 0,
+    likesCount: likes?.totalItems ?? 0,
     published,
     updated,
   } as const;
@@ -457,7 +465,7 @@ export async function persistPost(
     mentions: mentionRows,
     replyTarget: replyTargetObj,
   });
-  return { ...post, mentions: mentionRows };
+  return { ...post, account, mentions: mentionRows };
 }
 
 export async function persistSharingPost(
@@ -470,14 +478,25 @@ export async function persistSharingPost(
   object: ASPost,
   baseUrl: URL | string,
   options: {
-    account?: Account;
+    account?: Account & { owner: AccountOwner | null };
     contextLoader?: DocumentLoader;
     documentLoader?: DocumentLoader;
   } = {},
-): Promise<Post | null> {
+): Promise<
+  | (Post & {
+      account: Account & { owner: AccountOwner | null };
+      sharing:
+        | (Post & { account: Account & { owner: AccountOwner | null } })
+        | null;
+    })
+  | null
+> {
   if (announce.id == null) return null;
   const existingPost = await db.query.posts.findFirst({
-    with: { account: { with: { owner: true } } },
+    with: {
+      account: { with: { owner: true } },
+      sharing: { with: { account: { with: { owner: true } } } },
+    },
     where: eq(posts.iri, announce.id.href),
   });
   if (existingPost != null) return existingPost;
@@ -531,7 +550,9 @@ export async function persistSharingPost(
     mentions: [],
     replyTarget: null,
   });
-  return result[0] ?? null;
+  return result[0] == null
+    ? null
+    : { ...result[0], account, sharing: originalPost };
 }
 
 export async function persistPollVote(
@@ -774,9 +795,24 @@ export function toObject(
     replyTarget:
       post.replyTarget == null ? null : new URL(post.replyTarget.iri),
     replies: new OrderedCollection({
+      id: new URL("#replies", post.iri),
       totalItems: post.replies.length,
       items: post.replies.map((r) => new URL(r.iri)),
     }),
+    shares:
+      post.sharesCount == null
+        ? null
+        : new Collection({
+            id: new URL("#shares", post.iri),
+            totalItems: post.sharesCount,
+          }),
+    likes:
+      post.likesCount == null
+        ? null
+        : new Collection({
+            id: new URL("#likes", post.iri),
+            totalItems: post.likesCount,
+          }),
     attachments: post.media.map((medium) =>
       medium.type.startsWith("video/")
         ? new Video({

@@ -416,7 +416,7 @@ export async function onPostShared(
 ): Promise<void> {
   const object = await announce.getObject();
   if (!isPost(object)) return;
-  await db.transaction(async (tx) => {
+  const post = await db.transaction(async (tx) => {
     const post = await persistSharingPost(
       tx,
       announce,
@@ -427,11 +427,19 @@ export async function onPostShared(
     if (post?.sharingId != null) {
       await updatePostStats(tx, { id: post.sharingId });
     }
+    return post;
   });
+  if (post?.sharing?.account?.owner != null) {
+    await ctx.forwardActivity(
+      { username: post.sharing.account.owner.handle },
+      "followers",
+      { skipIfUnsigned: true },
+    );
+  }
 }
 
 export async function onPostUnshared(
-  _ctx: InboxContext<void>,
+  ctx: InboxContext<void>,
   undo: Undo,
 ): Promise<void> {
   const object = await undo.getObject();
@@ -440,7 +448,14 @@ export async function onPostUnshared(
   const sharer = object.actorId;
   const originalPost = object.objectId;
   if (sharer == null || originalPost == null) return;
-  await db.transaction(async (tx) => {
+  const original = await db.transaction(async (tx) => {
+    const original = await tx.query.posts.findFirst({
+      with: {
+        account: { with: { owner: true } },
+      },
+      where: eq(posts.iri, originalPost.href),
+    });
+    if (original == null) return null;
     const deleted = await tx
       .delete(posts)
       .where(
@@ -452,20 +467,22 @@ export async function onPostUnshared(
               .from(accounts)
               .where(eq(accounts.iri, sharer.href)),
           ),
-          eq(
-            posts.sharingId,
-            db
-              .select({ id: posts.id })
-              .from(posts)
-              .where(eq(posts.iri, originalPost.href)),
-          ),
+          eq(posts.sharingId, original.id),
         ),
       )
       .returning();
     if (deleted.length > 0 && deleted[0].sharingId != null) {
       await updatePostStats(tx, { id: deleted[0].sharingId });
     }
+    return original;
   });
+  if (original?.account.owner != null) {
+    await ctx.forwardActivity(
+      { username: original.account.owner.handle },
+      "followers",
+      { skipIfUnsigned: true },
+    );
+  }
 }
 
 export async function onPostPinned(
