@@ -56,7 +56,10 @@ class LogTapeLogger implements Logger {
   }
 }
 
-export const postgres = createPostgres(databaseUrl, { connect_timeout: 5 });
+export const postgres = createPostgres(databaseUrl, {
+  connect_timeout: 5,
+  connection: { IntervalStyle: "iso_8601" },
+});
 export const db = drizzle(postgres, { schema, logger: new LogTapeLogger() });
 
 export default db;
