@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.4.3
 -------------
 
-To be released.
+Released on January 11, 2025.
 
  -  Fixed a bug where mutes with duration had not been expired correctly.
     [[#92]]
