@@ -946,7 +946,14 @@ accounts.post("/:id/migrate/import", async (c) => {
   if (!(file instanceof File)) {
     return new Response("Invalid file", { status: 400 });
   }
-  const csv = await neatCsv(await file.text(), {
+  let csvText = await file.text();
+  if (
+    category === "following_accounts" &&
+    !csvText.match(/^Account address,/)
+  ) {
+    csvText = `Account address,Show boosts,Notify on new posts,Languages\n${csvText}`;
+  }
+  const csv = await neatCsv(csvText, {
     headers:
       category === "following_accounts" || category === "muted_accounts"
         ? undefined
@@ -964,10 +971,16 @@ accounts.post("/:id/migrate/import", async (c) => {
     > = {};
     for (const row of csv) {
       const handle = row["Account address"].trim();
-      const shares = row["Show boosts"].toLowerCase().trim() === "true";
-      const notify = row["Notify on new posts"].toLowerCase().trim() === "true";
+      const shares =
+        row["Show boosts"] == null
+          ? true
+          : row["Show boosts"].toLowerCase().trim() === "true";
+      const notify =
+        row["Notify on new posts"] == null
+          ? false
+          : row["Notify on new posts"].toLowerCase().trim() === "true";
       // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this
-      const languages = row["Languages"].toLowerCase().trim();
+      const languages = row["Languages"]?.toLowerCase()?.trim() ?? "";
       accounts[handle] = {
         shares,
         notify,
