@@ -6,6 +6,11 @@ Version 0.4.3
 
 To be released.
 
+ -  Fixed a bug where mutes with duration had not been expired correctly.
+    [[#92]]
+
+[#92]: https://github.com/dahlia/hollo/issues/92
+
 
 Version 0.4.2
 -------------
