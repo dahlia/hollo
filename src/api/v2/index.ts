@@ -13,16 +13,22 @@ import { z } from "zod";
 import { db } from "../../db";
 import { serializeAccount } from "../../entities/account";
 import { getPostRelations, serializePost } from "../../entities/status";
-import { federation } from "../../federation";
-import { persistAccount } from "../../federation/account";
-import { persistPost } from "../../federation/post";
 import { type Variables, scopeRequired, tokenRequired } from "../../oauth";
 import { type Account, accounts, posts } from "../../schema";
 import { uuid } from "../../uuid";
 import { postMedia } from "../v1/media";
 import instance from "./instance";
+import { loginRequired } from "../../login";
+import { exportController, importController } from "./controllers/account";
+import federation from "../../federation";
+import { persistAccount } from "../../federation/account";
+import { persistPost } from "../../federation/post";
 
 const app = new Hono<{ Variables: Variables }>();
+
+app.post("/:actorId/accountExport", loginRequired, exportController);
+
+app.post(":actorId/accountImport", loginRequired, importController);
 
 app.route("/instance", instance);
 
