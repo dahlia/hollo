@@ -1,5 +1,6 @@
 import { constants, access, lstatSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
+import { fileURLToPath } from "node:url"; // Add this import
 import { fromEnv } from "@aws-sdk/credential-providers";
 import { getLogger } from "@logtape/logtape";
 import { Disk } from "flydrive";
@@ -10,6 +11,9 @@ import type { DriverContract } from "flydrive/types";
 const logger = getLogger(["hollo", "storage"]);
 
 export type DriveDisk = "fs" | "s3";
+
+// Get the directory name of the current module
+const __dirname = dirname(fileURLToPath(import.meta.url)); // Add this line
 
 // biome-ignore lint/complexity/useLiteralKeys: tsc complains about this (TS4111)
 export const assetPath = process.env["FS_ASSET_PATH"];
@@ -84,8 +88,7 @@ switch (DRIVE_DISK) {
     driver = new FSDriver({
       location: isAbsolute(assetPath)
         ? assetPath
-        : // @ts-ignore: Don't know why, but TS can't find ImportMeta.dir on CI
-          join(dirname(import.meta.dir), assetPath),
+        : join(__dirname, assetPath), // Use __dirname derived from import.meta.url
       visibility: "public",
     });
     break;
