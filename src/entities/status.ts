@@ -119,6 +119,7 @@ export function serializePost(
     account: Account & { successor: Account | null };
     application: Application | null;
     replyTarget: Post | null;
+    type: string;
     sharing:
       | (Post & {
           account: Account & { successor: Account | null };
@@ -209,6 +210,7 @@ export function serializePost(
 ): Record<string, any> {
   return {
     id: post.id,
+    type: post.type,
     created_at: post.published ?? post.updated,
     in_reply_to_id: post.replyTargetId,
     in_reply_to_account_id: post.replyTarget?.accountId,
