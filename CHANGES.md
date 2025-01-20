@@ -6,6 +6,9 @@ Version 0.4.4
 
 To be released.
 
+ -  Upgrade Fedify to 1.3.4, which includes [security
+    fixes][@dahlia/fedify#200] [[CVE-2025-23221]]
+
 
 Version 0.4.3
 -------------
@@ -80,6 +83,18 @@ Released on December 30, 2024.
 
 [`discoverable`]: https://docs.joinmastodon.org/spec/activitypub/#discoverable
 [#65]: https://github.com/dahlia/hollo/issues/65
+
+
+Version 0.3.6
+-------------
+
+Released on January 21, 2025.
+
+ -  Upgrade Fedify to 1.3.4, which includes [security
+    fixes][@dahlia/fedify#200] [[CVE-2025-23221]]
+
+[@dahlia/fedify#200]: https://github.com/dahlia/fedify/discussions/200
+[CVE-2025-23221]: https://github.com/dahlia/fedify/security/advisories/GHSA-c59p-wq67-24wx
 
 
 Version 0.3.5
