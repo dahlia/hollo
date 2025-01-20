@@ -4,7 +4,7 @@ Hollo changelog
 Version 0.4.4
 -------------
 
-To be released.
+Released on January 21, 2025.
 
  -  Upgrade Fedify to 1.3.4, which includes [security
     fixes][@dahlia/fedify#200] [[CVE-2025-23221]]
